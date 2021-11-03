@@ -18,6 +18,7 @@ class MainI(IceFlix.Main):
         pass
 
     def register(self, service, current=None):
+        print(f"Me ha hablado {service}!!!!!")
         # Código
         # Throws UnkownService
         pass

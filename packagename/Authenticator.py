@@ -30,10 +30,20 @@ class AuthenticatorI(IceFlix.Authenticator):
         # Throws Unauthorized
         pass
 
+if __name__ == "__main__":
 
-with Ice.initialize(sys.argv) as communicator:
-    adapter = communicator.createObjectAdapterWithEndpoints("Authenticator", "default -p 10000")
-    object = AuthenticatorI()
-    adapter.add(object, communicator.stringToIdentity("AutheticatorID"))
-    adapter.activate()
-    communicator.waitForShutdown()
+   with Ice.initialize(sys.argv) as communicator:
+    base = communicator.stringToProxy("MainID:default -p 10000")
+    controller = IceFlix.MainPrx.checkedCast(base)
+    o = AuthenticatorI()
+    if not controller:
+        raise RuntimeError("Invalid proxy")
+
+    controller.register(o)
+
+#with Ice.initialize(sys.argv) as communicator:
+##    adapter = communicator.createObjectAdapterWithEndpoints("Authenticator", "default -p 10000")
+#    object = AuthenticatorI()
+#    adapter.add(object, communicator.stringToIdentity("AutheticatorID"))
+#    adapter.activate()
+#    communicator.waitForShutdown()
