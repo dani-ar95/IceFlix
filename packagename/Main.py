@@ -31,7 +31,7 @@ class MainI(IceFlix.Main):
 
 with Ice.initialize(sys.argv) as communicator:
     adapter = communicator.createObjectAdapterWithEndpoints("Main", "default -p 10000")
-    object = MainI()
+    #object MainI()
     adapter.add(object, communicator.stringToIdentity("MainID"))
     adapter.activate()
     communicator.waitForShutdown()
