@@ -1,7 +1,9 @@
-import Ice, sys, IceFlix
+import Ice, sys
+
 
 def MainApp(Ice.Application):
-    def main(self, args):
+    def run(self, args):
+        broker = self.communicator()
         properties = broker.getProperties("File")
-        adapter = broker.createObjectAdaptaer("MainServiceAdapter")
-        adapter = MainServicePkr.checkedCasr(adapter)
+        adapter = broker.createObjectAdapter("MainServiceAdapter")
+        main_system = MainServicePrx.checkedCast(adapter)

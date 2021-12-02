@@ -1,13 +1,13 @@
 import sys, Ice
-import IceFlix
 import json
 import secrets
 
-from packagename.Iceflix_ice import Unauthorized
+Ice.loadSlice("Iceflix.ice")
+import IceFlix
 
 class AuthenticatorI(IceFlix.Authenticator):
 
-    def __init__(self, proxyMain):
+    def __init__(self, argv):
         self.shutdownOnInterrupt()
         base = self.communicator().stringToProxy(proxyMain="MainID:default -p 10000")
         controller = IceFlix.MainPrx.checkedCast(base)
@@ -27,7 +27,7 @@ class AuthenticatorI(IceFlix.Authenticator):
                 obj[i]["user_token"] = new_token
                 return new_token
    
-        raise Unauthorized
+        raise IceFlix.Unauthorized
         # Throws Unauthorized
         # Retorna String
         pass
@@ -40,7 +40,7 @@ class AuthenticatorI(IceFlix.Authenticator):
             if obj[i]["user_token"] == userToken:
                 return True
 
-        raise Unauthorized
+        raise IceFlix.Unauthorizedd
         # Retorna boolean
 
     def whois(self, userToken, current=None):
@@ -51,13 +51,15 @@ class AuthenticatorI(IceFlix.Authenticator):
             if obj[i]["user_token"] == userToken:
                 return obj[i]["user"]
 
-        raise Unauthorized      
+        raise IceFlix.Unauthorized      
         # Throws Unauthorized
         # Retorna string
 
     def addUser(self, user, passwordHash, adminToken, current=None):
         # Comprobar admin
-
+        # Comunica con isAdmin()::Main para comprobar que es admin
+            #Si no es admin lanza excepción
+            #raise IceFlix.Unauthorized    
         # raise Unauthorized
         # Añadir usuario
         with open ("users.json", "r+") as fp:
@@ -68,7 +70,8 @@ class AuthenticatorI(IceFlix.Authenticator):
             fp.seek(0)
             json.dump(data, fp, indent=4)
             fp.truncate()
-        # Throws Unauthorized
+            
+
 
     def removeUser(self, user, adminToken, current=None):
         # Comprobar admin

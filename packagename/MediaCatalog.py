@@ -1,8 +1,12 @@
 import sys, Ice
+Ice.loadSlice("IceFlix.ice")
 import IceFlix
 import sqlite3
 
 class MediaCatalogI(IceFlix.MediaCatalog):
+    
+    def __init__(self, argv):
+        pass
 
     def __init__(self, proxyMain):
 
