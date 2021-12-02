@@ -7,6 +7,16 @@ from packagename.Iceflix_ice import Unauthorized
 
 class AuthenticatorI(IceFlix.Authenticator):
 
+    def __init__(self, proxyMain):
+        self.shutdownOnInterrupt()
+        base = communicator.stringToProxy("MainID:default -p 10000")
+        controller = IceFlix.MainPrx.checkedCast(base)
+        if not controller:
+            raise RuntimeError("Invalid proxy")
+
+        o = AuthenticatorI()
+        controller.register(o)
+
     def refreshAuthorization(self, user, passwordHash, current=None):
         # Código
         obj = json.load(open("users.json"))
@@ -32,7 +42,6 @@ class AuthenticatorI(IceFlix.Authenticator):
 
         raise Unauthorized
         # Retorna boolean
-        pass
 
     def whois(self, userToken, current=None):
         # Código
@@ -45,7 +54,6 @@ class AuthenticatorI(IceFlix.Authenticator):
         raise Unauthorized      
         # Throws Unauthorized
         # Retorna string
-        pass
 
     def addUser(self, user, passwordHash, adminToken, current=None):
         # Comprobar admin
@@ -77,6 +85,7 @@ class AuthenticatorI(IceFlix.Authenticator):
 
 if __name__ == "__main__":
     with Ice.initialize(sys.argv) as communicator:
+        self.shutdownOnInterrupt()
         base = communicator.stringToProxy("MainID:default -p 10000")
         controller = IceFlix.MainPrx.checkedCast(base)
         o = AuthenticatorI()

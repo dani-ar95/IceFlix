@@ -30,6 +30,7 @@ class MainI(IceFlix.Main):
 
 
 with Ice.initialize(sys.argv) as communicator:
+    self.shutdownOnInterrupt()
     adapter = communicator.createObjectAdapterWithEndpoints("Main", "default -p 10000")
     #object MainI()
     adapter.add(object, communicator.stringToIdentity("MainID"))
