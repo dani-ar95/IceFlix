@@ -1,5 +1,7 @@
 import sys, Ice
+Ice.loadSlice("IceFlix.ice")
 import IceFlix
+
 
 class MediaUploaderI(IceFlix.MediaUploader):
 

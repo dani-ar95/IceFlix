@@ -1,10 +1,16 @@
 import sys, Ice
-import IceFlix
 import Authenticator
 import MediaCatalog
+Ice.loadSlice('IceFlix.ice')
+import IceFlix
+
 
 class MainI(IceFlix.Main):
 
+    def __init__(self, admin_token):
+        properties = self.communicator().getProperties()
+        self.token = properties.getProperty('AdminToken')
+    
     def getAuthenticator(self, current=None):
         # Código
         # Throws ThemporaryUnavailable
@@ -25,12 +31,13 @@ class MainI(IceFlix.Main):
 
     def isAdmin(self, adminToken, current=None):
         # Código
-        # Retorna boolean
-        pass
+        return adminToken == self.token
 
 
+if __name__ == '__main__':
+    sys.exit(MainI().main(sys.argv))
+    
 with Ice.initialize(sys.argv) as communicator:
-    self.shutdownOnInterrupt()
     adapter = communicator.createObjectAdapterWithEndpoints("Main", "default -p 10000")
     #object MainI()
     adapter.add(object, communicator.stringToIdentity("MainID"))

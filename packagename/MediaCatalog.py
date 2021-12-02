@@ -1,7 +1,11 @@
 import sys, Ice
+Ice.loadSlice("IceFlix.ice")
 import IceFlix
 
 class MediaCatalogI(IceFlix.MediaCatalog):
+    
+    def __init__(self, argv):
+        pass
 
     def getTitle(self, id, current=None):
         # Código

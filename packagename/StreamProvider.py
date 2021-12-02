@@ -1,8 +1,9 @@
 import sys, Ice
+Ice.loadSlice("IceFlix.ice")
 import IceFlix
 
 class StreamProviderI(IceFlix.StreamProvider):
-
+    
     def getStream(self, id, userToken, current=None):
         # Código método getStream
         # Throws Unauthorized, WrongMediaID

@@ -1,4 +1,5 @@
 import sys, Ice
+Ice.loadSlice("IceFlix.ice")
 import IceFlix
 
 class StreamControllerI(IceFlix.StreamController):
