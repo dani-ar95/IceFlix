@@ -9,7 +9,7 @@ class AuthenticatorI(IceFlix.Authenticator):
 
     def __init__(self, proxyMain):
         self.shutdownOnInterrupt()
-        base = communicator.stringToProxy("MainID:default -p 10000")
+        base = self.communicator().stringToProxy(proxyMain="MainID:default -p 10000")
         controller = IceFlix.MainPrx.checkedCast(base)
         if not controller:
             raise RuntimeError("Invalid proxy")

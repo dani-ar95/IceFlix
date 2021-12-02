@@ -1,7 +1,22 @@
 import sys, Ice
 import IceFlix
+import sqlite3
 
 class MediaCatalogI(IceFlix.MediaCatalog):
+
+    def __init__(self, proxyMain):
+
+        conn = sqlite3.connect("media.db")
+
+        self.shutdownOnInterrupt()
+        base = self.communicator().stringToProxy(proxyMain="MainID:default -p 10000")
+        controller = IceFlix.MainPrx.checkedCast(base)
+        if not controller:
+            raise RuntimeError("Invalid proxy")
+
+        o = MediaCatalogI()
+        controller.register(o)
+
 
     def getTitle(self, id, current=None):
         # Código
