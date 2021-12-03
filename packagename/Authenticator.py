@@ -1,21 +1,12 @@
 import sys, Ice
 import json
 import secrets
+from time import sleep
 
 Ice.loadSlice("Iceflix.ice")
 import IceFlix
 
 class AuthenticatorI(IceFlix.Authenticator):
-
-    def __init__(self, argv):
-        self.shutdownOnInterrupt()
-        base = self.communicator().stringToProxy(proxyMain="MainID:default -p 10000")
-        controller = IceFlix.MainPrx.checkedCast(base)
-        if not controller:
-            raise RuntimeError("Invalid proxy")
-
-        o = AuthenticatorI()
-        controller.register(o)
 
     def refreshAuthorization(self, user, passwordHash, current=None):
         # Código
@@ -85,18 +76,19 @@ class AuthenticatorI(IceFlix.Authenticator):
                 obj.pop(i)
                 break
         # Throws Unauthorized
-
-if __name__ == "__main__":
-    with Ice.initialize(sys.argv) as communicator:
+        
+class AuthenticatorServer(Ice.Application):
+    def run(self, argv):
+        sleep(1)
         self.shutdownOnInterrupt()
-        base = communicator.stringToProxy("MainID:default -p 10000")
-        controller = IceFlix.MainPrx.checkedCast(base)
-        o = AuthenticatorI()
-        if not controller:
+        main_service_proxy = self.communicator().stringToProxy(argv[1])
+        auth = IceFlix.MainPrx.checkedCast(main_service_proxy)
+        if not auth:
             raise RuntimeError("Invalid proxy")
 
-        controller.register(o)
-
+        o = AuthenticatorI()
+        auth.register(o)
+        
 #with Ice.initialize(sys.argv) as communicator:
 ##    adapter = communicator.createObjectAdapterWithEndpoints("Authenticator", "default -p 10000")
 #    object = AuthenticatorI()

@@ -33,13 +33,22 @@ class MainI(IceFlix.Main):
         # Código
         return adminToken == self.token
 
+class MainServer(Ice.Application):
+    def run(self, argv):
+        token = argv[1]
+        broker = self.communicator()
+        servant = MainI(token)
+        
+        adapter = broker.createObjectAdapter('MainAdapter')
+        proxy = adapter.add(servant, broker.stringToIdentity('Main'))
+        
+        adapter.activate()
+        self.shutdownOnInterrupt()
+        broker.waitForShutdown()
+
+        #autenticacion del usuario?
+        
+        return 0
 
 if __name__ == '__main__':
     sys.exit(MainI().main(sys.argv))
-    
-with Ice.initialize(sys.argv) as communicator:
-    adapter = communicator.createObjectAdapterWithEndpoints("Main", "default -p 10000")
-    #object MainI()
-    adapter.add(object, communicator.stringToIdentity("MainID"))
-    adapter.activate()
-    communicator.waitForShutdown()
