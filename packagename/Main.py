@@ -1,16 +1,11 @@
 import sys, Ice
-import Authenticator
-import MediaCatalog
-Ice.loadSlice('IceFlix.ice')
+
+Ice.loadSlice('./Iceflix.ice')
 import IceFlix
 
 
 class MainI(IceFlix.Main):
 
-    def __init__(self, admin_token):
-        properties = self.communicator().getProperties()
-        self.token = properties.getProperty('AdminToken')
-    
     def getAuthenticator(self, current=None):
         # Código
         # Throws ThemporaryUnavailable
@@ -37,7 +32,7 @@ class MainServer(Ice.Application):
     def run(self, argv):
         token = argv[1]
         broker = self.communicator()
-        servant = MainI(token)
+        servant = MainI()
         
         adapter = broker.createObjectAdapter('MainAdapter')
         proxy = adapter.add(servant, broker.stringToIdentity('Main'))
@@ -50,5 +45,5 @@ class MainServer(Ice.Application):
         
         return 0
 
-if __name__ == '__main__':
-    sys.exit(MainI().main(sys.argv))
+server = MainServer()
+sys.exit(server.main(sys.argv))

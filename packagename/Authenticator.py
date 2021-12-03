@@ -63,7 +63,6 @@ class AuthenticatorI(IceFlix.Authenticator):
             fp.truncate()
             
 
-
     def removeUser(self, user, adminToken, current=None):
         # Comprobar admin
 
@@ -77,6 +76,7 @@ class AuthenticatorI(IceFlix.Authenticator):
                 break
         # Throws Unauthorized
         
+        
 class AuthenticatorServer(Ice.Application):
     def run(self, argv):
         sleep(1)
@@ -89,6 +89,8 @@ class AuthenticatorServer(Ice.Application):
         o = AuthenticatorI()
         auth.register(o)
         
+authserver = AuthenticatorServer()
+sys.exit(authserver.main(sys.argv))
 #with Ice.initialize(sys.argv) as communicator:
 ##    adapter = communicator.createObjectAdapterWithEndpoints("Authenticator", "default -p 10000")
 #    object = AuthenticatorI()
