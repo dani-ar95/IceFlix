@@ -79,7 +79,7 @@ class AuthenticatorI(IceFlix.Authenticator):
         
 class AuthenticatorServer(Ice.Application):
     def run(self, argv):
-        sleep(1)
+        #sleep(1)
         self.shutdownOnInterrupt()
         main_service_proxy = self.communicator().stringToProxy(argv[1])
         auth = IceFlix.MainPrx.checkedCast(main_service_proxy)
@@ -87,7 +87,10 @@ class AuthenticatorServer(Ice.Application):
             raise RuntimeError("Invalid proxy")
 
         o = AuthenticatorI()
-        auth.register(o)
+        print(type(o))
+
+        print(auth.isAdmin("admin"))
+        #auth.register(o)
         
 authserver = AuthenticatorServer()
 sys.exit(authserver.main(sys.argv))
