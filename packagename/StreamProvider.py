@@ -1,12 +1,13 @@
-import sys, Ice
-Ice.loadSlice("IceFlix.ice")
-import IceFlix
-import logging
-import glob
-import hashlib
-import os
-
 from packagename.Iceflix_ice import StreamController
+import os
+import hashlib
+import glob
+import logging
+import IceFlix
+import sys
+import Ice
+Ice.loadSlice("IceFlix.ice")
+
 
 class StreamProviderI(IceFlix.StreamProvider):
 
@@ -21,7 +22,7 @@ class StreamProviderI(IceFlix.StreamProvider):
         # Completar lista de id
         for filename in candidates:
             archivo = filename[prefix_len:]
-            with open (archivo, "rb") as f: 
+            with open(archivo, "rb") as f:
                 bytes = f.read()
                 readable_hash = hashlib.sha256(bytes).hexdigest()
                 self._idfiles_.add(readable_hash)
@@ -55,9 +56,30 @@ class StreamProviderI(IceFlix.StreamProvider):
         # Throws Unauthorized, WrongMediaID
         pass
 
-with Ice.initialize(sys.argv) as communicator:
-    adapter = communicator.createObjectAdapterWithEndpoints("StreamProvider", "default -p 10000")
-    object = StreamProviderI()
-    adapter.add(object, communicator.stringToIdentity("StreamProviderID"))
-    adapter.activate()
-    communicator.waitForShutdown()
+
+class StreamProviderServer(Ice.Application):
+    def run(self, argv):
+        # sleep(1)
+        self.shutdownOnInterrupt()
+        main_service_proxy = self.communicator().stringToProxy(argv[1])
+        main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
+        if not main_connection:
+            raise RuntimeError("Invalid proxy")
+
+        broker = self.communicator()
+        servant = StreamProviderI()
+
+        adapter = broker.createObjectAdapterWithEndpoints(
+            'StreamProviderAdapter', 'tcp -p 9095')
+        stream_provider_proxy = adapter.add(
+            servant, broker.stringToIdentity('StreamProvider'))
+
+        adapter.activate()
+
+        main_connection.register(stream_provider_proxy)
+
+        self.shutdownOnInterrupt()
+        broker.waitForShutdown()
+
+
+sys.exit(StreamProviderServer().main(sys.argv))
