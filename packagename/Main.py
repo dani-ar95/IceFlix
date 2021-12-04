@@ -5,7 +5,6 @@ import sys, Ice
 Ice.loadSlice('./iceflix.ice')
 import IceFlix
 
-
 class MainI(IceFlix.Main):
     
     def __init__(self, current=None):
@@ -15,33 +14,35 @@ class MainI(IceFlix.Main):
 
     def getAuthenticator(self, current=None):
         # Código
-        auth = self._servants_.get("<class 'IcePy.ObjectPrx'>", None)
-        if auth:
-            return auth
+        auth_prx = self._servants_.get("Authenticator", None)
+        if auth_prx:
+            return auth_prx
         else: 
             raise IceFlix.TemporaryUnavailable
         # Throws ThemporaryUnavailable
         # Retorna objeto tipo Authenticator
-        pass
 
     def getCatalog(self, current=None):
-        catalog = self._servants_.get("<class 'IcePy.ObjectPrx'>", None)
-        if catalog:
-            return catalog
+        catalog_prx = self._servants_.get("MediaCatalog", None)
+        if catalog_prx:
+            return catalog_prx
         else: 
             raise IceFlix.TemporaryUnavailable
         # Throws TemporaryUnavailable
         # Retorna objeto tipo MediaCatalog
-        pass
 
     def register(self, service, current=None):
-        print(f"Me ha hablado {service}!!!!!")
-        self._servants_.update({type(service): service})
-        # Throws UnkownService
-        pass
+        permitidos = set("MediaUploader", "Authenticator", "MediaCatalog", "StreamController", "StreamProvider")
+
+        identidad = service.ice_getIdentity()
+        nombre_servicio = MainServer.communicator().identityToString(identidad)
+
+        if nombre_servicio in permitidos:
+            self._servants_.update({nombre_servicio: service})
+        else:
+            raise IceFlix.UnkownService
 
     def isAdmin(self, adminToken, current=None):
-        # Código
         return adminToken == self._token_
 
 
