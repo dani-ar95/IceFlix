@@ -1,26 +1,11 @@
+#!/usr/bin/python3
+
 import sys, Ice
-Ice.loadSlice("IceFlix.ice")
+Ice.loadSlice("iceflix.ice")
 import IceFlix
 import sqlite3
 
 class MediaCatalogI(IceFlix.MediaCatalog):
-    
-    def __init__(self, argv):
-        pass
-
-    def __init__(self, proxyMain):
-
-        conn = sqlite3.connect("media.db")
-
-        self.shutdownOnInterrupt()
-        base = self.communicator().stringToProxy(proxyMain="MainID:default -p 10000")
-        controller = IceFlix.MainPrx.checkedCast(base)
-        if not controller:
-            raise RuntimeError("Invalid proxy")
-
-        o = MediaCatalogI()
-        controller.register(o)
-
 
     def getTitle(self, id, current=None):
         # Código
@@ -59,9 +44,28 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         # Throws Unauthorized, WrongMediaID
         pass
 
-with Ice.initialize(sys.argv) as communicator:
-    adapter = communicator.createObjectAdapterWithEndpoints("MediaCatalog", "default -p 10000")
-    object = MediaCatalogI()
-    adapter.add(object, communicator.stringToIdentity("MediaCatalogID"))
-    adapter.activate()
-    communicator.waitForShutdown()
+
+class MediaCatalogServer(Ice.Application):
+    def run(self, argv):
+        #sleep(1)
+        self.shutdownOnInterrupt()
+        main_service_proxy = self.communicator().stringToProxy(argv[1])
+        main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
+        if not main_connection:
+            raise RuntimeError("Invalid proxy")
+
+        broker = self.communicator()
+        servant = MediaCatalogI()
+        
+        adapter = broker.createObjectAdapterWithEndpoints('MediaCatalogAdapter','tcp -p 9092')
+        media_catalog_proxy = adapter.add(servant, broker.stringToIdentity('MediaCatalog'))
+        
+        adapter.activate()
+    
+        main_connection.register(media_catalog_proxy)
+        
+        self.shutdownOnInterrupt()
+        broker.waitForShutdown()
+        
+
+sys.exit(MediaCatalogServer().main(sys.argv))

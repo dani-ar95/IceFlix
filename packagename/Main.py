@@ -1,6 +1,8 @@
+#!/usr/bin/python3
+
 import sys, Ice
 
-Ice.loadSlice('./Iceflix.ice')
+Ice.loadSlice('./iceflix.ice')
 import IceFlix
 
 
@@ -29,7 +31,7 @@ class MainI(IceFlix.Main):
         # Código
         return adminToken == self.__token__
 
-    def __init__(current=None):
+    def __init__(self, current=None):
         self.__servants__ = dict()
         properties = MainServer.communicator().getProperties()
         self.__token__ = properties.getProperty('AdminToken')
@@ -39,9 +41,6 @@ class MainServer(Ice.Application):
         token = argv[1]
         broker = self.communicator()
         servant = MainI()
-        servant.funcionar()
-
-        #print(type(servant))
         
         adapter = broker.createObjectAdapter('MainAdapter')
         proxy = adapter.add(servant, broker.stringToIdentity('Main'))
@@ -54,5 +53,4 @@ class MainServer(Ice.Application):
         
         return 0
 
-server = MainServer()
-sys.exit(server.main(sys.argv))
+sys.exit(MainServer().main(sys.argv))

@@ -1,5 +1,7 @@
+#!/usr/bin/python3
+
 import sys, Ice
-Ice.loadSlice("IceFlix.ice")
+Ice.loadSlice("iceflix.ice")
 import IceFlix
 
 
@@ -17,9 +19,28 @@ class MediaUploaderI(IceFlix.MediaUploader):
         # Código método Destroy
         pass
 
-with Ice.initialize(sys.argv) as communicator:
-    adapter = communicator.createObjectAdapterWithEndpoints("MediaUploader", "default -p 10000")
-    object = MediaUploaderI()
-    adapter.add(object, communicator.stringToIdentity("MediaUploaderID"))
-    adapter.activate()
-    communicator.waitForShutdown()
+
+class MediaUploaderServer(Ice.Application):
+    def run(self, argv):
+        #sleep(1)
+        self.shutdownOnInterrupt()
+        main_service_proxy = self.communicator().stringToProxy(argv[1])
+        main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
+        if not main_connection:
+            raise RuntimeError("Invalid proxy")
+
+        broker = self.communicator()
+        servant = MediaUploaderI()
+        
+        adapter = broker.createObjectAdapterWithEndpoints('MediaUploaderAdapter','tcp -p 9093')
+        authenticator_proxy = adapter.add(servant, broker.stringToIdentity('MediaUploader'))
+        
+        adapter.activate()
+        
+        main_connection.register(authenticator_proxy)
+        
+        self.shutdownOnInterrupt()
+        broker.waitForShutdown()
+        
+
+sys.exit(MediaUploaderServer().main(sys.argv))

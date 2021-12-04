@@ -1,9 +1,11 @@
+#!/usr/bin/python3
+
 import sys, Ice
 import json
 import secrets
 from time import sleep
 
-Ice.loadSlice("Iceflix.ice")
+Ice.loadSlice("iceflix.ice")
 import IceFlix
 
 class AuthenticatorI(IceFlix.Authenticator):
@@ -82,21 +84,21 @@ class AuthenticatorServer(Ice.Application):
         #sleep(1)
         self.shutdownOnInterrupt()
         main_service_proxy = self.communicator().stringToProxy(argv[1])
-        auth = IceFlix.MainPrx.checkedCast(main_service_proxy)
-        if not auth:
+        main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
+        if not main_connection:
             raise RuntimeError("Invalid proxy")
 
-        o = AuthenticatorI()
-        print(type(o))
-
-        print(auth.isAdmin("admin"))
-        #auth.register(o)
+        broker = self.communicator()
+        servant = AuthenticatorI()
         
-authserver = AuthenticatorServer()
-sys.exit(authserver.main(sys.argv))
-#with Ice.initialize(sys.argv) as communicator:
-##    adapter = communicator.createObjectAdapterWithEndpoints("Authenticator", "default -p 10000")
-#    object = AuthenticatorI()
-#    adapter.add(object, communicator.stringToIdentity("AutheticatorID"))
-#    adapter.activate()
-#    communicator.waitForShutdown()
+        adapter = broker.createObjectAdapterWithEndpoints('AuthenticatorAdapter','tcp -p 9091')
+        authenticator_proxy = adapter.add(servant, broker.stringToIdentity('Authenticator'))
+        
+        adapter.activate()
+        
+        main_connection.register(authenticator_proxy)
+        
+        self.shutdownOnInterrupt()
+        broker.waitForShutdown()
+        
+sys.exit(AuthenticatorServer().main(sys.argv))
