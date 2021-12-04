@@ -7,10 +7,15 @@ import IceFlix
 
 
 class MainI(IceFlix.Main):
+    
+    def __init__(self, current=None):
+        self._servants_ = dict()
+        properties = MainServer.communicator().getProperties()
+        self._token_ = properties.getProperty('AdminToken')
 
     def getAuthenticator(self, current=None):
         # Código
-        auth = self.__servants__.get("<class 'IcePy.ObjectPrx'>", None)
+        auth = self._servants_.get("<class 'IcePy.ObjectPrx'>", None)
         if auth:
             return auth
         else: 
@@ -20,7 +25,7 @@ class MainI(IceFlix.Main):
         pass
 
     def getCatalog(self, current=None):
-        catalog = self.__servants__.get("<class 'IcePy.ObjectPrx'>", None)
+        catalog = self._servants_.get("<class 'IcePy.ObjectPrx'>", None)
         if catalog:
             return catalog
         else: 
@@ -31,18 +36,14 @@ class MainI(IceFlix.Main):
 
     def register(self, service, current=None):
         print(f"Me ha hablado {service}!!!!!")
-        self.__servants__.update({type(service): service})
+        self._servants_.update({type(service): service})
         # Throws UnkownService
         pass
 
     def isAdmin(self, adminToken, current=None):
         # Código
-        return adminToken == self.__token__
+        return adminToken == self._token_
 
-    def __init__(self, current=None):
-        self.__servants__ = dict()
-        properties = MainServer.communicator().getProperties()
-        self.__token__ = properties.getProperty('AdminToken')
 
 class MainServer(Ice.Application):
     def run(self, argv):
