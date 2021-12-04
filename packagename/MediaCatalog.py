@@ -61,7 +61,7 @@ class MediaCatalogServer(Ice.Application):
         media_catalog_proxy = adapter.add(servant, broker.stringToIdentity('MediaCatalog'))
         
         adapter.activate()
-    
+        print(type(media_catalog_proxy))
         main_connection.register(media_catalog_proxy)
         
         self.shutdownOnInterrupt()

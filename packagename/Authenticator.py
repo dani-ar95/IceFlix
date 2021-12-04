@@ -95,7 +95,7 @@ class AuthenticatorServer(Ice.Application):
         authenticator_proxy = adapter.add(servant, broker.stringToIdentity('Authenticator'))
         
         adapter.activate()
-        
+        print(type(authenticator_proxy))
         main_connection.register(authenticator_proxy)
         
         self.shutdownOnInterrupt()

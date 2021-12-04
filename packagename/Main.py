@@ -10,20 +10,28 @@ class MainI(IceFlix.Main):
 
     def getAuthenticator(self, current=None):
         # Código
+        auth = self.__servants__.get("<class 'IcePy.ObjectPrx'>", None)
+        if auth:
+            return auth
+        else: 
+            raise IceFlix.TemporaryUnavailable
         # Throws ThemporaryUnavailable
         # Retorna objeto tipo Authenticator
         pass
 
     def getCatalog(self, current=None):
-        # Código
+        catalog = self.__servants__.get("<class 'IcePy.ObjectPrx'>", None)
+        if catalog:
+            return catalog
+        else: 
+            raise IceFlix.TemporaryUnavailable
         # Throws TemporaryUnavailable
         # Retorna objeto tipo MediaCatalog
         pass
 
     def register(self, service, current=None):
         print(f"Me ha hablado {service}!!!!!")
-
-        # Código
+        self.__servants__.update({type(service): service})
         # Throws UnkownService
         pass
 
