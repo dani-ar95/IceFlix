@@ -22,7 +22,6 @@ class Client(Ice.Application):
                 connection_tries -= 1
                 sleep(10)
         
-        
         user = input("Introduce el nombre de usuario: ")
         password = input("Password: ")
         
