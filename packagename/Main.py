@@ -4,47 +4,53 @@ import sys, Ice
 
 Ice.loadSlice('./iceflix.ice')
 import IceFlix
+import logging
 
 class MainI(IceFlix.Main):
-    
-    def __init__(self, current=None):
-        self._servants_ = dict()
-        properties = MainServer.communicator().getProperties()
-        self._token_ = properties.getProperty('AdminToken')
 
     def getAuthenticator(self, current=None):
-        # Código
+        ''' Devuelve un proxy al Authenticator, o TemporaryUnavailable si no está disponible'''
+
         auth_prx = self._servants_.get("Authenticator", None)
         if auth_prx:
             return auth_prx
-        else: 
+        else:
             raise IceFlix.TemporaryUnavailable
-        # Throws ThemporaryUnavailable
-        # Retorna objeto tipo Authenticator
+
 
     def getCatalog(self, current=None):
+        ''' Devuelve un proxy al MediaCatalog, o TemporaryUnavailable si no está disponible'''
+
         catalog_prx = self._servants_.get("MediaCatalog", None)
         if catalog_prx:
             return catalog_prx
-        else: 
+        else:
             raise IceFlix.TemporaryUnavailable
-        # Throws TemporaryUnavailable
-        # Retorna objeto tipo MediaCatalog
+
 
     def register(self, service, current=None):
-        permitidos = set("MediaUploader", "Authenticator", "MediaCatalog", "StreamController", "StreamProvider")
+        ''' Permite que los servicios se registren para poder contactarles '''
+
+        permitidos = set(["MediaUploader", "Authenticator", "MediaCatalog", "StreamController", "StreamProvider"])
 
         identidad = service.ice_getIdentity()
         nombre_servicio = MainServer.communicator().identityToString(identidad)
 
         if nombre_servicio in permitidos:
             self._servants_.update({nombre_servicio: service})
+            logging.debug("Añadido el servicio: " + nombre_servicio)
         else:
             raise IceFlix.UnkownService
 
     def isAdmin(self, adminToken, current=None):
+        ''' Comprueba si el token dado es del administrador'''
+
         return adminToken == self._token_
 
+    def __init__(self, current=None):
+        self._servants_ = dict()
+        properties = MainServer.communicator().getProperties()
+        self._token_ = properties.getProperty('AdminToken')
 
 class MainServer(Ice.Application):
     def run(self, argv):

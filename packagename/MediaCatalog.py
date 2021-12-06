@@ -1,14 +1,37 @@
 #!/usr/bin/python3
 
 import sys, Ice
+from packagename.MediaUploader import MediaUploaderI
 Ice.loadSlice("iceflix.ice")
 import IceFlix
 import sqlite3
 
+
+class MediaInfo(object):
+    def __init__(self, name: str, tags: list):
+        self.name = name
+        self.tags = tags
+
+class Media(object):
+    def __init__(self, mediaID: str, provider, info: MediaInfo):
+        self.mediaID = mediaID
+        self.provider = provider
+        self.info = info
+
 class MediaCatalogI(IceFlix.MediaCatalog):
 
-    def getTitle(self, id, current=None):
-        # Código
+    def getTitle(self, mediaId: str, current=None):
+        # Comprobar ID
+
+        conn = sqlite3.connect("media.db")
+        c = conn.cursor()
+        c.execute("SELECT * FROM media WHERE id='{}'".format(mediaId))
+
+        
+        # Query para sacar nombre -> name
+        # Query para sacar tags -> StringList tags
+        # struct MediaInfo
+
         # Throws WrongMediaID, Temporaryunavailable
         # Retorna objeto tipo Media
         pass
@@ -44,6 +67,10 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         # Throws Unauthorized, WrongMediaID
         pass
 
+    def check_id(id: str):
+
+    def __init__(self, current=None):
+        self._media_ = dict()
 
 class MediaCatalogServer(Ice.Application):
     def run(self, argv):
