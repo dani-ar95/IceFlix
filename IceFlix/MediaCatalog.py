@@ -22,7 +22,9 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
     def getTitle(self, mediaId: str, current=None):
         ''' Retorna un objeto Media con la informacion del medio con el ID dado '''
-        # Comprobar ID -> WrongMediaID
+        
+        if mediaId not in self._media_.keys():
+            raise IceFlix.WrongID
 
         conn = sqlite3.connect("media.db")
         c = conn.cursor()
@@ -63,10 +65,9 @@ class MediaCatalogI(IceFlix.MediaCatalog):
     def getTitlesByTags(self, tags: list, includeAllTags: bool, userToken, current=None):
         ''' Retorna una lista de IDs de los medios con las tags dadas '''
 
-        # Comprobar WrongMediaID
         try:
             self.check_user(userToken)
-        except IceFlix.Unauthorized e, IceFlix.TemporaryUnavailable p:
+        except IceFlix.Unauthorized as e, IceFlix.TemporaryUnavailable as p:
             raise IceFlix.Unauthorized
         else:
 
@@ -82,38 +83,70 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             return ids
 
 
-    def addTags(self, id: str, tags: list, userToken, current=None):
-        # Código
+    def addTags(self, mediaId: str, tags: list, userToken, current=None):
+        ''' Añade las tags dadas al medio con el ID dado '''
+
         try:
             self.check_user(userToken)
-        except IceFlix.Unauthorized e, IceFlix.TemporaryUnavailable p:
+        except IceFlix.Unauthorized as e, IceFlix.TemporaryUnavailable as p:
             raise IceFlix.Unauthorized
         else:
-            # Comprobar id
+
+            if mediaId not in self._media_.keys():
+                raise IceFlix.WrongID 
+
             conn = sqlite3.connect("media.db")
             c = conn.cursor()
 
-            c.execute("UPDATE media SET tags  ")
-        # Throws  WrongMediaID
-        # Comprobar MediaID
+            current_tags = c.execute("SELECT tags FROM media WHERE id = ''".format(id))
+            c.execute("UPDATE media SET tags = '{}' WHERE id = '{}'".format(tags.append(current_tags), mediaId))
+            conn.commit()
+            c.close()
 
 
+    def removeTags(self, mediaId: str, tags: list,  userToken, current=None):
+        ''' Elimina las tags dadas del medio con el ID dado '''
 
+        try:
+            self.check_admin(userToken)
+        except IceFlix.Unauthorized as e, IceFlix.TemporaryUnavailable as p:
+            raise IceFlix.Unauthorized
+        else:        
 
-    def removeTags(self, id, name, adminToken, current=None):
-        # Código
-        # Throws Unauthorized, WrongMediaID
-        pass
+            if mediaId not in self._media_.keys():
+                raise IceFlix.WrongID
+
+            conn = sqlite3.connect("media.db")
+            c = conn.cursor()
+
+            current_tags = c.execute("SELECT tags FROM media WHERE id = ''".format(id))
+            new_tags = [x for x in current_tags if x not in tags]
+            c.execute("UPDATE media SET tags = '{}' WHERE id = '{}'".format(tags.append(new_tags), mediaId))
+            conn.commit()
+            c.close()
 
     def renameTitle(self, id, name, adminToken, current=None):
-        # Cödigo
-        # Throws Unauthorized, WrongMediaID
-        pass
+        ''' Renombra el medio de la estructura correspondiente '''
 
-    def updateMedia(self, id, initialName, provider):
-        # Código
-        # Throws Unauthorized, WrongMediaID
-        pass
+        try:
+            self.check_admin(adminToken)
+        except IceFlix.Unauthorized:
+            raise IceFlix.Unauthorized
+
+        if id not in self._media_.keys():
+            raise IceFlix.WrongMediaID
+
+        else:
+            media = self._media_.get(id)
+            media.info.name = name
+            self._media_.update(id, media)
+
+    def updateMedia(self, id, initialName, provider, current=None):
+        ''' Añade o actualiza el medio del ID dado '''
+
+        info = MediaInfo(initialName, "tag")
+        nuevo = Media(id, provider, info)
+        self._media_.update({id: nuevo})
 
     def check_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''
@@ -129,6 +162,8 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                 raise IceFlix.Unauthorized
 
     def check_user(self, user_token: str):
+        ''' Comprueba que la sesion del usuario es la actual '''
+
         try:
             auth_prx = MediaCatalogServer.main_connection.getAuthenticator()
         except IceFlix.TemporaryUnavailable:
@@ -136,7 +171,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         else:
             try:
                 user = auth_prx.isAuthorized(user_token)
-            except IceFlix.Unauthorized e:
+            except IceFlix.Unauthorized as e:
                 raise e
 
     def __init__(self, current=None):
