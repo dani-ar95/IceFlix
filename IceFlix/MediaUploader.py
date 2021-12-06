@@ -15,9 +15,6 @@ class MediaUploaderI(IceFlix.MediaUploader):
     def close(self, current=None):
         # Código método Close
         pass
-    def destroy(self, current=None):
-        # Código método Destroy
-        pass
 
 
 class MediaUploaderServer(Ice.Application):

@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-from logging import exception
 import sys, Ice
 import json
 import secrets
@@ -12,8 +11,7 @@ import IceFlix
 class AuthenticatorI(IceFlix.Authenticator):
 
     def refreshAuthorization(self, user, passwordHash, current=None):
-        ''' Genera un nuevo token para el usuario y contraseña dados'''
-
+        # Código
         obj = json.load(open("users.json"))
 
         for i in xrange(len(obj)):
@@ -23,10 +21,12 @@ class AuthenticatorI(IceFlix.Authenticator):
                 return new_token
    
         raise IceFlix.Unauthorized
+        # Throws Unauthorized
+        # Retorna String
+        pass
 
     def isAuthorized(self,userToken, current=None):
-        ''' Comprueba si el token de usuario está registrado '''
-
+        # Código
         obj = json.load(open("users.json"))
 
         for i in xrange(len(obj)):
@@ -34,59 +34,50 @@ class AuthenticatorI(IceFlix.Authenticator):
                 return True
 
         raise IceFlix.Unauthorizedd
+        # Retorna boolean
 
     def whois(self, userToken, current=None):
-        ''' Devuelve el nombre del usuario con el token dado '''
-
+        # Código
         obj = json.load(open("users.json"))
 
         for i in xrange(len(obj)):
             if obj[i]["user_token"] == userToken:
                 return obj[i]["user"]
 
-        raise IceFlix.Unauthorized
+        raise IceFlix.Unauthorized      
+        # Throws Unauthorized
+        # Retorna string
 
     def addUser(self, user, passwordHash, adminToken, current=None):
-        ''' Permite al Administrador añadir un usuario '''
-
-        if check_admin(adminToken):
-            with open ("users.json", "r+") as fp:
-                data = json.load(fp)
-                data["user"] = user
-                data["password"] = passwordHash
-                data["user_token"] = secrets.token_urlsafe(40)
-                fp.seek(0)
-                json.dump(data, fp, indent=4)
-                fp.truncate()
-
+        # Comprobar admin
+        # Comunica con isAdmin()::Main para comprobar que es admin
+            #Si no es admin lanza excepción
+            #raise IceFlix.Unauthorized    
+        # raise Unauthorized
+        # Añadir usuario
+        with open ("users.json", "r+") as fp:
+            data = json.load(fp)
+            data["user"] = user
+            data["password"] = passwordHash
+            data["user_token"] = secrets.token_urlsafe(40)
+            fp.seek(0)
+            json.dump(data, fp, indent=4)
+            fp.truncate()
+            
 
     def removeUser(self, user, adminToken, current=None):
-        ''' Permite al Administrador eliminar un usuario '''
+        # Comprobar admin
 
-        if check_admin(adminToken):
         # raise Unautorized
         # Eliminar usuario
-            obj = json.load(open("users.json"))
+        obj = json.load(open("users.json"))
 
-            for i in xrange(len(obj)):
-                if obj[i]["user"] == user:
-                    obj.pop(i)
-                    break
+        for i in xrange(len(obj)):
+            if obj[i]["user"] == user:
+                obj.pop(i)
+                break
         # Throws Unauthorized
-
-            
-    def check_admin(admin_token: str):
-        ''' Comprueba si un token es Administrador '''
-
-        try:
-            auth_prx = AuthenticatorServer.getAuthenticator()
-        except IceFlix.TemporaryUnavailable:
-            raise IceFlix.TemporaryUnavailable
-        else: 
-            if auth_prx.isAdmin(admin_token):
-                return True
-            else:
-                raise IceFlix.Unauthorized
+        
         
 class AuthenticatorServer(Ice.Application):
     def run(self, argv):
@@ -104,8 +95,8 @@ class AuthenticatorServer(Ice.Application):
         authenticator_proxy = adapter.add(servant, broker.stringToIdentity('Authenticator'))
         
         adapter.activate()
-        print(type(authenticator_proxy))
         main_connection.register(authenticator_proxy)
+        
         
         self.shutdownOnInterrupt()
         broker.waitForShutdown()

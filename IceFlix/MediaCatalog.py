@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import sys, Ice
-from packagename.MediaUploader import MediaUploaderI
+from IceFlix.MediaUploader import MediaUploaderI
 Ice.loadSlice("iceflix.ice")
 import IceFlix
 import sqlite3

@@ -8,6 +8,7 @@ Ice.loadslice('iceflix.ice')
 
 
 class Client(Ice.Application):
+    
     def calculate_hash(password):
         sha = hashlib.sha256()
         sha.update(password.encode())
@@ -31,7 +32,7 @@ class Client(Ice.Application):
 
         user = input("Introduce el nombre de usuario: ")
         password = input("Password: ")
-        hash_password = calculate_hash(password)
+        hash_password = calculate_pash(password)
 
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
         if not main_connection:
