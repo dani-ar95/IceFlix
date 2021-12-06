@@ -1,4 +1,4 @@
-from packagename.Iceflix_ice import StreamController
+from IceFlix.Iceflix_ice import StreamController
 import os
 import hashlib
 import glob
