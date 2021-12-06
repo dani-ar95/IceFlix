@@ -1,63 +1,98 @@
-import IceFlix
+#!/usr/bin/python3
+
 import Ice
 import sys
 from time import sleep
 import hashlib
+import getpass
 
-Ice.loadslice('iceflix.ice')
+Ice.loadSlice("./iceflix.ice")
+import IceFlix
 
+EXIT_OK = 0
+EXIT_ERROR = 1
 
 class Client(Ice.Application):
     
-    def calculate_hash(password):
+    
+    
+    def calculate_hash(self, password):
         sha = hashlib.sha256()
         sha.update(password.encode())
         return sha.hexdigest()
+    
+    def logged_prompt(self, main_connection):
+        user = input("Introduce el nombre de usuario: ")
+        password = getpass.getpass("Password: ")
+        hash_password = self.calculate_hash(password)
+        authenticator_proxy = None
+        
+        try:
+            print("Conectando con el servicio de autenticación...")
+            authenticator_proxy = main_connection.getAuthenticator()
+            print("Conectado")
+        except IceFlix.TemporaryUnavailable:
+            print("Servicio de autenticación no disponible.")
+            sys.exit(0)
+
+
+        auth_connection = IceFlix.MainPrx.checkedCast(authenticator_proxy)
+        try:    
+            auth_token = auth_connection.refreshAuthorization(user, hash_password)
+        except IceFlix.Unauthorized:
+            print("Credenciales invalidas. Ejecutando modo usuario anónimo...")
+            sleep(2)
+            self.not_logged_prompt(main_connection)
+            
+        while 1:
+            keyboard = input(user+" >: ")
+            pass
+            
+    def not_logged_prompt(self, main_connection):
+        while 1:
+                keyboard = input("Usuario anonimo >: ")
+                if keyboard == "catalog_service":
+                    try:
+                        catalog_proxy = main_connection.getCatalog()
+                    except IceFlix.TemporaryUnavailable:
+                        print("Servicio de catálogo no disponible") 
+                    pass
+                elif keyboard == "exit":
+                    sys.exit(0)
+                elif keyboard == "login":
+                    self.logged_prompt(main_connection)
+        
 
     def run(self, argv):
         broker = self.communicator()
         main_service_proxy = broker.stringToProxy(argv[1])
         connection_tries = 3
-
+        
         while(connection_tries > 0):
             try:
                 check = main_service_proxy.ice_ping()
                 if not check:
                     break
-            except Exception as ex:
-                raise IceFlix.TemporaryUnavailable()
-            else:
+            except Ice.ConnectionRefusedException:
+                print("no")
                 connection_tries -= 1
-                sleep(10)
+                if connection_tries == 0:
+                    print("Número máximo de intentos alcanzados. Saliendo...")
+                    sleep(2)
 
-        user = input("Introduce el nombre de usuario: ")
-        password = input("Password: ")
-        hash_password = calculate_pash(password)
+                sleep(1)
 
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
-        if not main_connection:
-            raise RuntimeError("Invalid proxy")
-
-        try:
-            authenticator_proxy = main_connection.getAuthenticator()
-        except Exception as ex:
-            raise IceFlix.TemporaryUnavailable()
-
-        auth_connection = IceFlix.MainPrx.checkedCast(authenticator_proxy)
-        if not auth_connection:
-            raise RuntimeError("Invalid proxy")
-
-        try:
-            auth_token = auth_connection.refreshAuthorization(
-                user, hash_password)
-        except Exception as ex:
-            raise IceFlix.Unauthorized()
-
-        try:
-            catalog_proxy = main_connection.getCatalog()
-        except Exception as ex:
-            raise IceFlix.TemporaryUnavailable()
-
+            
+        login = input("Quieres logearte? (y/n): ")
+        if login == "y":
+            self.logged_prompt(main_connection)
+            
+        elif login == "n":
+            self.not_logged_prompt(main_connection)
+                
+        self.shutdownOnInterrupt()
+        broker.waitForShutdown()
 
 if __name__ == '__main__':
     sys.exit(Client().main(sys.argv))

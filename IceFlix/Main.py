@@ -14,8 +14,11 @@ class MainI(IceFlix.Main):
 
     def getAuthenticator(self, current=None):
         # Código
+        print("getAuthenticator")
         auth_prx = self._servants_.get("Authenticator", None)
-        if auth_prx:
+        print("auth_prx: ", auth_prx)
+        if auth_prx: 
+            print("devolviendo auth_prx")
             return auth_prx
         else: 
             raise IceFlix.TemporaryUnavailable
@@ -32,7 +35,7 @@ class MainI(IceFlix.Main):
         # Retorna objeto tipo MediaCatalog
 
     def register(self, service, current=None):
-        permitidos = set("MediaUploader", "Authenticator", "MediaCatalog", "StreamController", "StreamProvider")
+        permitidos = set(["MediaUploader", "Authenticator", "MediaCatalog", "StreamController", "StreamProvider"])
 
         identidad = service.ice_getIdentity()
         nombre_servicio = MainServer.communicator().identityToString(identidad)
@@ -48,7 +51,8 @@ class MainI(IceFlix.Main):
 
 class MainServer(Ice.Application):
     def run(self, argv):
-        token = argv[1]
+        if len(argv) > 1:
+            token = argv[1]
         broker = self.communicator()
         servant = MainI()
         

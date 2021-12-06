@@ -25,7 +25,7 @@ class AuthenticatorI(IceFlix.Authenticator):
         # Retorna String
         pass
 
-    def isAuthorized(self,userToken, current=None):
+    def isAuthorized(self, userToken, current=None):
         # Código
         obj = json.load(open("users.json"))
 
@@ -33,7 +33,7 @@ class AuthenticatorI(IceFlix.Authenticator):
             if obj[i]["user_token"] == userToken:
                 return True
 
-        raise IceFlix.Unauthorizedd
+        raise IceFlix.Unauthorized
         # Retorna boolean
 
     def whois(self, userToken, current=None):
