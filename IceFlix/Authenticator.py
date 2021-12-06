@@ -77,7 +77,20 @@ class AuthenticatorI(IceFlix.Authenticator):
                 obj.pop(i)
                 break
         # Throws Unauthorized
-        
+
+            
+    def check_admin(self, admin_token: str):
+        ''' Comprueba si un token es Administrador '''
+
+        try:
+            auth_prx = AuthenticatorServer.main_connection.getAuthenticator()
+        except IceFlix.TemporaryUnavailable:
+            raise IceFlix.TemporaryUnavailable
+        else: 
+            if auth_prx.isAdmin(admin_token):
+                return True
+            else:
+                raise IceFlix.Unauthorized
         
 class AuthenticatorServer(Ice.Application):
     def run(self, argv):

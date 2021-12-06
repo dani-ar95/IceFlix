@@ -9,7 +9,7 @@ Ice.loadSlice("IceFlix.ice")
 
 class StreamControllerI(IceFlix.StreamController):
 
-    def __init__(self, mainProxy):
+    def __init__(self, mainProxy, current=None):
         root_folder = "resources"
         logging.debug("Sirviendo el directorio: %s", root_folder)
 
