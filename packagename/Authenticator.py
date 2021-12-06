@@ -79,7 +79,7 @@ class AuthenticatorI(IceFlix.Authenticator):
         ''' Comprueba si un token es Administrador '''
 
         try:
-            auth_prx = AuthenticatorServer.getAuthenticator()
+            auth_prx = AuthenticatorServer.main_connection.getAuthenticator()
         except IceFlix.TemporaryUnavailable:
             raise IceFlix.TemporaryUnavailable
         else: 
