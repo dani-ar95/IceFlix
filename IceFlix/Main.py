@@ -8,42 +8,45 @@ import IceFlix
 class MainI(IceFlix.Main):
     
     def __init__(self, current=None):
-        self._servants_ = dict()
+        self._servants_ = set()
         properties = MainServer.communicator().getProperties()
         self._token_ = properties.getProperty("AdminToken")
 
     def getAuthenticator(self, current=None):
-        # Código
         print("getAuthenticator")
-        auth_prx = self._servants_.get("Authenticator", None)
-        print("auth_prx: ", auth_prx)
-        if auth_prx: 
-            print("devolviendo auth_prx")
-            return auth_prx
-        else: 
-            raise IceFlix.TemporaryUnavailable
+        for servant in self._servants_:
+            if servant.ice_isA("::IceFlix::Authenticator"):
+                print(servant.ice_isA("::IceFlix::Authenticator"))
+                try:
+                    response = servant.ice_ping()
+                    print("ping hecho")
+                except Ice.ConnectionRefusedException:
+                    self._servants_.remove(servant)
+                if not response:
+                    print("returning")
+                    return servant
+                
+        raise IceFlix.TemporaryUnavailable("No authenticator available")
         # Throws ThemporaryUnavailable
         # Retorna objeto tipo Authenticator
 
     def getCatalog(self, current=None):
-        catalog_prx = self._servants_.get("MediaCatalog", None)
-        if catalog_prx:
-            return catalog_prx
-        else: 
-            raise IceFlix.TemporaryUnavailable
+        for servant in self._servants_:
+            if servant.ice_isA("::IceFlix::MediaCatalog"):
+                try:
+                    response = servant.ice_ping()
+                except Ice.ConnectionRefusedException:
+                    self._servants_.remove(servant)
+                if not response:
+                    return servant
+                
+        raise IceFlix.TemporaryUnavailable("No catalog available")
         # Throws TemporaryUnavailable
         # Retorna objeto tipo MediaCatalog
 
     def register(self, service, current=None):
-        permitidos = set(["MediaUploader", "Authenticator", "MediaCatalog", "StreamController", "StreamProvider"])
-
-        identidad = service.ice_getIdentity()
-        nombre_servicio = MainServer.communicator().identityToString(identidad)
-
-        if nombre_servicio in permitidos:
-            self._servants_.update({nombre_servicio: service})
-        else:
-            raise IceFlix.UnkownService
+        self._servants_.add(service)
+        # Throws UnkownService
 
     def isAdmin(self, adminToken, current=None):
         return adminToken == self._token_
@@ -66,5 +69,5 @@ class MainServer(Ice.Application):
         #autenticacion del usuario?
         
         return 0
-
-sys.exit(MainServer().main(sys.argv))
+if __name__ == "__main__":
+    sys.exit(MainServer().main(sys.argv))

@@ -13,9 +13,7 @@ EXIT_OK = 0
 EXIT_ERROR = 1
 
 class Client(Ice.Application):
-    
-    
-    
+   
     def calculate_hash(self, password):
         sha = hashlib.sha256()
         sha.update(password.encode())
@@ -25,12 +23,11 @@ class Client(Ice.Application):
         user = input("Introduce el nombre de usuario: ")
         password = getpass.getpass("Password: ")
         hash_password = self.calculate_hash(password)
-        authenticator_proxy = None
+
         
         try:
             print("Conectando con el servicio de autenticación...")
             authenticator_proxy = main_connection.getAuthenticator()
-            print("Conectado")
         except IceFlix.TemporaryUnavailable:
             print("Servicio de autenticación no disponible.")
             sys.exit(0)
@@ -74,13 +71,13 @@ class Client(Ice.Application):
                 if not check:
                     break
             except Ice.ConnectionRefusedException:
-                print("no")
+                print("No ha sido posible conectar. Intentando de nuevo...")
                 connection_tries -= 1
                 if connection_tries == 0:
                     print("Número máximo de intentos alcanzados. Saliendo...")
                     sleep(2)
 
-                sleep(1)
+                sleep(10)
 
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
             

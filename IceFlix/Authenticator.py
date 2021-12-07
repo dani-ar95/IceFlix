@@ -109,9 +109,10 @@ class AuthenticatorServer(Ice.Application):
         
         adapter.activate()
         main_connection.register(authenticator_proxy)
-        
+        broker
         
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
         
-sys.exit(AuthenticatorServer().main(sys.argv))
+if __name__ == '__main__':
+    sys.exit(AuthenticatorServer().main(sys.argv))       
