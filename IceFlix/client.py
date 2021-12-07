@@ -53,7 +53,9 @@ class Client(Ice.Application):
                         catalog_proxy = main_connection.getCatalog()
                     except IceFlix.TemporaryUnavailable:
                         print("Servicio de catálogo no disponible") 
-                    pass
+                    else:
+                        catalog_connection = IceFlix.MainPrx.checkedCast(catalog_proxy)
+                        
                 elif keyboard == "exit":
                     sys.exit(0)
                 elif keyboard == "login":

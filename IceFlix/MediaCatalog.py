@@ -18,7 +18,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         query = c.fetchall()
 
         if not query and mediaId not in self._media_.keys():
-            raise IceFlix.WrongID
+            raise IceFlix.WrongMediaId
 
         provider = self._media_.get(mediaId)
         try:
@@ -56,7 +56,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         try:
             self.check_user(userToken)
-        except IceFlix.Unauthorized as e, IceFlix.TemporaryUnavailable as p:
+        except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable) as e:
             raise IceFlix.Unauthorized
         else:
 
@@ -77,12 +77,12 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         try:
             self.check_user(userToken)
-        except IceFlix.Unauthorized as e, IceFlix.TemporaryUnavailable as p:
+        except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable):
             raise IceFlix.Unauthorized
+        
         else:
-
             if mediaId not in self._media_.keys():
-                raise IceFlix.WrongID 
+                raise IceFlix.WrongMediaId
 
             conn = sqlite3.connect("media.db")
             c = conn.cursor()
@@ -98,12 +98,12 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         try:
             self.check_admin(userToken)
-        except IceFlix.Unauthorized as e, IceFlix.TemporaryUnavailable as p:
+        except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable) as e:
             raise IceFlix.Unauthorized
         else:        
 
             if mediaId not in self._media_.keys():
-                raise IceFlix.WrongID
+                raise IceFlix.WrongMediaId
 
             conn = sqlite3.connect("media.db")
             c = conn.cursor()
@@ -123,7 +123,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             raise IceFlix.Unauthorized
 
         if id not in self._media_.keys():
-            raise IceFlix.WrongMediaID
+            raise IceFlix.WrongMediaId
 
         else:
             media = self._media_.get(id)
