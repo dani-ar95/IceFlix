@@ -6,25 +6,10 @@ Ice.loadSlice("iceflix.ice")
 import IceFlix
 import sqlite3
 
-
-class MediaInfo(object):
-    def __init__(self, name: str, tags: list):
-        self.name = name
-        self.tags = tags
-
-class Media(object):
-    def __init__(self, mediaID: str, provider, info: MediaInfo):
-        self.mediaID = mediaID
-        self.provider = provider
-        self.info = info
-
 class MediaCatalogI(IceFlix.MediaCatalog):
 
     def getTitle(self, mediaId: str, current=None):
         ''' Retorna un objeto Media con la informacion del medio con el ID dado '''
-        
-        if mediaId not in self._media_.keys():
-            raise IceFlix.WrongID
 
         conn = sqlite3.connect("media.db")
         c = conn.cursor()
@@ -32,18 +17,22 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         query = c.fetchall()
 
+        if not query and mediaId not in self._media_.keys():
+            raise IceFlix.WrongID
+
         provider = self._media_.get(mediaId)
-        if not provider:
+        try:
+            provider.ice_ping()
+        except IceFlix.CommunicationError:
             raise IceFlix.TemporaryUnavailable
 
-        id = query.pop(0)
         name = query.pop(0)
         tags = []
         while(query):
             tags.append(query.pop(0))
 
-        info = MediaInfo(name, tags)
-        media_obj = Media(mediaId, provider, info)
+        info = IceFlix.MediaInfo(name, tags)
+        media_obj = IceFlix.Media(mediaId, provider, info)
         conn.close()
         return media_obj
 
@@ -144,8 +133,8 @@ class MediaCatalogI(IceFlix.MediaCatalog):
     def updateMedia(self, id, initialName, provider, current=None):
         ''' Añade o actualiza el medio del ID dado '''
 
-        info = MediaInfo(initialName, "tag")
-        nuevo = Media(id, provider, info)
+        info = IceFlix.MediaInfo(initialName, "tag")
+        nuevo = IceFlix.Media(id, provider, info)
         self._media_.update({id: nuevo})
 
     def check_admin(self, admin_token: str):

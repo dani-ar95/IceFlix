@@ -1,4 +1,4 @@
-from IceFlix.Iceflix_ice import StreamController
+from IceFlix.Iceflix_ice import StreamController, TemporaryUnavailable, Unauthorized
 import os
 import hashlib
 import glob
@@ -11,7 +11,7 @@ Ice.loadSlice("IceFlix.ice")
 
 class StreamProviderI(IceFlix.StreamProvider):
 
-    def __init__(self, mainProxy):
+    def __init__(self, current=None):
         root_folder = "resources"
         logging.debug("Sirviendo el directorio: %s", root_folder)
         candidates = glob.glob(os.path.join(root_folder, '*'), recursive=True)
@@ -19,15 +19,21 @@ class StreamProviderI(IceFlix.StreamProvider):
         self._root_ = root_folder
         self._idfiles_ = set()
 
+        try:
+            catalog_prx = StreamProviderServer.main_connection.getCatalog()
+        except IceFlix.TemporaryUnavailable:
+            raise IceFlix.TemporaryUnavailable
+
         # Completar lista de id
         for filename in candidates:
             archivo = filename[prefix_len:]
             with open(archivo, "rb") as f:
                 bytes = f.read()
-                readable_hash = hashlib.sha256(bytes).hexdigest()
-                self._idfiles_.add(readable_hash)
+                id_hash = hashlib.sha256(bytes).hexdigest()
+                self._idfiles_.add(id_hash)
 
-        # conectarse al main
+            catalog_prx.updateMedia(id, filename, self)
+                        
 
     def getStream(self, id: str, userToken, current=None):
         ''' Factoría de objetos StreamController '''
@@ -68,16 +74,35 @@ class StreamProviderI(IceFlix.StreamProvider):
         # Throws Unauthorized, UploadError
         # Retorna String
         try:
+            self.check_admin(adminToken)
+        except Iceflix.TemporaryUnavailable as e, IceFlix.Unauthorized as e:
+                raise e
+
+        with open(fileName, "rb") as f:
+            bytes = f.read()
+            id_hash = hashlib.sha256(bytes).hexdigest()
+            self._idfiles_.add(id_hash)
+
+        try:
             catalog_prx = StreamProviderServer.main_connection.getCatalog()
         except IceFlix.TemporaryUnavailable:
             raise IceFlix.TemporaryUnavailable
         else:
-            catalog_prx.updateMedia(id, fileName, uploader)
+            catalog_prx.updateMedia(id_hash, fileName, self)
 
     def deleteMedia(self, id: str, adminToken: str, current=None):
         # Código método deleteMedia
         # Throws Unauthorized, WrongMediaID
-        pass
+        try:
+            self.check_admin(adminToken)
+        except Iceflix.TemporaryUnavailable as e, IceFlix.Unauthorized as e:
+                raise e        
+
+        if id not in self._idfiles_:
+            raise IceFlix.WrongMediaID
+        else:
+            self._idfiles_.remove(id)
+            # Avisar al catalog de que no hay medio?
 
     def check_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''
