@@ -15,7 +15,7 @@ class StreamControllerI(IceFlix.StreamController):
 
     def getSDP(self, userToken, port: int, current=None):
         print(f"Mensaje: {userToken}, comunicado por puerto: {port}")
-        print("Token: tuputamadre")
+        print("Token: ")
 
     def stop(self):
         pass
