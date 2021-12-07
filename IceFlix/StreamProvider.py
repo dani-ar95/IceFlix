@@ -1,4 +1,5 @@
 from IceFlix.Iceflix_ice import StreamController, TemporaryUnavailable, Unauthorized
+from StreamController import StreamControllerI
 import os
 import hashlib
 import glob
@@ -59,7 +60,7 @@ class StreamProviderI(IceFlix.StreamProvider):
 
                 else:
                     name = medio_info.info.name
-                    servant = StreamController(name)
+                    servant = StreamControllerI(name)
                     proxy = current.adapter.addWithUUID(servant)
                     return StreamController.RemoteFilePrx.checkedCast(proxy)
 
