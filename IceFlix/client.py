@@ -53,12 +53,10 @@ class Client(Ice.Application):
                     try:
                         catalog_proxy = main_connection.getCatalog()
                     except IceFlix.TemporaryUnavailable:
-<<<<<<< Updated upstream
                         print("Servicio de catálogo no disponible") 
                     else:
                         catalog_connection = IceFlix.MainPrx.checkedCast(catalog_proxy)
                         
-=======
                         print("Servicio de catálogo no disponible")
                     else:
                         print("Catálogo conectado")
@@ -66,7 +64,6 @@ class Client(Ice.Application):
                         # Dar opcion de nombre completo o no
                         print(catalog_proxy.getTitlesByName("Up", False))
 
->>>>>>> Stashed changes
                 elif keyboard == "exit":
                     sys.exit(0)
                 elif keyboard == "login":

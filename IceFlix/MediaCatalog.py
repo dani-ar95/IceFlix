@@ -75,11 +75,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         try:
             self.check_user(userToken)
-<<<<<<< Updated upstream
-        except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable):
-=======
         except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable) as e:
->>>>>>> Stashed changes
             raise IceFlix.Unauthorized
         
         else:
