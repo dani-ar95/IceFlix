@@ -1,7 +1,5 @@
 #!/usr/bin/python3
-
 import sys, Ice
-from IceFlix.MediaUploader import MediaUploaderI
 Ice.loadSlice("iceflix.ice")
 import IceFlix
 import sqlite3
@@ -77,7 +75,11 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         try:
             self.check_user(userToken)
+<<<<<<< Updated upstream
         except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable):
+=======
+        except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable) as e:
+>>>>>>> Stashed changes
             raise IceFlix.Unauthorized
         
         else:
@@ -169,7 +171,6 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 class MediaCatalogServer(Ice.Application):
     def run(self, argv):
         #sleep(1)
-        self.shutdownOnInterrupt()
         main_service_proxy = self.communicator().stringToProxy(argv[1])
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
         if not main_connection:
@@ -178,15 +179,16 @@ class MediaCatalogServer(Ice.Application):
         broker = self.communicator()
         servant = MediaCatalogI()
         
-        adapter = broker.createObjectAdapterWithEndpoints('MediaCatalogAdapter','tcp -p 9092')
+        adapter = broker.createObjectAdapterWithEndpoints('MediaCatalogAdapter', 'tcp -p 9092')
         media_catalog_proxy = adapter.add(servant, broker.stringToIdentity('MediaCatalog'))
-        
+
         adapter.activate()
-        print(type(media_catalog_proxy))
+
         main_connection.register(media_catalog_proxy)
-        
+
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
         
-
-sys.exit(MediaCatalogServer().main(sys.argv))
+if __name__ == '__main__':
+    #MediaCatalogServer().run(sys.argv)
+    sys.exit(MediaCatalogServer().main(sys.argv))

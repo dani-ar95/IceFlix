@@ -55,7 +55,7 @@ class StreamProviderI(IceFlix.StreamProvider):
             else:
                 try:
                     medio_info = catalog_prx.getTitle(id)
-                except IceFlix.WrongMediaId as e, IceFlix.TemporaryUnavailable as e:
+                except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
                     raise e
 
                 else:
@@ -76,8 +76,8 @@ class StreamProviderI(IceFlix.StreamProvider):
         # Retorna String
         try:
             self.check_admin(adminToken)
-        except Iceflix.TemporaryUnavailable as e, IceFlix.Unauthorized as e:
-                raise e
+        except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
+                raise IceFlix.Unauthorized
 
         with open(fileName, "rb") as f:
             bytes = f.read()
@@ -96,8 +96,8 @@ class StreamProviderI(IceFlix.StreamProvider):
         # Throws Unauthorized, WrongMediaID
         try:
             self.check_admin(adminToken)
-        except Iceflix.TemporaryUnavailable as e, IceFlix.Unauthorized as e:
-                raise e        
+        except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
+                raise IceFlix.Unauthorized
 
         if id not in self._idfiles_:
             raise IceFlix.WrongMediaID

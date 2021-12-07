@@ -11,72 +11,85 @@ import IceFlix
 class AuthenticatorI(IceFlix.Authenticator):
 
     def refreshAuthorization(self, user, passwordHash, current=None):
-        # Código
-        obj = json.load(open("users.json"))
+        ''' Actualiza el token de un usuario registrado '''
 
-        for i in xrange(len(obj)):
-            if obj[i]["user"] == user and obj[i]["password"] == passwordHash:
+        with open("users.json", "r") as f:
+            obj = json.load(f)
+
+        for i in obj["users"]:
+            if i["user"] == user and i["password"] == passwordHash:
+                print("Usuario autenticado")
                 new_token = secrets.token_urlsafe(40)
-                obj[i]["user_token"] = new_token
+                i["user_token"] = new_token
+
+                with open('users.json', 'w') as file:
+                    json.dump(obj, file, indent=2)
+
+                #new = {"user": {"user": i["user"], "password": i["password"], "user_token": new_token}}
                 return new_token
-   
+
         raise IceFlix.Unauthorized
-        # Throws Unauthorized
-        # Retorna String
-        pass
 
     def isAuthorized(self, userToken, current=None):
-        # Código
-        obj = json.load(open("users.json"))
+        ''' Permite conocer si un token está actualizado en el sistema '''
 
-        for i in xrange(len(obj)):
-            if obj[i]["user_token"] == userToken:
+        with open("users.json", "r") as f:
+            obj = json.load(f)
+
+        for i in obj["users"]:
+            if i["user_token"] == userToken:
                 return True
 
         raise IceFlix.Unauthorized
-        # Retorna boolean
 
     def whois(self, userToken, current=None):
-        # Código
-        obj = json.load(open("users.json"))
+        ''' Permite conocer el usuario asociado a un token'''
 
-        for i in xrange(len(obj)):
-            if obj[i]["user_token"] == userToken:
-                return obj[i]["user"]
+        with open("users.json", "r") as f:
+            obj = json.load(f)
 
-        raise IceFlix.Unauthorized      
-        # Throws Unauthorized
-        # Retorna string
+        for i in obj["users"]:
+            if i["user_token"] == userToken:
+                return i["user"]
+
+        raise IceFlix.Unauthorized
+
 
     def addUser(self, user, passwordHash, adminToken, current=None):
-        # Comprobar admin
-        # Comunica con isAdmin()::Main para comprobar que es admin
-            #Si no es admin lanza excepción
-            #raise IceFlix.Unauthorized    
-        # raise Unauthorized
-        # Añadir usuario
-        with open ("users.json", "r+") as fp:
-            data = json.load(fp)
-            data["user"] = user
-            data["password"] = passwordHash
-            data["user_token"] = secrets.token_urlsafe(40)
-            fp.seek(0)
-            json.dump(data, fp, indent=4)
-            fp.truncate()
+        ''' Perimte al administrador añadir usuarios al sistema '''
+        
+        try:
+            self.check_admin(adminToken)
+        except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
+            raise IceFlix.Unauthorized
+
+        with open("users.json", "r") as f:
+            obj = json.load(f)
+
+        obj["users"].append({"user": user, "password": passwordHash, "user_token": "blank"})
+
+        with open('users.json', 'w') as file:
+            json.dump(obj, file, indent=2)
+
+        #new = {"user": {"user": i["user"], "password": i["password"], "user_token": new_token}}
+  
             
 
     def removeUser(self, user, adminToken, current=None):
-        # Comprobar admin
+        ''' Permite al administrador elminar usuarios del sistema '''
 
-        # raise Unautorized
-        # Eliminar usuario
-        obj = json.load(open("users.json"))
+        try:
+            self.check_admin(adminToken)
+        except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
+            raise IceFlix.Unauthorized
 
-        for i in xrange(len(obj)):
-            if obj[i]["user"] == user:
+        with open("users.json", "r") as f:
+            obj = json.load(f)
+
+        for i in obj["users"]:
+            if i["user"] == user:
                 obj.pop(i)
                 break
-        # Throws Unauthorized
 
             
     def check_admin(self, admin_token: str):

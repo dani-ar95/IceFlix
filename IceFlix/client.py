@@ -33,7 +33,8 @@ class Client(Ice.Application):
             sys.exit(0)
 
 
-        auth_connection = IceFlix.MainPrx.checkedCast(authenticator_proxy)
+        #auth_connection = IceFlix.MainPrx.checkedCast(authenticator_proxy)
+        auth_connection = authenticator_proxy
         try:    
             auth_token = auth_connection.refreshAuthorization(user, hash_password)
         except IceFlix.Unauthorized:
@@ -52,10 +53,20 @@ class Client(Ice.Application):
                     try:
                         catalog_proxy = main_connection.getCatalog()
                     except IceFlix.TemporaryUnavailable:
+<<<<<<< Updated upstream
                         print("Servicio de catálogo no disponible") 
                     else:
                         catalog_connection = IceFlix.MainPrx.checkedCast(catalog_proxy)
                         
+=======
+                        print("Servicio de catálogo no disponible")
+                    else:
+                        print("Catálogo conectado")
+                        print("SOlicitas info porque si")
+                        # Dar opcion de nombre completo o no
+                        print(catalog_proxy.getTitlesByName("Up", False))
+
+>>>>>>> Stashed changes
                 elif keyboard == "exit":
                     sys.exit(0)
                 elif keyboard == "login":
