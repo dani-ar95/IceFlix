@@ -4,7 +4,7 @@ import logging
 import IceFlix
 import sys
 import Ice
-Ice.loadSlice("IceFlix.ice")
+Ice.loadSlice("./iceflix.ice")
 
 
 class StreamControllerI(IceFlix.StreamController):

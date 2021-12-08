@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 import sys, Ice
-Ice.loadSlice("iceflix.ice")
+Ice.loadSlice("./iceflix.ice")
 import IceFlix
 import sqlite3
 
