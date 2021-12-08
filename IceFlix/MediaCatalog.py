@@ -5,6 +5,9 @@ import IceFlix
 import sqlite3
 
 class MediaCatalogI(IceFlix.MediaCatalog):
+    
+    def __init__(self):
+        self._media_ = dict()
 
     def getTile(self, mediaId: str, current=None):
         ''' Retorna un objeto Media con la informacion del medio con el ID dado '''
@@ -21,12 +24,14 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             raise IceFlix.WrongMediaId
 
         # Buscar provider en temporal
-        provider = self._media_.get(mediaId)
+        provider = self._media_.get(mediaId).StreamProvider
         if provider:
             try:
                 provider.ice_ping()
-            except IceFlix.CommunicationError:
+            except Ice.ConnectionRefusedException:
                 raise IceFlix.TemporaryUnavailable
+            else:
+                return self._media_.get(mediaId)
         else:
             # Buscar provider en bbdd
             try:
@@ -49,18 +54,24 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         conn = sqlite3.connect("./media.db")
         c = conn.cursor()
+        id_list = []
 
         if exact:
             c.execute("SELECT id FROM media WHERE name='{}'".format(name))
         else:
             c.execute("SELECT id FROM media WHERE LOWER(name) like LOWER('%{}%')".format(name))
 
+        for media in self._media_.values():
+            print(type(media))
+            if name in media.info.name:
+                id_list.append(media.mediaId)
+
         list_returned = c.fetchall()
         conn.close()
-        id_list = []
-        for id in list_returned[0]:
-            id_list.append(id)
-        
+
+        #for id in list_returned[0]:
+         #   id_list.append(id)
+
         return id_list
 
     def getTilesByTags(self, tags: list, includeAllTags: bool, userToken, current=None):
@@ -186,8 +197,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             except IceFlix.Unauthorized as e:
                 raise e
 
-    def __init__(self):
-        self._media_ = dict()
+
 
 class MediaCatalogServer(Ice.Application):
     def run(self, argv):

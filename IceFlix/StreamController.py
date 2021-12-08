@@ -20,16 +20,9 @@ class StreamControllerI(IceFlix.StreamController):
             print("Archivo no encontrado: " + file_path)
 
     def getSDP(self, userToken, port: int, current=None):
-        # Comprobar user autenticado
-
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect(("localhost", port))
-        file_size = Path(self._filename_).stat().st_size
-        sent = 0
-
-        while (sent < file_size):
-            s.send(self._fd_.read(512))
-            sent + 512
+        #Comprobar userToken
+        path = self._filename_
+        return str(path) + "::127.0.0.1::" + str(port)
 
     def stop(self):
         pass

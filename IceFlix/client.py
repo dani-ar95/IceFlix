@@ -1,11 +1,13 @@
 #!/usr/bin/python3
 
-from os import system
+from os import system, terminal_size
 import Ice
 import sys
 from time import sleep
 import hashlib
 import getpass
+import socket
+import iceflixrtsp
 
 Ice.loadSlice("./iceflix.ice")
 import IceFlix
@@ -31,7 +33,7 @@ class Client(Ice.Application):
             authenticator_proxy = main_connection.getAuthenticator()
         except IceFlix.TemporaryUnavailable:
             print("Servicio de autenticación no disponible.")
-            sys.exit(0)
+            sys.exit(1)
 
         try:    
             auth_token = authenticator_proxy.refreshAuthorization(user, hash_password)
@@ -41,20 +43,26 @@ class Client(Ice.Application):
             system("clear")
             self.not_logged_prompt(main_connection)
             
+        try:
+            catalog_proxy = main_connection.getCatalog()
+        except IceFlix.TemporaryUnavailable:
+            print("Servicio de catálogo no disponible")
+            sys.exit(1)
+            
         while 1:
-            keyboard = input(user + "> ")
+            keyboard = input("MainService@" + user + "> ")
             if keyboard == "catalog_service":
-                self.catalog_service(main_connection)
+                self.catalog_service(user, auth_token, catalog_proxy)
                 
             elif keyboard == "logout":
                 print("Cerrando sesión...")
                 system("clear")
                 self.not_logged_prompt(main_connection)
-            pass
+            
             
     def not_logged_prompt(self, main_connection):
         while 1:
-                keyboard = input("Usuario anonimo> ")
+                keyboard = input("MainService@Usuario_anonimo> ")
                 if keyboard == "catalog_service":
                     self.catalog_service()
                 elif keyboard == "exit":
@@ -62,48 +70,149 @@ class Client(Ice.Application):
                 elif keyboard == "login":
                     self.logged_prompt(main_connection)
         
-    def catalog_service(self, main_connection):
+        
+    def catalog_service(self, user, auth_token, catalog_connection):
         ''' Gestiona el comando "catalog_service" '''
         #MENU PARA ELEGIR LAS DISTINTAS BUSQUEDAS
-        try:
-                
-        #1. namesearching
-            #main.connection.getcatalog()
-    
-    def name_searching(self, main_connection):
-        ''' Gestiona el comando "name_searching" '''
-        try:
-            catalog_proxy = main_connection.getCatalog()
-        except IceFlix.TemporaryUnavailable:
-            print("Servicio de catálogo no disponible") 
-        else:
-            print("1. Buscar por nombre competo")
-            print("2. Buscar por parte del nombre")
-            option = input("Opción (1/2): ")
-            while option.isdigit() == False or int(option) < 1 or int(option) > 2:
-                option = input("Inserta una opción válida: ")
-                
-            media_list = []
+        #try:
+        while 1:
+            system("clear")
+            
+            print("1. Búsqueda por nombre")
+            print("2. Búsqueda por etiquetas")
+            print("3. Añadir etiquetas")
+            print("4. Eliminar etiqutetas")
+            print("5. Salir")
+            
+            option = input(user + "> ")
+            while option.isdigit() == False or int(option) < 1 or int(option) > 4:
+                    option = input("Inserta una opción válida: ")
             
             if option == "1":
-                title = input("\nInsertar titulo: ")
-                id_list = catalog_proxy.getTilesByName(title, True)
-                for id in id_list:
-                    try:
-                        media_list.append(catalog_proxy.getTile(id))
-                    except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable):
-                        continue
-                    
+                media_list = self.name_searching(catalog_connection)
+                if media_list == None:
+                    return 
+                
             elif option == "2":
-                title = input("\nInsertar titulo: ")
-                id_list = catalog_proxy.getTilesByName(title, False)
-                for id in id_list:
-                    try:
-                        media_list.append(catalog_proxy.getTile(id))
-                    except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable):
-                        continue
-                    
-            return media_list
+                media_list = self.tag_searching(auth_token, catalog_connection)
+                if media_list == None:
+                    return
+                
+            elif option == "3":
+                pass
+            elif option == "5":
+                return
+            
+            counter = 0
+            print("Media encontrado:\n")
+            for media in media_list:
+                counter += 1
+                print(str(counter) + media.info.name)
+            
+            selecting_media = input("Selecciona un media (1-" + str(counter) + "), o deja en blanco para realizar otra búsqueda: ")
+            while selecting_media.isdigit() == False or int(selecting_media) < 1 or int(selecting_media) > counter or selecting_media != "":
+                selecting_media = input("Inserta una opción válida: ")
+        
+            if not selecting_media:
+                return
+            else: 
+                self.stream_provider(media_list[int(selecting_media) - 1])
+            
+            
+    def stream_provider(self, media, auth_token):
+        #media.provider = IceFlix.StreamProviderPrx.checkedCast(media.provider)
+
+        try:
+            stream_controller_proxy = media.provider.getStream(media.id, auth_token)
+        except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:  
+            print(e)
+            return
+        
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind(("", 10000))
+        try:
+            config = stream_controller_proxy.getSDP(auth_token, 10000)
+        except IceFlix.Unauthorized:
+            print("Usuario no autorizado")
+            return
+        lista = config.split("::")
+        emitter = iceflixrtsp.RTSPEmitter(lista[0], lista[1], lista[2])
+        emitter.start()
+        player = iceflixrtsp.RTSPPlayer()
+        player.play(emitter.playback_uri)
+
+        # Stream for 10 seconds
+        sleep(10.0)
+
+        # Stop player and streamer
+        player.stop()
+        emitter.stop()
+
+        
+    def tag_searching(self, auth_token, catalog_connection):
+        media_list = []
+        tag_list = []
+        
+        print("Inserta sus etiquetas. Para salir, dejar en blanco:")
+        while 1:
+            tag = input("Etiqueta: ")
+            if tag == "":
+                break
+            tag_list.append(tag)    
+        
+        if not tag_list:
+            return
+        
+        option = input("¿Quieres que tu búsqueda coincida con todas tus etiquetas? (s/n): ")
+        while option != "s" and option != "n":
+            option = input("Inserta una opción válida: ")
+
+        all_tags = None
+        if option == "s":
+            all_tags = True
+        elif option == "n":
+            all_tags = False
+            
+        try:
+            id_list = catalog_connection.searchByTags(tag_list, all_tags, auth_token)
+        except IceFlix.Unauthorized:
+            print("Usuario no autorizado.")
+            return
+        
+        for id in id_list:
+            try:
+                media_list.append(catalog_connection.getTile(id))
+            except(IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
+                print(e)
+                
+        return media_list
+    
+    def name_searching(self, catalog_connection):
+        media_list = []
+        full_title = False
+        
+        print("1. Buscar por nombre completo")
+        print("2. Buscar por parte del nombre")
+        option = input("Opción (1/2): ")
+        while option.isdigit() == False or int(option) < 1 or int(option) > 2:
+            option = input("Inserta una opción válida: ")
+            
+        if option == "1":
+            full_title = True
+        elif option == "2":
+            full_title = False
+        
+        title = input("\nInsertar titulo: ")
+        
+        id_list = catalog_connection.getTilesByName(title, full_title)
+
+        for id in id_list:
+            try:
+                media_list.append(catalog_connection.getTile(id))
+            except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
+                print(e)
+                        
+        return media_list
 
     def run(self, argv):
         broker = self.communicator()
@@ -126,8 +235,8 @@ class Client(Ice.Application):
 
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
             
-        login = input("Quieres logearte? (y/n): ")
-        if login == "y":
+        login = input("Quieres logearte? (s/n): ")
+        if login == "s":
             self.logged_prompt(main_connection)
             
         elif login == "n":

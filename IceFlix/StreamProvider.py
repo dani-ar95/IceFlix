@@ -1,12 +1,14 @@
+#!/usr/bin/python3
+
 from StreamController import StreamControllerI
 import os
 import hashlib
 import glob
 import logging
-import IceFlix
 import sys
 import Ice
 Ice.loadSlice("./iceflix.ice")
+import IceFlix
 
 
 class StreamProviderI(IceFlix.StreamProvider):
@@ -82,27 +84,17 @@ class StreamProviderI(IceFlix.StreamProvider):
         ''' Comprueba si un token es Administrador '''
 
         try:
-            auth_prx = StreamProviderServer.main_connection.getAuthenticator()
-        except IceFlix.TemporaryUnavailable:
-            raise IceFlix.TemporaryUnavailable
-        else:
-            if auth_prx.isAdmin(admin_token):
-                return True
-            else:
-                raise IceFlix.Unauthorized
+            user = self._main_prx_.isAdmin(admin_token)
+        except IceFlix.Unauthorized as e:
+            raise e
 
     def check_user(self, user_token: str):
         ''' Comprueba que la sesion del usuario es la actual '''
 
         try:
-            auth_prx = StreamProviderServer.main_connection.getAuthenticator()
-        except IceFlix.TemporaryUnavailable:
-            raise IceFlix.TemporaryUnavailable
-        else:
-            try:
-                user = auth_prx.isAuthorized(user_token)
-            except IceFlix.Unauthorized as e:
-                raise e
+            user = self._authenticator_prx_.isAuthorized(user_token)
+        except IceFlix.Unauthorized as e:
+            raise e
 
 class StreamProviderServer(Ice.Application):
     def run(self, argv):
@@ -116,6 +108,11 @@ class StreamProviderServer(Ice.Application):
         broker = self.communicator()
         try:
             catalog_prx = main_connection.getCatalog()
+        except IceFlix.TemporaryUnavailable:
+            raise IceFlix.TemporaryUnavailable
+        
+        try:
+            authenticator_prx = main_connection.getAuthenticator()
         except IceFlix.TemporaryUnavailable:
             raise IceFlix.TemporaryUnavailable
 
@@ -152,6 +149,8 @@ class StreamProviderServer(Ice.Application):
         servant._proxy_ = stream_provider_proxy
 
         servant._catalog_prx_ = catalog_prx
+        servant._authenticator_prx_ = authenticator_prx
+        servant._main_prx_ = main_connection
 
         main_connection.register(stream_provider_proxy)
 
