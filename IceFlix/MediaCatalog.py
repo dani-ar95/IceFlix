@@ -1,10 +1,15 @@
 #!/usr/bin/python3
-import sys, Ice
-Ice.loadSlice("./iceflix.ice")
-import IceFlix
 import sqlite3
+import IceFlix
+import sys
+import Ice
+Ice.loadSlice("./iceflix.ice")
+
 
 class MediaCatalogI(IceFlix.MediaCatalog):
+
+    def __init__(self):
+        self._media_ = dict()
 
     def getTile(self, mediaId: str, current=None):
         ''' Retorna un objeto Media con la informacion del medio con el ID dado '''
@@ -32,7 +37,8 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         else:
             # Buscar provider en bbdd
             try:
-                provider = current.adapter.getCommunicator().stringToProxy(query[0][3])
+                provider = current.adapter.getCommunicator(
+                ).stringToProxy(query[0][3])
             except Ice.NoEndpointException:
                 raise IceFlix.TemporaryUnavailable
 
@@ -56,10 +62,11 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         if exact:
             c.execute("SELECT id FROM media WHERE name='{}'".format(name))
         else:
-            c.execute("SELECT id FROM media WHERE LOWER(name) like LOWER('%{}%')".format(name))
+            c.execute(
+                "SELECT id FROM media WHERE LOWER(name) like LOWER('%{}%')".format(name))
 
-        for media in self.media.values():
-            if media.info.name.contains(media):
+        for media in self._media_.values():
+            if name in self._media_.values().name:
                 id_list.append(media.id)
 
         list_returned = c.fetchall()
@@ -83,13 +90,14 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             c = conn.cursor()
             ids = []
             if includeAllTags:
-                ids = c.execute("SELECT id FROM media WHERE tags = {}".format(tags))
+                ids = c.execute(
+                    "SELECT id FROM media WHERE tags = {}".format(tags))
             else:
-                ids = c.execute("SELECT id FROM media WHERE tags IN {}".format(tags))
+                ids = c.execute(
+                    "SELECT id FROM media WHERE tags IN {}".format(tags))
 
             conn.close()
             return ids
-
 
     def addTags(self, mediaId: str, tags: list, userToken, current=None):
         ''' Añade las tags dadas al medio con el ID dado '''
@@ -98,7 +106,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             self.check_user(userToken)
         except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable) as e:
             raise IceFlix.Unauthorized
-        
+
         else:
             if mediaId not in self._media_.keys():
                 raise IceFlix.WrongMediaId
@@ -106,11 +114,12 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             conn = sqlite3.connect("media.db")
             c = conn.cursor()
 
-            current_tags = c.execute("SELECT tags FROM media WHERE id = ''".format(id))
-            c.execute("UPDATE media SET tags = '{}' WHERE id = '{}'".format(tags.append(current_tags), mediaId))
+            current_tags = c.execute(
+                "SELECT tags FROM media WHERE id = ''".format(id))
+            c.execute("UPDATE media SET tags = '{}' WHERE id = '{}'".format(
+                tags.append(current_tags), mediaId))
             conn.commit()
             conn.close()
-
 
     def removeTags(self, mediaId: str, tags: list,  userToken, current=None):
         ''' Elimina las tags dadas del medio con el ID dado '''
@@ -119,7 +128,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             self.check_admin(userToken)
         except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable) as e:
             raise IceFlix.Unauthorized
-        else:        
+        else:
 
             if mediaId not in self._media_.keys():
                 raise IceFlix.WrongMediaId
@@ -127,9 +136,11 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             conn = sqlite3.connect("media.db")
             c = conn.cursor()
 
-            current_tags = c.execute("SELECT tags FROM media WHERE id = ''".format(id))
+            current_tags = c.execute(
+                "SELECT tags FROM media WHERE id = ''".format(id))
             new_tags = [x for x in current_tags if x not in tags]
-            c.execute("UPDATE media SET tags = '{}' WHERE id = '{}'".format(tags.append(new_tags), mediaId))
+            c.execute("UPDATE media SET tags = '{}' WHERE id = '{}'".format(
+                tags.append(new_tags), mediaId))
             conn.commit()
             conn.close()
 
@@ -150,7 +161,8 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             if in_ddbb:
                 conn = sqlite3.connect("media.db")
                 c = conn.cursor()
-                c.execute("UPDATE media SET name = '{}' WHERE id = '{}'".format(name, id))
+                c.execute(
+                    "UPDATE media SET name = '{}' WHERE id = '{}'".format(name, id))
                 conn.commit()
                 conn.close()
 
@@ -193,12 +205,10 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             except IceFlix.Unauthorized as e:
                 raise e
 
-    def __init__(self):
-        self._media_ = dict()
 
 class MediaCatalogServer(Ice.Application):
     def run(self, argv):
-        #sleep(1)
+        # sleep(1)
         main_service_proxy = self.communicator().stringToProxy(argv[1])
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
         if not main_connection:
@@ -206,9 +216,11 @@ class MediaCatalogServer(Ice.Application):
 
         broker = self.communicator()
         servant = MediaCatalogI()
-        
-        adapter = broker.createObjectAdapterWithEndpoints('MediaCatalogAdapter', 'tcp -p 9092')
-        media_catalog_proxy = adapter.add(servant, broker.stringToIdentity('MediaCatalog'))
+
+        adapter = broker.createObjectAdapterWithEndpoints(
+            'MediaCatalogAdapter', 'tcp -p 9092')
+        media_catalog_proxy = adapter.add(
+            servant, broker.stringToIdentity('MediaCatalog'))
 
         adapter.activate()
 
@@ -216,7 +228,8 @@ class MediaCatalogServer(Ice.Application):
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
-        
+
+
 if __name__ == '__main__':
-    #MediaCatalogServer().run(sys.argv)
+    # MediaCatalogServer().run(sys.argv)
     sys.exit(MediaCatalogServer().main(sys.argv))
