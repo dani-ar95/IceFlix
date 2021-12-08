@@ -1,4 +1,4 @@
-
+from StreamController import StreamControllerI
 import os
 import hashlib
 import glob
@@ -11,33 +11,8 @@ Ice.loadSlice("IceFlix.ice")
 
 class StreamProviderI(IceFlix.StreamProvider):
 
-    def __init__(self, current=None):
-        root_folder = "media_resources"
-        logging.debug("Sirviendo el directorio: %s", root_folder)
-        candidates = glob.glob(os.path.join(root_folder, '*'), recursive=True)
-        prefix_len = len(root_folder) + 1
-        self._root_ = root_folder
-        self._idfiles_ = set()
-
-        try:
-            catalog_prx = StreamProviderServer.main_connection.getCatalog()
-        except IceFlix.TemporaryUnavailable:
-            raise IceFlix.TemporaryUnavailable
-
-        # stringfield del proxy
-        stringfield = ice_ToString(self._proxy_)
-
-        # Completar lista de id
-        for filename in candidates:
-            archivo = filename[prefix_len:]
-            print(archivo)
-            with open(archivo, "rb") as f:
-                bytes = f.read()
-                id_hash = hashlib.sha256(bytes).hexdigest()
-                self._idfiles_.add(id_hash)
-
-            catalog_prx.updateMedia(id, filename, stringfield)
-                        
+    def __init__(self):
+        print("hola")
 
     def getStream(self, mediaId: str, userToken, current=None):
         ''' Factoría de objetos StreamController '''
@@ -47,31 +22,26 @@ class StreamProviderI(IceFlix.StreamProvider):
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
 
-        if id not in self._idfiles_:
-            raise IceFlix.WrongMediaID
+        if id not in StreamProviderServer._idfiles_:
+            raise IceFlix.WrongMediaId
         else:
 
             try:
-                catalog_prx = StreamProviderServer.main_connection.getCatalog()
-            except IceFlix.TemporaryUnavailable:
-                raise IceFlix.TemporaryUnavailable
-            else:
-                try:
-                    medio_info = catalog_prx.getTitle(mediaId)
-                except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
-                    raise e
+                medio_info = self._catalog_prx_.getTitle(mediaId)
+            except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
+                raise e
 
-                else:
-                    name = medio_info.info.name
-                    servant = StreamControllerI(name)
-                    proxy = current.adapter.addWithUUID(servant)
-                    return StreamController.RemoteFilePrx.checkedCast(proxy)
+            else:
+                name = medio_info.info.name
+                servant = StreamControllerI(name)
+                proxy = current.adapter.addWithUUID(servant)
+                return IceFlix.StreamControllerPrx.checkedCast(proxy)
 
 
     def isAvailable(self, mediaId: str, current=None):
         ''' Confirma si existe un medio con ese id'''
 
-        return mediaId in self._idfiles_
+        return mediaId in StreamProviderServer._idfiles_
 
     def uploadMedia(self, fileName: str, uploader, adminToken: str, current=None):
         # Código del método uploadMedia
@@ -85,7 +55,7 @@ class StreamProviderI(IceFlix.StreamProvider):
         with open(fileName, "rb") as f:
             bytes = f.read()
             id_hash = hashlib.sha256(bytes).hexdigest()
-            self._idfiles_.add(id_hash)
+            StreamProviderServer._idfiles_.add(id_hash)
 
         try:
             catalog_prx = StreamProviderServer.main_connection.getCatalog()
@@ -144,6 +114,11 @@ class StreamProviderServer(Ice.Application):
             raise RuntimeError("Invalid proxy")
 
         broker = self.communicator()
+        try:
+            catalog_prx = main_connection.getCatalog()
+        except IceFlix.TemporaryUnavailable:
+            raise IceFlix.TemporaryUnavailable
+
         servant = StreamProviderI()
 
         adapter = broker.createObjectAdapterWithEndpoints(
@@ -151,9 +126,32 @@ class StreamProviderServer(Ice.Application):
         stream_provider_proxy = adapter.add(
             servant, broker.stringToIdentity('StreamProvider'))
 
+        #---------------------------------------------------------
+        root_folder = "media_resources"
+        print(f"Sirviendo el directorio: {root_folder}")
+        candidates = glob.glob(os.path.join(root_folder, '*'), recursive=True)
+        prefix_len = len(root_folder) + 1
+        self._root_ = root_folder
+        self._idfiles_ = set()
+
+        # stringfield del proxy
+        proxy = IceFlix.StreamProviderPrx.checkedCast(stream_provider_proxy)
+
+        # Completar lista de id
+        for filename in candidates:
+            with open("./"+str(filename), "rb") as f:
+                bytes = f.read()
+                id_hash = hashlib.sha256(bytes).hexdigest()
+                self._idfiles_.add(id_hash)
+
+            catalog_prx.updateMedia(id_hash, filename, proxy)
+
+        #---------------------------------------------------------
         adapter.activate()
 
         servant._proxy_ = stream_provider_proxy
+
+        servant._catalog_prx_ = catalog_prx
 
         main_connection.register(stream_provider_proxy)
 

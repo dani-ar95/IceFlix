@@ -154,7 +154,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
     def updateMedia(self, id, initialName, provider, current=None):
         ''' Añade o actualiza el medio del ID dado '''
 
-        info = IceFlix.MediaInfo(initialName, "tag")
+        info = IceFlix.MediaInfo(initialName, ["tag"])
         nuevo = IceFlix.Media(id, provider, info)
         self._media_.update({id: nuevo})
         print("Añadido medio:")
@@ -186,7 +186,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             except IceFlix.Unauthorized as e:
                 raise e
 
-    def __init__(self, current=None):
+    def __init__(self):
         self._media_ = dict()
 
 class MediaCatalogServer(Ice.Application):

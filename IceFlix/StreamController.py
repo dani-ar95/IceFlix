@@ -4,19 +4,33 @@ import logging
 import IceFlix
 import sys
 import Ice
+import socket
+#import path
+
 Ice.loadSlice("IceFlix.ice")
 
 
 class StreamControllerI(IceFlix.StreamController):
 
     def __init__(self, file_path, current=None):
-        root_folder = "resources"
-        self._file_ = file_path
-        #logging.debug("Sirviendo el directorio: %s", root_folder)
+        self._filename_ = file_path
+        try:
+            self._fd_ = open(file_path, "rb")
+        except FileNotFoundError:
+            print("Archivo no encontrado: " + file_path)
 
     def getSDP(self, userToken, port: int, current=None):
-        print(f"Mensaje: {userToken}, comunicado por puerto: {port}")
-        print("Token: ")
+        # Comprobar user autenticado
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect(("localhost", port))
+        #file_size = Path(self._filename_).stat().st_size
+        file_size = 8
+        sent = 0
+
+        while (sent < file_size):
+            s.send(self._fd_.read(512))
+            sent + 512
 
     def stop(self):
         pass
@@ -32,7 +46,7 @@ class StreamControllerServer(Ice.Application):
             raise RuntimeError("Invalid proxy")
 
         broker = self.communicator()
-        servant = StreamControllerI()
+        servant = StreamControllerI("default")
 
         adapter = broker.createObjectAdapterWithEndpoints(
             'StreamControllerAdapter', 'tcp -p 9094')
@@ -47,4 +61,5 @@ class StreamControllerServer(Ice.Application):
         broker.waitForShutdown()
 
 
-sys.exit(StreamControllerServer().main(sys.argv))
+if __name__ == '__main__':
+    sys.exit(StreamControllerServer().main(sys.argv))
