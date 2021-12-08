@@ -22,14 +22,11 @@ class MainI(IceFlix.Main):
                 pass
             else:
                 if servant.ice_isA("::IceFlix::Authenticator"):
-                    print(servant.ice_isA("::IceFlix::Authenticator"))
                     try:
                         response = servant.ice_ping()
-                        print("ping hecho")
                     except Ice.ConnectionRefusedException:
                         self._servants_.remove(servant)
                     if not response:
-                        print("returning")
                         return IceFlix.AuthenticatorPrx.checkedCast(servant)
 
         raise IceFlix.TemporaryUnavailable("No authenticator available")
@@ -47,11 +44,9 @@ class MainI(IceFlix.Main):
                     except Ice.ConnectionRefusedException:
                         self._servants_.remove(servant)
                     if not response:
-                        return servant
+                        return IceFlix.MediaCatalogPrx.checkedCast(servant)
                 
         raise IceFlix.TemporaryUnavailable()
-        # Throws TemporaryUnavailable
-        # Retorna objeto tipo MediaCatalog
 
     def register(self, service, current=None):
         print("Bienvenido: " + str(type(service)))
