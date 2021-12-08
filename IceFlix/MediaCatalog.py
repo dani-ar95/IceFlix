@@ -19,10 +19,11 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             raise IceFlix.WrongMediaId
 
         provider = self._media_.get(mediaId)
-        try:
-            provider.ice_ping()
-        except IceFlix.CommunicationError:
-            raise IceFlix.TemporaryUnavailable
+        if provider:
+            try:
+                provider.ice_ping()
+            except IceFlix.CommunicationError:
+                raise IceFlix.TemporaryUnavailable
 
         name = query.pop(0)
         tags = []
@@ -113,7 +114,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             c.close()
 
     def renameTitle(self, id, name, adminToken, current=None):
-        ''' Renombra el medio de la estructura correspondiente '''
+        ''' Permite al administrador renombrar un medio a partir de su ID '''
 
         try:
             self.check_admin(adminToken)
@@ -124,6 +125,15 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             raise IceFlix.WrongMediaId
 
         else:
+            in_ddbb = self.getTitle(id)
+
+            if in_ddbb:
+                conn = sqlite3.connect("media.db")
+                c = conn.cursor()
+                c.execute("UPDATE media SET name = '{}' WHERE id = '{}'".format(name, id))
+                conn.commit()
+                c.close()
+
             media = self._media_.get(id)
             media.info.name = name
             self._media_.update(id, media)

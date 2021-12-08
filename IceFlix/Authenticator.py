@@ -20,12 +20,7 @@ class AuthenticatorI(IceFlix.Authenticator):
             if i["user"] == user and i["password"] == passwordHash:
                 print("Usuario autenticado")
                 new_token = secrets.token_urlsafe(40)
-                i["user_token"] = new_token
-
-                with open('users.json', 'w') as file:
-                    json.dump(obj, file, indent=2)
-
-                #new = {"user": {"user": i["user"], "password": i["password"], "user_token": new_token}}
+                self._active_users_.update({user:new_token})
                 return new_token
 
         raise IceFlix.Unauthorized
@@ -33,26 +28,22 @@ class AuthenticatorI(IceFlix.Authenticator):
     def isAuthorized(self, userToken, current=None):
         ''' Permite conocer si un token está actualizado en el sistema '''
 
-        with open("users.json", "r") as f:
-            obj = json.load(f)
+        if userToken in self._active_users_.values():
+            return True
+        else:
+            raise IceFlix.Unauthorized
 
-        for i in obj["users"]:
-            if i["user_token"] == userToken:
-                return True
-
-        raise IceFlix.Unauthorized
 
     def whois(self, userToken, current=None):
         ''' Permite conocer el usuario asociado a un token'''
 
-        with open("users.json", "r") as f:
-            obj = json.load(f)
-
-        for i in obj["users"]:
-            if i["user_token"] == userToken:
-                return i["user"]
-
-        raise IceFlix.Unauthorized
+        if userToken in self._active_users_.values():
+            info = self._active_users_.items()
+            for user in info:
+                if user[1] == userToken:
+                    return user[0]
+        else:
+            raise IceFlix.Unauthorized
 
 
     def addUser(self, user, passwordHash, adminToken, current=None):
@@ -66,14 +57,11 @@ class AuthenticatorI(IceFlix.Authenticator):
         with open("users.json", "r") as f:
             obj = json.load(f)
 
-        obj["users"].append({"user": user, "password": passwordHash, "user_token": "blank"})
+        obj["users"].append({"user": user, "password": passwordHash})
 
         with open('users.json', 'w') as file:
             json.dump(obj, file, indent=2)
 
-        #new = {"user": {"user": i["user"], "password": i["password"], "user_token": new_token}}
-  
-            
 
     def removeUser(self, user, adminToken, current=None):
         ''' Permite al administrador elminar usuarios del sistema '''
@@ -91,6 +79,9 @@ class AuthenticatorI(IceFlix.Authenticator):
                 obj.pop(i)
                 break
 
+        if user in self._active_users_.keys():
+            self._active_users_.pop(user)
+
             
     def check_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''
@@ -104,6 +95,11 @@ class AuthenticatorI(IceFlix.Authenticator):
                 return True
             else:
                 raise IceFlix.Unauthorized
+
+
+    def __init__(self, current=None):
+        self._active_users_ = dict()
+        
         
 class AuthenticatorServer(Ice.Application):
     def run(self, argv):
