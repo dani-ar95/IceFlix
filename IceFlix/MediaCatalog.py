@@ -6,7 +6,7 @@ import sqlite3
 
 class MediaCatalogI(IceFlix.MediaCatalog):
 
-    def getTitle(self, mediaId: str, current=None):
+    def getTile(self, mediaId: str, current=None):
         ''' Retorna un objeto Media con la informacion del medio con el ID dado '''
 
         conn = sqlite3.connect("media.db")
@@ -34,7 +34,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         conn.close()
         return media_obj
 
-    def getTitlesByName(self, name, exact: bool, current=None):
+    def getTilesByName(self, name, exact: bool, current=None):
         ''' Retorna una lista de IDs a partir del nombre dado'''
 
         conn = sqlite3.connect("media.db")
@@ -49,7 +49,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         id_list = c.fetchall()
         return id_list
 
-    def getTitlesByTags(self, tags: list, includeAllTags: bool, userToken, current=None):
+    def getTilesByTags(self, tags: list, includeAllTags: bool, userToken, current=None):
         ''' Retorna una lista de IDs de los medios con las tags dadas '''
 
         try:
@@ -112,7 +112,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             conn.commit()
             c.close()
 
-    def renameTitle(self, id, name, adminToken, current=None):
+    def renameTile(self, id, name, adminToken, current=None):
         ''' Renombra el medio de la estructura correspondiente '''
 
         try:

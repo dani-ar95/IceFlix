@@ -112,7 +112,7 @@ class AuthenticatorServer(Ice.Application):
         main_service_proxy = self.communicator().stringToProxy(argv[1])
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
         if not main_connection:
-            raise RuntimeError("Invalid proxy")
+            return 1
 
         broker = self.communicator()
         servant = AuthenticatorI()

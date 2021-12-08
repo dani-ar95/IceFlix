@@ -44,6 +44,10 @@ class Client(Ice.Application):
             
         while 1:
             keyboard = input(user+" >: ")
+            if keyboard == "exit":
+                print("Saliendo...")
+                self.communicator().destroy()
+                return 0
             pass
             
     def not_logged_prompt(self, main_connection):
@@ -58,11 +62,10 @@ class Client(Ice.Application):
                         catalog_connection = IceFlix.MainPrx.checkedCast(catalog_proxy)
                         
                         print("Servicio de catálogo no disponible")
-                    else:
                         print("Catálogo conectado")
                         print("SOlicitas info porque si")
                         # Dar opcion de nombre completo o no
-                        print(catalog_proxy.getTitlesByName("Up", False))
+                        print(catalog_proxy.getTilesByName("Up", False))
 
                 elif keyboard == "exit":
                     sys.exit(0)
@@ -81,13 +84,13 @@ class Client(Ice.Application):
                 if not check:
                     break
             except Ice.ConnectionRefusedException:
-                print("No ha sido posible conectar. Intentando de nuevo...")
+                print("No ha sido posible conectar con Main Service. Intentando de nuevo en 10s...")
                 connection_tries -= 1
                 if connection_tries == 0:
                     print("Número máximo de intentos alcanzados. Saliendo...")
                     sleep(2)
-
-                sleep(10)
+                    return 0
+                sleep(1) #cambiar a 10 segundoss
 
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
             
