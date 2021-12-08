@@ -1,19 +1,16 @@
 #!/usr/bin/python3
 
-import IceFlix
-import sys
-import Ice
+import sys, Ice
 Ice.loadSlice("./iceflix.ice")
+import IceFlix
 
 
 class MediaUploaderI(IceFlix.MediaUploader):
 
     def receive(self, size: int, current=None):
         # Código método Receive
-        # Retorna Bytes
-        total = bytes
-        chunk = self._fd_.read(size)
-        return chunk
+        # Retorna String
+        pass   
 
     def close(self, current=None):
         # Código método Close
@@ -22,7 +19,7 @@ class MediaUploaderI(IceFlix.MediaUploader):
 
 class MediaUploaderServer(Ice.Application):
     def run(self, argv):
-        # sleep(1)
+        #sleep(1)
         self.shutdownOnInterrupt()
         main_service_proxy = self.communicator().stringToProxy(argv[1])
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
@@ -31,18 +28,16 @@ class MediaUploaderServer(Ice.Application):
 
         broker = self.communicator()
         servant = MediaUploaderI()
-
-        adapter = broker.createObjectAdapterWithEndpoints(
-            'MediaUploaderAdapter', 'tcp -p 9093')
-        authenticator_proxy = adapter.add(
-            servant, broker.stringToIdentity('MediaUploader'))
-
+        
+        adapter = broker.createObjectAdapterWithEndpoints('MediaUploaderAdapter','tcp -p 9093')
+        authenticator_proxy = adapter.add(servant, broker.stringToIdentity('MediaUploader'))
+        
         adapter.activate()
-
+        
         main_connection.register(authenticator_proxy)
-
+        
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
-
+        
 
 sys.exit(MediaUploaderServer().main(sys.argv))

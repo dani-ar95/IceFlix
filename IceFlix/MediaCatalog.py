@@ -17,16 +17,18 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         query = c.fetchall()
 
         # Buscar el ID en bbdd y temporal
-        if not query and mediaId not in self._media_.keys():
+        if not query and mediaId not in self.media.keys():
             raise IceFlix.WrongMediaId
 
         # Buscar provider en temporal
-        provider = self._media_.get(mediaId)
+        provider = self.media.get(mediaId)
         if provider:
             try:
                 provider.ice_ping()
             except IceFlix.CommunicationError:
                 raise IceFlix.TemporaryUnavailable
+            else:
+                return self.media.get(mediaId)
         else:
             # Buscar provider en bbdd
             try:
@@ -49,18 +51,23 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         conn = sqlite3.connect("./media.db")
         c = conn.cursor()
+        id_list = []
 
         if exact:
             c.execute("SELECT id FROM media WHERE name='{}'".format(name))
         else:
             c.execute("SELECT id FROM media WHERE LOWER(name) like LOWER('%{}%')".format(name))
 
+        for media in self.media.values():
+            if media.info.name.contains(media):
+                id_list.append(media.id)
+
         list_returned = c.fetchall()
         conn.close()
-        id_list = []
+
         for id in list_returned[0]:
             id_list.append(id)
-        
+
         return id_list
 
     def getTilesByTags(self, tags: list, includeAllTags: bool, userToken, current=None):

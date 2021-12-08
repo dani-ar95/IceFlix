@@ -1,12 +1,14 @@
+#!/usr/bin/python3
+
 from StreamController import StreamControllerI
 import os
 import hashlib
 import glob
 import logging
-import IceFlix
 import sys
 import Ice
 Ice.loadSlice("./iceflix.ice")
+import IceFlix
 
 
 class StreamProviderI(IceFlix.StreamProvider):
@@ -16,7 +18,7 @@ class StreamProviderI(IceFlix.StreamProvider):
 
     def getStream(self, mediaId: str, userToken, current=None):
         ''' Factoría de objetos StreamController '''
-
+        
         try:
             self.check_user(userToken)
         except IceFlix.Unauthorized:
@@ -37,6 +39,7 @@ class StreamProviderI(IceFlix.StreamProvider):
                 proxy = current.adapter.addWithUUID(servant)
                 return IceFlix.StreamControllerPrx.checkedCast(proxy)
 
+
     def isAvailable(self, mediaId: str, current=None):
         ''' Confirma si existe un medio con ese id'''
 
@@ -49,13 +52,11 @@ class StreamProviderI(IceFlix.StreamProvider):
         try:
             self.check_admin(adminToken)
         except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
-            raise IceFlix.Unauthorized
+                raise IceFlix.Unauthorized
 
-        file_size = Path(fileName).stat().st_size
-        new_file = uploader.receive(file_size)
-        with open(fileName, "wb") as f:
-            f.write(new_file)
-            id_hash = hashlib.sha256(new_file).hexdigest()
+        with open(fileName, "rb") as f:
+            bytes = f.read()
+            id_hash = hashlib.sha256(bytes).hexdigest()
             StreamProviderServer._idfiles_.add(id_hash)
 
         try:
@@ -63,8 +64,7 @@ class StreamProviderI(IceFlix.StreamProvider):
         except IceFlix.TemporaryUnavailable:
             raise IceFlix.TemporaryUnavailable
         else:
-            # Hacer que meta su proxy en self
-            catalog_prx.updateMedia(id_hash, fileName, self)
+            catalog_prx.updateMedia(id_hash, fileName, self) # Hacer que meta su proxy en self
 
     def deleteMedia(self, id: str, adminToken: str, current=None):
         # Código método deleteMedia
@@ -72,7 +72,7 @@ class StreamProviderI(IceFlix.StreamProvider):
         try:
             self.check_admin(adminToken)
         except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
-            raise IceFlix.Unauthorized
+                raise IceFlix.Unauthorized
 
         if id not in self._idfiles_:
             raise IceFlix.WrongMediaID
@@ -84,28 +84,17 @@ class StreamProviderI(IceFlix.StreamProvider):
         ''' Comprueba si un token es Administrador '''
 
         try:
-            auth_prx = StreamProviderServer.main_connection.getAuthenticator()
-        except IceFlix.TemporaryUnavailable:
-            raise IceFlix.TemporaryUnavailable
-        else:
-            if auth_prx.isAdmin(admin_token):
-                return True
-            else:
-                raise IceFlix.Unauthorized
+            user = self._main_prx_.isAdmin(admin_token)
+        except IceFlix.Unauthorized as e:
+            raise e
 
     def check_user(self, user_token: str):
         ''' Comprueba que la sesion del usuario es la actual '''
 
         try:
-            auth_prx = StreamProviderServer.main_connection.getAuthenticator()
-        except IceFlix.TemporaryUnavailable:
-            raise IceFlix.TemporaryUnavailable
-        else:
-            try:
-                user = auth_prx.isAuthorized(user_token)
-            except IceFlix.Unauthorized as e:
-                raise e
-
+            user = self._authenticator_prx_.isAuthorized(user_token)
+        except IceFlix.Unauthorized as e:
+            raise e
 
 class StreamProviderServer(Ice.Application):
     def run(self, argv):
@@ -121,6 +110,11 @@ class StreamProviderServer(Ice.Application):
             catalog_prx = main_connection.getCatalog()
         except IceFlix.TemporaryUnavailable:
             raise IceFlix.TemporaryUnavailable
+        
+        try:
+            authenticator_prx = main_connection.getAuthenticator()
+        except IceFlix.TemporaryUnavailable:
+            raise IceFlix.TemporaryUnavailable
 
         servant = StreamProviderI()
 
@@ -129,7 +123,7 @@ class StreamProviderServer(Ice.Application):
         stream_provider_proxy = adapter.add(
             servant, broker.stringToIdentity('StreamProvider'))
 
-        # ---------------------------------------------------------
+        #---------------------------------------------------------
         root_folder = "media_resources"
         print(f"Sirviendo el directorio: {root_folder}")
         candidates = glob.glob(os.path.join(root_folder, '*'), recursive=True)
@@ -149,12 +143,14 @@ class StreamProviderServer(Ice.Application):
 
             catalog_prx.updateMedia(id_hash, filename, proxy)
 
-        # ---------------------------------------------------------
+        #---------------------------------------------------------
         adapter.activate()
 
         servant._proxy_ = stream_provider_proxy
 
         servant._catalog_prx_ = catalog_prx
+        servant._authenticator_prx_ = authenticator_prx
+        servant._main_prx_ = main_connection
 
         main_connection.register(stream_provider_proxy)
 
@@ -163,5 +159,5 @@ class StreamProviderServer(Ice.Application):
 
 
 if __name__ == '__main__':
-    # MediaCatalogServer().run(sys.argv)
+    #MediaCatalogServer().run(sys.argv)
     sys.exit(StreamProviderServer().main(sys.argv))
