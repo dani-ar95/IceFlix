@@ -11,7 +11,8 @@ class StreamControllerI(IceFlix.StreamController):
 
     def __init__(self, file_path, current=None):
         root_folder = "resources"
-        logging.debug("Sirviendo el directorio: %s", root_folder)
+        self._file_ = file_path
+        #logging.debug("Sirviendo el directorio: %s", root_folder)
 
     def getSDP(self, userToken, port: int, current=None):
         print(f"Mensaje: {userToken}, comunicado por puerto: {port}")

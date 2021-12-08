@@ -1,5 +1,4 @@
-from IceFlix.Iceflix_ice import StreamController, TemporaryUnavailable, Unauthorized
-from StreamController import StreamControllerI
+
 import os
 import hashlib
 import glob
@@ -13,7 +12,7 @@ Ice.loadSlice("IceFlix.ice")
 class StreamProviderI(IceFlix.StreamProvider):
 
     def __init__(self, current=None):
-        root_folder = "resources"
+        root_folder = "media_resources"
         logging.debug("Sirviendo el directorio: %s", root_folder)
         candidates = glob.glob(os.path.join(root_folder, '*'), recursive=True)
         prefix_len = len(root_folder) + 1
@@ -25,22 +24,26 @@ class StreamProviderI(IceFlix.StreamProvider):
         except IceFlix.TemporaryUnavailable:
             raise IceFlix.TemporaryUnavailable
 
+        # stringfield del proxy
+        stringfield = ice_ToString(self._proxy_)
+
         # Completar lista de id
         for filename in candidates:
             archivo = filename[prefix_len:]
+            print(archivo)
             with open(archivo, "rb") as f:
                 bytes = f.read()
                 id_hash = hashlib.sha256(bytes).hexdigest()
                 self._idfiles_.add(id_hash)
 
-            catalog_prx.updateMedia(id, filename, self)
+            catalog_prx.updateMedia(id, filename, stringfield)
                         
 
-    def getStream(self, id: str, userToken, current=None):
+    def getStream(self, mediaId: str, userToken, current=None):
         ''' Factoría de objetos StreamController '''
         
         try:
-            self.check_admin(userToken)
+            self.check_user(userToken)
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
 
@@ -54,7 +57,7 @@ class StreamProviderI(IceFlix.StreamProvider):
                 raise IceFlix.TemporaryUnavailable
             else:
                 try:
-                    medio_info = catalog_prx.getTitle(id)
+                    medio_info = catalog_prx.getTitle(mediaId)
                 except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
                     raise e
 
@@ -65,10 +68,10 @@ class StreamProviderI(IceFlix.StreamProvider):
                     return StreamController.RemoteFilePrx.checkedCast(proxy)
 
 
-    def isAvailable(self, id: str, current=None):
+    def isAvailable(self, mediaId: str, current=None):
         ''' Confirma si existe un medio con ese id'''
 
-        return id in self._idfiles_
+        return mediaId in self._idfiles_
 
     def uploadMedia(self, fileName: str, uploader, adminToken: str, current=None):
         # Código del método uploadMedia
@@ -89,7 +92,7 @@ class StreamProviderI(IceFlix.StreamProvider):
         except IceFlix.TemporaryUnavailable:
             raise IceFlix.TemporaryUnavailable
         else:
-            catalog_prx.updateMedia(id_hash, fileName, self)
+            catalog_prx.updateMedia(id_hash, fileName, self) # Hacer que meta su proxy en self
 
     def deleteMedia(self, id: str, adminToken: str, current=None):
         # Código método deleteMedia
@@ -118,6 +121,19 @@ class StreamProviderI(IceFlix.StreamProvider):
             else:
                 raise IceFlix.Unauthorized
 
+    def check_user(self, user_token: str):
+        ''' Comprueba que la sesion del usuario es la actual '''
+
+        try:
+            auth_prx = StreamProviderServer.main_connection.getAuthenticator()
+        except IceFlix.TemporaryUnavailable:
+            raise IceFlix.TemporaryUnavailable
+        else:
+            try:
+                user = auth_prx.isAuthorized(user_token)
+            except IceFlix.Unauthorized as e:
+                raise e
+
 class StreamProviderServer(Ice.Application):
     def run(self, argv):
         # sleep(1)
@@ -137,10 +153,14 @@ class StreamProviderServer(Ice.Application):
 
         adapter.activate()
 
+        servant._proxy_ = stream_provider_proxy
+
         main_connection.register(stream_provider_proxy)
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
 
 
-sys.exit(StreamProviderServer().main(sys.argv))
+if __name__ == '__main__':
+    #MediaCatalogServer().run(sys.argv)
+    sys.exit(StreamProviderServer().main(sys.argv))

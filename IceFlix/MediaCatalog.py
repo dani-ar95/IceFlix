@@ -157,6 +157,8 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         info = IceFlix.MediaInfo(initialName, "tag")
         nuevo = IceFlix.Media(id, provider, info)
         self._media_.update({id: nuevo})
+        print("Añadido medio:")
+        print({id: nuevo})
 
     def check_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''
