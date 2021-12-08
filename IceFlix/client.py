@@ -1,10 +1,12 @@
 #!/usr/bin/python3
 
+from os import system
 import Ice
 import sys
 from time import sleep
 import hashlib
 import getpass
+import signal
 
 Ice.loadSlice("./iceflix.ice")
 import IceFlix
@@ -44,9 +46,9 @@ class Client(Ice.Application):
             
         while 1:
             keyboard = input(user+" >: ")
-            if keyboard == "exit":
-                print("Saliendo...")
-                self.communicator().destroy()
+            if keyboard == "logout":
+                print("Cerrando sesión...")
+                system("clear")
                 return 0
             pass
             
@@ -60,12 +62,29 @@ class Client(Ice.Application):
                         print("Servicio de catálogo no disponible") 
                     else:
                         catalog_connection = IceFlix.MainPrx.checkedCast(catalog_proxy)
-                        
-                        print("Servicio de catálogo no disponible")
-                        print("Catálogo conectado")
-                        print("SOlicitas info porque si")
-                        # Dar opcion de nombre completo o no
-                        print(catalog_proxy.getTilesByName("Up", False))
+                        print("1. Buscar por nombre competo")
+                        print("2. Buscar por parte del nombre")
+                        option = input("Opción (1/2): ")
+                        while option.isdigit() == False or int(option) < 1 or int(option) > 2:
+                            option = input("Inserta una opción válida: ")
+                        if option == "1":
+                            title = input("\nInsertar titulo: ")
+                            media_info = catalog_proxy.getTilesByName(title, True)
+                            for id in media_info:
+                                try:
+                                    media = catalog_proxy.getTile(id)
+                                except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
+                                    print("El servicio de Streaming asociado a este medio no esta disponible\n")
+                        elif option == "2":
+                            title = input("\nInsertar titulo: ")
+                            id_list = catalog_proxy.getTilesByName(title, False)
+                            for id in id_list:
+                                print(id)
+                                try:
+                                    media = catalog_proxy.getTile(id)
+                                    print(media.info)
+                                except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
+                                    print("El servicio de Streaming asociado a este medio no esta disponible\n")
 
                 elif keyboard == "exit":
                     sys.exit(0)
@@ -100,7 +119,7 @@ class Client(Ice.Application):
             
         elif login == "n":
             self.not_logged_prompt(main_connection)
-                
+        
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
 

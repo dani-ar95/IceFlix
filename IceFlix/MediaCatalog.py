@@ -9,9 +9,10 @@ class MediaCatalogI(IceFlix.MediaCatalog):
     def getTile(self, mediaId: str, current=None):
         ''' Retorna un objeto Media con la informacion del medio con el ID dado '''
 
-        conn = sqlite3.connect("media.db")
+        conn = sqlite3.connect("./media.db")
         c = conn.cursor()
-        c.execute("SELECT * FROM media WHERE id='{}'".format(mediaId))
+        print(mediaId)
+        c.execute("SELECT * FROM media WHERE id LIKE '{}'".format(mediaId))
 
         query = c.fetchall()
 
@@ -29,7 +30,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         else:
             # Buscar provider en bbdd
             try:
-                provider = current.getComunicator().stringToProxy(query[3])
+                provider = current.adapter.getCommunicator().stringToProxy(query[0][3])
             except Ice.NoEndpointException:
                 raise IceFlix.TemporaryUnavailable
 
@@ -46,16 +47,20 @@ class MediaCatalogI(IceFlix.MediaCatalog):
     def getTilesByName(self, name, exact: bool, current=None):
         ''' Retorna una lista de IDs a partir del nombre dado'''
 
-        conn = sqlite3.connect("media.db")
+        conn = sqlite3.connect("./media.db")
         c = conn.cursor()
 
         if exact:
             c.execute("SELECT id FROM media WHERE name='{}'".format(name))
         else:
-            c.execute("SELECT id FROM media WHERE LOWER(name) like LOWER('{}')".format(name))
+            c.execute("SELECT id FROM media WHERE LOWER(name) like LOWER('%{}%')".format(name))
 
+        list_returned = c.fetchall()
         conn.close()
-        id_list = c.fetchall()
+        id_list = []
+        for id in list_returned[0]:
+            id_list.append(id)
+        
         return id_list
 
     def getTilesByTags(self, tags: list, includeAllTags: bool, userToken, current=None):
@@ -97,7 +102,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             current_tags = c.execute("SELECT tags FROM media WHERE id = ''".format(id))
             c.execute("UPDATE media SET tags = '{}' WHERE id = '{}'".format(tags.append(current_tags), mediaId))
             conn.commit()
-            c.close()
+            conn.close()
 
 
     def removeTags(self, mediaId: str, tags: list,  userToken, current=None):
@@ -119,7 +124,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             new_tags = [x for x in current_tags if x not in tags]
             c.execute("UPDATE media SET tags = '{}' WHERE id = '{}'".format(tags.append(new_tags), mediaId))
             conn.commit()
-            c.close()
+            conn.close()
 
     def renameTile(self, id, name, adminToken, current=None):
         ''' Renombra el medio de la estructura correspondiente '''
@@ -140,7 +145,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                 c = conn.cursor()
                 c.execute("UPDATE media SET name = '{}' WHERE id = '{}'".format(name, id))
                 conn.commit()
-                c.close()
+                conn.close()
 
             media = self._media_.get(id)
             media.info.name = name

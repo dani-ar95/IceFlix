@@ -9,8 +9,6 @@ class MainI(IceFlix.Main):
     
     def __init__(self, current=None):
         self._servants_ = set()
-        properties = MainServer.communicator().getProperties()
-        self._token_ = properties.getProperty("AdminToken")
 
     def getAuthenticator(self, current=None):
         print("getAuthenticator")
@@ -63,6 +61,8 @@ class MainServer(Ice.Application):
             token = argv[1]
         broker = self.communicator()
         servant = MainI()
+        properties = MainServer.communicator().getProperties()
+        servant._token_ = properties.getProperty("AdminToken")
         
         adapter = broker.createObjectAdapter("MainAdapter")
         proxy = adapter.add(servant, broker.stringToIdentity("Main"))
