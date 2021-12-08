@@ -16,7 +16,7 @@ class StreamProviderI(IceFlix.StreamProvider):
 
     def getStream(self, mediaId: str, userToken, current=None):
         ''' Factoría de objetos StreamController '''
-        
+
         try:
             self.check_user(userToken)
         except IceFlix.Unauthorized:
@@ -37,7 +37,6 @@ class StreamProviderI(IceFlix.StreamProvider):
                 proxy = current.adapter.addWithUUID(servant)
                 return IceFlix.StreamControllerPrx.checkedCast(proxy)
 
-
     def isAvailable(self, mediaId: str, current=None):
         ''' Confirma si existe un medio con ese id'''
 
@@ -50,11 +49,13 @@ class StreamProviderI(IceFlix.StreamProvider):
         try:
             self.check_admin(adminToken)
         except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
-                raise IceFlix.Unauthorized
+            raise IceFlix.Unauthorized
 
-        with open(fileName, "rb") as f:
-            bytes = f.read()
-            id_hash = hashlib.sha256(bytes).hexdigest()
+        file_size = Path(fileName).stat().st_size
+        new_file = uploader.receive(file_size)
+        with open(fileName, "wb") as f:
+            f.write(new_file)
+            id_hash = hashlib.sha256(new_file).hexdigest()
             StreamProviderServer._idfiles_.add(id_hash)
 
         try:
@@ -62,7 +63,8 @@ class StreamProviderI(IceFlix.StreamProvider):
         except IceFlix.TemporaryUnavailable:
             raise IceFlix.TemporaryUnavailable
         else:
-            catalog_prx.updateMedia(id_hash, fileName, self) # Hacer que meta su proxy en self
+            # Hacer que meta su proxy en self
+            catalog_prx.updateMedia(id_hash, fileName, self)
 
     def deleteMedia(self, id: str, adminToken: str, current=None):
         # Código método deleteMedia
@@ -70,7 +72,7 @@ class StreamProviderI(IceFlix.StreamProvider):
         try:
             self.check_admin(adminToken)
         except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
-                raise IceFlix.Unauthorized
+            raise IceFlix.Unauthorized
 
         if id not in self._idfiles_:
             raise IceFlix.WrongMediaID
@@ -104,6 +106,7 @@ class StreamProviderI(IceFlix.StreamProvider):
             except IceFlix.Unauthorized as e:
                 raise e
 
+
 class StreamProviderServer(Ice.Application):
     def run(self, argv):
         # sleep(1)
@@ -126,7 +129,7 @@ class StreamProviderServer(Ice.Application):
         stream_provider_proxy = adapter.add(
             servant, broker.stringToIdentity('StreamProvider'))
 
-        #---------------------------------------------------------
+        # ---------------------------------------------------------
         root_folder = "media_resources"
         print(f"Sirviendo el directorio: {root_folder}")
         candidates = glob.glob(os.path.join(root_folder, '*'), recursive=True)
@@ -146,7 +149,7 @@ class StreamProviderServer(Ice.Application):
 
             catalog_prx.updateMedia(id_hash, filename, proxy)
 
-        #---------------------------------------------------------
+        # ---------------------------------------------------------
         adapter.activate()
 
         servant._proxy_ = stream_provider_proxy
@@ -160,5 +163,5 @@ class StreamProviderServer(Ice.Application):
 
 
 if __name__ == '__main__':
-    #MediaCatalogServer().run(sys.argv)
+    # MediaCatalogServer().run(sys.argv)
     sys.exit(StreamProviderServer().main(sys.argv))

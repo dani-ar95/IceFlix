@@ -29,7 +29,7 @@ class StreamControllerI(IceFlix.StreamController):
 
         while (sent < file_size):
             s.send(self._fd_.read(512))
-            sent + 512
+            sent += 512
 
     def stop(self):
         pass
