@@ -61,7 +61,7 @@ class MainServer(Ice.Application):
             token = argv[1]
         broker = self.communicator()
         servant = MainI()
-        properties = MainServer.communicator().getProperties()
+        properties = broker.getProperties()
         servant._token_ = properties.getProperty("AdminToken")
         
         adapter = broker.createObjectAdapter("MainAdapter")

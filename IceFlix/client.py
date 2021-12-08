@@ -6,7 +6,6 @@ import sys
 from time import sleep
 import hashlib
 import getpass
-import signal
 
 Ice.loadSlice("./iceflix.ice")
 import IceFlix
@@ -34,63 +33,77 @@ class Client(Ice.Application):
             print("Servicio de autenticación no disponible.")
             sys.exit(0)
 
-
-        #auth_connection = IceFlix.MainPrx.checkedCast(authenticator_proxy)
-        auth_connection = authenticator_proxy
         try:    
-            auth_token = auth_connection.refreshAuthorization(user, hash_password)
+            auth_token = authenticator_proxy.refreshAuthorization(user, hash_password)
         except IceFlix.Unauthorized:
             print("Credenciales invalidas. Ejecutando modo usuario anónimo...")
-            sleep(2)
+            sleep(2)    #Simula complejidad
+            system("clear")
             self.not_logged_prompt(main_connection)
             
         while 1:
-            keyboard = input(user+" >: ")
-            if keyboard == "logout":
+            keyboard = input(user + "> ")
+            if keyboard == "catalog_service":
+                self.catalog_service(main_connection)
+                
+            elif keyboard == "logout":
                 print("Cerrando sesión...")
                 system("clear")
-                return 0
+                self.not_logged_prompt(main_connection)
             pass
             
     def not_logged_prompt(self, main_connection):
         while 1:
-                keyboard = input("Usuario anonimo >: ")
+                keyboard = input("Usuario anonimo> ")
                 if keyboard == "catalog_service":
-                    try:
-                        catalog_proxy = main_connection.getCatalog()
-                    except IceFlix.TemporaryUnavailable:
-                        print("Servicio de catálogo no disponible") 
-                    else:
-                        catalog_connection = IceFlix.MainPrx.checkedCast(catalog_proxy)
-                        print("1. Buscar por nombre competo")
-                        print("2. Buscar por parte del nombre")
-                        option = input("Opción (1/2): ")
-                        while option.isdigit() == False or int(option) < 1 or int(option) > 2:
-                            option = input("Inserta una opción válida: ")
-                        if option == "1":
-                            title = input("\nInsertar titulo: ")
-                            media_info = catalog_proxy.getTilesByName(title, True)
-                            for id in media_info:
-                                try:
-                                    media = catalog_proxy.getTile(id)
-                                except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
-                                    print("El servicio de Streaming asociado a este medio no esta disponible\n")
-                        elif option == "2":
-                            title = input("\nInsertar titulo: ")
-                            id_list = catalog_proxy.getTilesByName(title, False)
-                            for id in id_list:
-                                print(id)
-                                try:
-                                    media = catalog_proxy.getTile(id)
-                                    print(media.info)
-                                except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
-                                    print("El servicio de Streaming asociado a este medio no esta disponible\n")
-
+                    self.catalog_service()
                 elif keyboard == "exit":
                     sys.exit(0)
                 elif keyboard == "login":
                     self.logged_prompt(main_connection)
         
+    def catalog_service(self, main_connection):
+        ''' Gestiona el comando "catalog_service" '''
+        #MENU PARA ELEGIR LAS DISTINTAS BUSQUEDAS
+        try:
+                
+        #1. namesearching
+            #main.connection.getcatalog()
+    
+    def name_searching(self, main_connection):
+        ''' Gestiona el comando "name_searching" '''
+        try:
+            catalog_proxy = main_connection.getCatalog()
+        except IceFlix.TemporaryUnavailable:
+            print("Servicio de catálogo no disponible") 
+        else:
+            print("1. Buscar por nombre competo")
+            print("2. Buscar por parte del nombre")
+            option = input("Opción (1/2): ")
+            while option.isdigit() == False or int(option) < 1 or int(option) > 2:
+                option = input("Inserta una opción válida: ")
+                
+            media_list = []
+            
+            if option == "1":
+                title = input("\nInsertar titulo: ")
+                id_list = catalog_proxy.getTilesByName(title, True)
+                for id in id_list:
+                    try:
+                        media_list.append(catalog_proxy.getTile(id))
+                    except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable):
+                        continue
+                    
+            elif option == "2":
+                title = input("\nInsertar titulo: ")
+                id_list = catalog_proxy.getTilesByName(title, False)
+                for id in id_list:
+                    try:
+                        media_list.append(catalog_proxy.getTile(id))
+                    except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable):
+                        continue
+                    
+            return media_list
 
     def run(self, argv):
         broker = self.communicator()
