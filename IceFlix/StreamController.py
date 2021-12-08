@@ -5,9 +5,9 @@ import IceFlix
 import sys
 import Ice
 import socket
-#import path
+from pathlib import Path
 
-Ice.loadSlice("IceFlix.ice")
+Ice.loadSlice("./iceflix.ice")
 
 
 class StreamControllerI(IceFlix.StreamController):
@@ -24,8 +24,7 @@ class StreamControllerI(IceFlix.StreamController):
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(("localhost", port))
-        #file_size = Path(self._filename_).stat().st_size
-        file_size = 8
+        file_size = Path(self._filename_).stat().st_size
         sent = 0
 
         while (sent < file_size):
