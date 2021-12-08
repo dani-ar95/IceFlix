@@ -15,14 +15,22 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         query = c.fetchall()
 
+        # Buscar el ID en bbdd y temporal
         if not query and mediaId not in self._media_.keys():
             raise IceFlix.WrongMediaId
 
+        # Buscar provider en temporal
         provider = self._media_.get(mediaId)
         if provider:
             try:
                 provider.ice_ping()
             except IceFlix.CommunicationError:
+                raise IceFlix.TemporaryUnavailable
+        else:
+            # Buscar provider en bbdd
+            try:
+                provider = current.getComunicator().stringToProxy(query[3])
+            except Ice.NoEndpointException:
                 raise IceFlix.TemporaryUnavailable
 
         name = query.pop(0)
@@ -43,7 +51,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         if exact:
             c.execute("SELECT id FROM media WHERE name='{}'".format(name))
-        else: 
+        else:
             c.execute("SELECT id FROM media WHERE LOWER(name) like LOWER('{}')".format(name))
 
         conn.close()
