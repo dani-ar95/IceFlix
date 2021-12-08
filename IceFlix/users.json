@@ -2,13 +2,11 @@
   "users": [
     {
       "user": "usuario2",
-      "password": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
-      "user_token": "L6EVJD9gZhjeP3a6zOSe52WP-i0L9VLdBmQp8iGl4cxH1O9aABc7DQ"
+      "password": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
     },
     {
       "user": "user",
-      "password": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
-      "user_token": "FAIU5UkeAwxSVFqvgHTXqEfown7DTxKpOxBjJL0FMaNWQQo5rOc4kA"
+      "password": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
     }
   ]
 }

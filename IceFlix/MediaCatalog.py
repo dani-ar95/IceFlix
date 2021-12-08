@@ -15,14 +15,23 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         query = c.fetchall()
 
+        # Buscar el ID en bbdd y temporal
         if not query and mediaId not in self._media_.keys():
             raise IceFlix.WrongMediaId
 
+        # Buscar provider en temporal
         provider = self._media_.get(mediaId)
-        try:
-            provider.ice_ping()
-        except IceFlix.CommunicationError:
-            raise IceFlix.TemporaryUnavailable
+        if provider:
+            try:
+                provider.ice_ping()
+            except IceFlix.CommunicationError:
+                raise IceFlix.TemporaryUnavailable
+        else:
+            # Buscar provider en bbdd
+            try:
+                provider = current.getComunicator().stringToProxy(query[3])
+            except Ice.NoEndpointException:
+                raise IceFlix.TemporaryUnavailable
 
         name = query.pop(0)
         tags = []
@@ -42,7 +51,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         if exact:
             c.execute("SELECT id FROM media WHERE name='{}'".format(name))
-        else: 
+        else:
             c.execute("SELECT id FROM media WHERE LOWER(name) like LOWER('{}')".format(name))
 
         conn.close()
@@ -124,6 +133,15 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             raise IceFlix.WrongMediaId
 
         else:
+            in_ddbb = self.getTitle(id)
+
+            if in_ddbb:
+                conn = sqlite3.connect("media.db")
+                c = conn.cursor()
+                c.execute("UPDATE media SET name = '{}' WHERE id = '{}'".format(name, id))
+                conn.commit()
+                c.close()
+
             media = self._media_.get(id)
             media.info.name = name
             self._media_.update(id, media)
