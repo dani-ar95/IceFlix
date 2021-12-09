@@ -20,12 +20,26 @@ class StreamControllerI(IceFlix.StreamController):
             print("Archivo no encontrado: " + file_path)
 
     def getSDP(self, userToken, port: int, current=None):
-        #Comprobar userToken
-        path = self._filename_
-        return str(path) + "::127.0.0.1::" + str(port)
+        ''' Retorna la configuracion del flujo SDP '''
+
+        try:
+            authenticated = self.check_user(userToken)
+        except IceFlix.Unauthorized as e:
+            raise e
+        else:    
+            path = self._filename_
+            return str(path) + "::127.0.0.1::" + str(port)
 
     def stop(self):
         pass
+
+    def check_user(self, user_token):
+        ''' Comprueba que la sesion del usuario es la actual '''
+
+        try:
+            user = self._authenticator_prx_.isAuthorized(user_token)
+        except IceFlix.Unauthorized as e:
+            raise e
 
 
 class StreamControllerServer(Ice.Application):
