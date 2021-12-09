@@ -176,7 +176,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             # Quitar tags de medios en la BBDD
             c.execute("SELECT tags FROM media WHERE id LIKE ''".format(id))
             current_tags = c.fetchall() # Ejecuta la query
-            new_tags = [x for x in current_tags if x not in tags] # Elimina las tags indicadas 
+            new_tags = [x for x in current_tags if x not in tags] # Elimina las tags indicadas
             c.execute("UPDATE media SET tags = '{}' WHERE id = '{}'".format(
                 tags.append(new_tags), mediaId))
             conn.commit()
@@ -196,7 +196,10 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             raise IceFlix.WrongMediaId
 
         else:
-            in_ddbb = self.getTitle(id)
+            try:
+                in_ddbb = self.getTitle(id)
+            except IceFlix.Unauthorized:
+                raise IceFlix.Unauthorized
 
             if in_ddbb:
                 conn = sqlite3.connect("media.db")

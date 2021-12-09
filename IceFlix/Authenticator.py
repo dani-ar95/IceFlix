@@ -87,15 +87,12 @@ class AuthenticatorI(IceFlix.Authenticator):
         ''' Comprueba si un token es Administrador '''
 
         try:
-            auth_prx = AuthenticatorServer.main_connection.getAuthenticator()
+            auth_prx = self._main_prx_.isAdmin(admin_token)
         except IceFlix.TemporaryUnavailable:
-            raise IceFlix.TemporaryUnavailable
-        else: 
-            if auth_prx.isAdmin(admin_token):
-                return True
-            else:
-                raise IceFlix.Unauthorized
-
+            print("Se ha perdido conexión con el servidor Main")
+            raise IceFlix.Unauthorized
+        else:
+            return auth_prx
 
     def __init__(self, current=None):
         self._active_users_ = dict()
@@ -118,7 +115,7 @@ class AuthenticatorServer(Ice.Application):
         
         adapter.activate()
         main_connection.register(authenticator_proxy)
-        broker
+        servant._main_prx_ = main_connection
         
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
