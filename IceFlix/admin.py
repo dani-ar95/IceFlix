@@ -110,8 +110,6 @@ class Admin(Ice.Application):
 
             print("1. Búsqueda por nombre")
             print("2. Búsqueda por etiquetas")
-            print("3. Añadir etiquetas")
-            print("4. Eliminar etiqutetas")
             print("5. Salir")
 
             option = input(user + "> ")
@@ -125,10 +123,14 @@ class Admin(Ice.Application):
                 print("Estas son las medias disponibles: ")
                 for media in media_list:
                     print(media.info.name)
-                option = input("Elige una para renombrarla:")
-                new_name = input("Nuevo nombre: ")
-                #Controlar que el admin no meta valores ilegales
-                catalog_connection.renameTile(media_list[int(option)].mediaId,new_name,admin_token)
+                option = input("Elige una media: ")
+                media_elegida = media_list[int(option)]
+                print("Opciones: ")
+                print("0. Añadir etiquetas")
+                print("1. Eliminar etiquetas")
+                print("2. Reproducir")
+                print("3. Renombra nombra")
+                print("4. Eliminar video")
                 return
                 
             elif option == "2":
@@ -137,10 +139,7 @@ class Admin(Ice.Application):
                     return
 
             elif option == "3":
-                new_user = input("Introduce el nuevo nombre de usuario: ")
-                new_password = getpass.getpass("Nueva Password: ")
-                new_hash_password = self.calculate_hash(new_password)
-                catalog_connection.addUser(new_user, new_hash_password, admin_token)
+                
                 pass
             elif option == "5":
                 return
@@ -160,6 +159,12 @@ class Admin(Ice.Application):
                 return
             else:
                 self.stream_provider(media_list[int(selecting_media) - 1])'''
+
+    def renameTile(media_list,catalog_connection,admin_token):
+        option = input("Elige una para renombrarla:")
+        new_name = input("Nuevo nombre: ")
+        #Controlar que el admin no meta valores ilegales
+        catalog_connection.renameTile(media_list[int(option)].mediaId,new_name,admin_token)
 
     def stream_provider(self, media, auth_token):
         #media.provider = IceFlix.StreamProviderPrx.checkedCast(media.provider)
