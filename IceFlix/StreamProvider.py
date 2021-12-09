@@ -146,10 +146,8 @@ class StreamProviderServer(Ice.Application):
 
         servant = StreamProviderI()
 
-        adapter = broker.createObjectAdapterWithEndpoints(
-            'StreamProviderAdapter', 'tcp -p 9095')
-        stream_provider_proxy = adapter.add(
-            servant, broker.stringToIdentity('StreamProvider'))
+        adapter = broker.createObjectAdapterWithEndpoints('StreamProviderAdapter', 'tcp -p 9095')
+        stream_provider_proxy = adapter.add(servant, broker.stringToIdentity('StreamProvider'))
 
         #---------------------------------------------------------
         root_folder = "media_resources"

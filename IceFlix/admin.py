@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+from MediaUploader import MediaUploaderI
 from os import system, terminal_size, path
 import Ice
 import sys
@@ -56,6 +57,8 @@ class Admin(Ice.Application):
                 self.catalog_service(user, auth_token, catalog_proxy, admin_token)
             elif keyboard == "authenticator":
                 self.authenticator_service(user, auth_token, authenticator_proxy, admin_token)
+            elif keyboard == "streamprovider":
+                self.stream_provider_service(admin_token)
             elif keyboard == "logout":
                 print("Cerrando sesión...")
                 system("clear")
@@ -167,6 +170,26 @@ class Admin(Ice.Application):
                 return
             else:
                 self.stream_provider(media_list[int(selecting_media) - 1])'''
+
+    def stream_provider_service(self, admin_token):
+        stream_provider_proxy = input("Introduce el proxy del stream provider: ")
+        proxy = self.communicator().stringToProxy(stream_provider_proxy)
+        stream_provider_connection = IceFlix.StreamProviderPrx.checkedCast(proxy)
+        try:
+            check = stream_provider_connection.ice_ping()
+        except Ice.ConnectionRefusedException:
+            print("No ha sido posible conectar con Stream Provider")
+            return
+        filename = input("Escribe el nombre del video que quieres subir: ")
+        file = path.join(path.dirname(__file__), filename)
+        uploader = MediaUploaderI(file)
+        adapter = self.communicator().createObjectAdapterWithEndpoints('MediaUploaderAdapter', 'tcp -p 9080')
+        uploader_proxy = adapter.add(uploader, self.communicator().stringToIdentity('MediaUploader'))
+        uploader_connection = IceFlix.MediaUploaderPrx.checkedCast(uploader_proxy)
+        try:
+            file_id = stream_provider_connection.uploadMedia(file, uploader_connection, admin_token)
+        except (IceFlix.Unauthorized, IceFlix.UploadError) as e:
+            raise e
 
     def renameTile(media_list,catalog_connection,admin_token):
         option = input("Elige una para renombrarla:")

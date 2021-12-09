@@ -35,17 +35,17 @@ class MediaUploaderServer(Ice.Application):
             raise RuntimeError("Invalid proxy")
 
         broker = self.communicator()
-        servant = MediaUploaderI()
+        '''servant = MediaUploaderI()
         
         adapter = broker.createObjectAdapterWithEndpoints('MediaUploaderAdapter','tcp -p 9093')
         authenticator_proxy = adapter.add(servant, broker.stringToIdentity('MediaUploader'))
         
         adapter.activate()
         
-        main_connection.register(authenticator_proxy)
+        main_connection.register(authenticator_proxy)'''
         
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
         
-
-sys.exit(MediaUploaderServer().main(sys.argv))
+if __name__ == "__main__":
+    sys.exit(MediaUploaderServer().main(sys.argv))

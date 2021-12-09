@@ -7,6 +7,7 @@ from time import sleep
 from os import path
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
+USERS_PATH = path.join(path.dirname(__file__), "users.json")
 Ice.loadSlice(SLICE_PATH)
 import IceFlix
 
@@ -15,7 +16,7 @@ class AuthenticatorI(IceFlix.Authenticator):
     def refreshAuthorization(self, user, passwordHash, current=None):
         ''' Actualiza el token de un usuario registrado '''
 
-        with open("users.json", "r") as f:
+        with open(USERS_PATH, "r") as f:
             obj = json.load(f)
 
         for i in obj["users"]:
@@ -56,12 +57,12 @@ class AuthenticatorI(IceFlix.Authenticator):
         except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
             raise IceFlix.Unauthorized
 
-        with open("users.json", "r") as f:
+        with open(USERS_PATH, "r") as f:
             obj = json.load(f)
 
         obj["users"].append({"user": user, "password": passwordHash, "tags": {}})
 
-        with open('users.json', 'w') as file:
+        with open(USERS_PATH, 'w') as file:
             json.dump(obj, file, indent=2)
 
 
@@ -73,7 +74,7 @@ class AuthenticatorI(IceFlix.Authenticator):
         except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
             raise IceFlix.Unauthorized
 
-        with open("users.json", "r") as f:
+        with open(USERS_PATH, "r") as f:
             obj = json.load(f)
 
         for i in obj["users"]:
@@ -81,7 +82,7 @@ class AuthenticatorI(IceFlix.Authenticator):
                 obj["users"].remove(i)
                 break
 
-        with open('users.json', 'w') as file:
+        with open(USERS_PATH, 'w') as file:
             json.dump(obj, file, indent=2)
 
         if user in self._active_users_.keys():
