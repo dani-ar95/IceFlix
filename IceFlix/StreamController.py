@@ -1,12 +1,10 @@
 #!/usr/bin/python3
 
-import logging
+from os import path
 import IceFlix
 import sys
+
 import Ice
-import socket
-from pathlib import Path
-from os import path
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)

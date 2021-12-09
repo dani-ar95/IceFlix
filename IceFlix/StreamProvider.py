@@ -1,14 +1,15 @@
 #!/usr/bin/python3
 
 from StreamController import StreamControllerI
-import os
+from os import path, remove
 import hashlib
 import glob
 import logging
 import sys
 import Ice
 
-SLICE_PATH = os.path.join(os.path.dirname(__file__), "iceflix.ice")
+
+SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
 import IceFlix
 
@@ -70,7 +71,7 @@ class StreamProviderI(IceFlix.StreamProvider):
         self._idfiles_.add(id_hash)
 
         # Escribir el archivo nuevo
-        new_file_name = os.path.join("media_resources", fileName)
+        new_file_name = path.join("media_resources", fileName)
         with open(new_file_name, "wb") as write_pointer:
             write_pointer.write(new_file)
 
@@ -83,7 +84,7 @@ class StreamProviderI(IceFlix.StreamProvider):
             return id_hash
 
     def deleteMedia(self, mediaId: str, adminToken: str, current=None):
-        ''' Perimitme al administrador borrar archivos '''
+        ''' Perimite al administrador borrar archivos conociendo su id '''
 
         try:
             self.check_admin(adminToken)
@@ -94,10 +95,16 @@ class StreamProviderI(IceFlix.StreamProvider):
             raise IceFlix.WrongMediaID
         else:
             self._idfiles_.remove(id)
-            # Avisar al catalog de que no hay medio?
 
-        # Borrar el archivo        elif userToken is None:
-            raise IceFlix.Unauthorized    
+        try:
+            media_file = self._catalog_prx_.getTile(mediaId)
+        except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
+            raise IceFlix.WrongMediaId
+
+        else:
+            filename = media_file.info.name
+            remove(filename)
+
 
     def check_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''
@@ -147,9 +154,7 @@ class StreamProviderServer(Ice.Application):
         #---------------------------------------------------------
         root_folder = "media_resources"
         print(f"Sirviendo el directorio: {root_folder}")
-        candidates = glob.glob(os.path.join(root_folder, '*'), recursive=True)
-        prefix_len = len(root_folder) + 1
-        self._root_ = root_folder
+        candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
 
         # stringfield del proxy
         proxy = IceFlix.StreamProviderPrx.checkedCast(stream_provider_proxy)
@@ -157,6 +162,7 @@ class StreamProviderServer(Ice.Application):
         # Completar lista de id
         for filename in candidates:
             with open("./"+str(filename), "rb") as f:
+                print("Sirviendo " + str(filename))
                 bytes = f.read()
                 id_hash = hashlib.sha256(bytes).hexdigest()
                 servant._idfiles_.add(id_hash)
