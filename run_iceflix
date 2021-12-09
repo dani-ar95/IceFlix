@@ -1,3 +1,5 @@
 #!/bin/bash
-#python3 IceFlix/Main.py --Ice.Config=main_service.config
+python3 IceFlix/Main.py --Ice.Config=IceFlix/main_service.config admin
 python3 IceFlix/Authenticator.py "Main:tcp -p 9090"
+python3 IceFlix/MediaCatalog.py "Main:tcp -p 9090"
+python3 IceFlix/StreamProvider.py "Main:tcp -p 9090"

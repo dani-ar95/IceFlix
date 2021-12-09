@@ -131,6 +131,14 @@ class Admin(Ice.Application):
                 print("2. Reproducir")
                 print("3. Renombra nombra")
                 print("4. Eliminar video")
+                option = input("Elige una opcion: ")
+                if option == "1":
+                    print("Introcuce las etiquetas que quieras de una en una")
+                    etiqueta = input("Etiqueta:")
+                    try:
+                        catalog_connection.addTags(media_elegida.mediaId, [etiqueta], auth_token)
+                    except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
+                        raise e
                 return
                 
             elif option == "2":
