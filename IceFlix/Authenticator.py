@@ -76,8 +76,11 @@ class AuthenticatorI(IceFlix.Authenticator):
 
         for i in obj["users"]:
             if i["user"] == user:
-                obj.pop(i)
+                obj["users"].remove(i)
                 break
+
+        with open('users.json', 'w') as file:
+            json.dump(obj, file, indent=2)
 
         if user in self._active_users_.keys():
             self._active_users_.pop(user)
@@ -88,6 +91,8 @@ class AuthenticatorI(IceFlix.Authenticator):
 
         try:
             auth_prx = self._main_prx_.isAdmin(admin_token)
+            if not auth_prx:
+                raise IceFlix.Unauthorized
         except IceFlix.TemporaryUnavailable:
             print("Se ha perdido conexión con el servidor Main")
             raise IceFlix.Unauthorized

@@ -16,14 +16,14 @@ EXIT_OK = 0
 EXIT_ERROR = 1
 
 
-class Client(Ice.Application):
+class Admin(Ice.Application):
 
     def calculate_hash(self, password):
         sha = hashlib.sha256()
         sha.update(password.encode())
         return sha.hexdigest()
 
-    def logged_prompt(self, main_connection):
+    def logged_prompt(self, main_connection, admin_token):
         user = input("Introduce el nombre de usuario: ")
         password = getpass.getpass("Password: ")
         hash_password = self.calculate_hash(password)
@@ -52,8 +52,9 @@ class Client(Ice.Application):
         while 1:
             keyboard = input("MainService@" + user + "> ")
             if keyboard == "catalog_service":
-                self.catalog_service(user, auth_token, main_connection)
-
+                self.catalog_service(user, auth_token, catalog_proxy, admin_token)
+            elif keyboard == "authenticator":
+                self.authenticator_service(user, auth_token, authenticator_proxy, admin_token)
             elif keyboard == "logout":
                 print("Cerrando sesión...")
                 system("clear")
@@ -69,7 +70,37 @@ class Client(Ice.Application):
             elif keyboard == "login":
                 self.logged_prompt(main_connection)
 
-    def catalog_service(self, user, auth_token, main_connection):
+    def authenticator_service(self, user, auth_token, auth_connection, admin_token):
+        ''' Gestiona el comando "authenticator" '''
+        # MENU PARA ELEGIR LAS DISTINTAS BUSQUEDAS
+        # try:
+        while 1:
+            system("clear")
+            print("1. whois")
+            print("2. Añadir usuario")
+            print("3. Eliminar usuario")
+            print("4. Salir")
+
+            option = input(user + "> ")
+            while option.isdigit() == False or int(option) < 1 or int(option) > 4:
+                option = input("Inserta una opción válida: ")
+
+            if option == "1":
+                user = auth_connection.whois(auth_token)
+                print(user)
+                sleep(2)
+            elif option == "2":
+                new_user = input("Introduce el nuevo nombre de usuario: ")
+                new_password = getpass.getpass("Nueva Password: ")
+                new_hash_password = self.calculate_hash(new_password)
+                auth_connection.addUser(new_user, new_hash_password, admin_token)
+            elif option == "3":
+                delete_user = input("Introduce un usuario válido para eliminarlo: ")
+                auth_connection.removeUser(delete_user, admin_token)
+            elif option == "4":
+                return
+
+    def catalog_service(self, user, auth_token, catalog_connection, admin_token):
         ''' Gestiona el comando "catalog_service" '''
         # MENU PARA ELEGIR LAS DISTINTAS BUSQUEDAS
         # try:
@@ -83,20 +114,24 @@ class Client(Ice.Application):
             print("5. Salir")
 
             option = input(user + "> ")
-            while option.isdigit() == False or int(option) < 1 or int(option) > 4:
+            while option.isdigit() == False or int(option) < 1 or int(option) > 5:
                 option = input("Inserta una opción válida: ")
 
             if option == "1":
-                media_list = self.name_searching(main_connection)
+                media_list = self.name_searching(catalog_connection)
                 if media_list == None:
                     return
 
             elif option == "2":
-                media_list = self.tag_searching(auth_token, main_connection)
+                media_list = self.tag_searching(auth_token, catalog_connection)
                 if media_list == None:
                     return
 
             elif option == "3":
+                new_user = input("Introduce el nuevo nombre de usuario: ")
+                new_password = getpass.getpass("Nueva Password: ")
+                new_hash_password = self.calculate_hash(new_password)
+                catalog_connection.addUser(new_user, new_hash_password, admin_token)
                 pass
             elif option == "5":
                 return
@@ -232,16 +267,24 @@ class Client(Ice.Application):
                 sleep(1)  # cambiar a 10 segundoss
 
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
-        login = input("Quieres logearte? (s/n): ")
-        if login == "s":
-            self.logged_prompt(main_connection)
+        if len(argv) > 2:
+            is_admin = main_connection.isAdmin(argv[2])
+            if is_admin:
+                login = input("Quieres logearte? (s/n): ")
+                if login == "s":
+                    self.logged_prompt(main_connection, argv[2])
 
-        elif login == "n":
-            self.not_logged_prompt(main_connection)
+                elif login == "n":
+                    self.not_logged_prompt(main_connection)
+            else:
+                print("The admin token is not valid. Please retry again")
+        else:
+            print("Please retry introducing an admin token")
 
+        print("Press Ctrl+C to exit")
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
 
 
 if __name__ == '__main__':
-    sys.exit(Client().main(sys.argv))
+    sys.exit(Admin().main(sys.argv))
