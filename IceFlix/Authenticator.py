@@ -59,7 +59,7 @@ class AuthenticatorI(IceFlix.Authenticator):
         with open("users.json", "r") as f:
             obj = json.load(f)
 
-        obj["users"].append({"user": user, "password": passwordHash})
+        obj["users"].append({"user": user, "password": passwordHash, "tags": {}})
 
         with open('users.json', 'w') as file:
             json.dump(obj, file, indent=2)

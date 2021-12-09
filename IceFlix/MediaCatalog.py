@@ -2,6 +2,7 @@
 import sqlite3
 import IceFlix
 import sys
+import json
 import Ice
 from os import path
 
@@ -95,7 +96,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         ''' Retorna una lista de IDs de los medios con las tags dadas '''
 
         try:
-            self.check_user(userToken)
+            username = self.check_user_name(userToken)
         except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable) as e:
             raise IceFlix.Unauthorized
         else:
@@ -104,29 +105,54 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             c = conn.cursor()
             id_list = []
 
-            # Buscar por tags en BBDD
-            if includeAllTags:
-                c.execute("SELECT id FROM media WHERE tags LIKE {}".format(tags)) # Revisar si funciona cambiando el orden de las tags en la busqueda
-            else:
-                c.execute("SELECT id FROM media WHERE tags IN {}".format(tags))
+            # Buscar IDs en persistente
+            c.execute("SELECT id FROM media ") # Revisar si funciona cambiando el orden de las tags en la busqueda
 
             list_returned = c.fetchall() # Ejecuta la query
             conn.close()
+
+            with open("users.json", "r") as f:
+                obj = json.load(f)
+                for i in obj["users"]:
+                    if i["name"] == username:
+                        user_tags = i["tags"]
+
+            if includeAllTags:
+                for media_id in list_returned:
+                    id_tags = user_tags.get(media_id)
+                    valid = [True if (x for x in tags in id_tags) else False]
+                    if valid: 
+                        id_list.append(media_id)
+            else:
+                for media_id in list_returned:
+                    id_tags = user_tags.get(media_id)
+                    for x in id_tags:
+                        if x in tags:
+                            valid = True
+                            break
+                    if valid:
+                        id_list.append(media_id)
             
-            if list_returned: # Si la query devuelve algo, añadirlo al resultado
-                id_list.append([id for id in list_returned])
 
             # Buscar por tags en medios dinámicos
+            valid = False
             if includeAllTags:
                 for media in self._media_.values():
-                    media_tags = [tag for tag in media.info.tags] # Sacar todos los tags de un medio
-                    if media_tags == tags:                        # Comprobar con los tags que nos piden (no se si funciona cambiando el orden)
-                        id_list.append(media.mediaId)
+                    if media.mediaId in user_tags.keys():
+                        user_tags_for_media = user_tags.get(media.mediaId)
+                        valid = bool(x for x in user_tags_for_media in tags)
+                        if valid and media.mediaId not in id_list:
+                            id_list.append(media.mediaId)
             else:
                 for media in self._media_.values():
-                    media_tags = [tag for tag in media.info.tags] # Comprobar que las tags que nos piden estan contenidas en todas las del medio
-                    if tags in media_tags:
-                        id_list.append(media.mediaId)
+                    if media.mediaId in user_tags.keys():
+                        user_tags_for_media = user_tags.get(media.mediaId)
+                        for tag in user_tags_for_media:
+                            if tag in tags:
+                                valid = True
+                                break
+                        if valid and media.mediaId not in id_list:
+                            id_list.append(media.mediaId)
 
             return id_list
 
@@ -134,7 +160,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         ''' Añade las tags dadas al medio con el ID dado '''
 
         try:
-            self.check_user(userToken)
+            user_name = self.check_user_name(userToken)
         except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable) as e:
             raise IceFlix.Unauthorized
 
@@ -142,16 +168,18 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             if mediaId not in self._media_.keys():
                 raise IceFlix.WrongMediaId
 
-            conn = sqlite3.connect("media.db")
-            c = conn.cursor()
+            # Cambiar tags persistentes
+            with open("users.json", "r") as f:
+                obj = json.load(f)
 
-            # Cambiar tags del medio en la BBDD
-            c.execute("SELECT tags FROM media WHERE id LIKE ''".format(id)) # Pedir las tags actuales del medio
-            current_tags = c.fetchall() # Ejecuta la query
-            new_tags = [current_tags.append([tag for tag in tags if tag not in current_tags])] # Añade las tags que no tiene
-            c.execute("UPDATE media SET tags = '{}' WHERE id = '{}'".format(new_tags, mediaId)) # ¿Esto se añade como lista? ¿O como tags individuales?
-            conn.commit()
-            conn.close()
+            for i in obj["users"]:
+                if i["user"] == user_name:
+                    i.update({mediaId: tags})
+                    break
+
+            with open('users.json', 'w') as file:
+                json.dump(obj, file, indent=2)
+
 
             # Cambiar tags de medios dinámicos
             for media in self._media_.values():
@@ -164,27 +192,29 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         ''' Elimina las tags dadas del medio con el ID dado '''
 
         try:
-            self.check_admin(userToken)
+            user_name = self.check_admin(userToken)
         except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable) as e:
             raise IceFlix.Unauthorized
         else:
 
-            if mediaId not in self._media_.keys():
-                raise IceFlix.WrongMediaId
+            # Cambiar tags persistentes
+            with open("users.json", "r") as f:
+                obj = json.load(f)
 
-            conn = sqlite3.connect("media.db")
-            c = conn.cursor()
+            for i in obj["users"]:
+                if i["user"] == user_name:
+                    user_tags = i["tags"]
+                    if mediaId in user_tags.values():
+                        lista_de_tags_del_medio = user_tags.get(mediaId)
+                        new_list = [x for x in lista_de_tags_del_medio if x not in tags]
+                        user_tags.update({mediaId: new_list})
 
-            # Quitar tags de medios en la BBDD
-            c.execute("SELECT tags FROM media WHERE id LIKE ''".format(id))
-            current_tags = c.fetchall() # Ejecuta la query
-            new_tags = [x for x in current_tags if x not in tags] # Elimina las tags indicadas
-            c.execute("UPDATE media SET tags = '{}' WHERE id = '{}'".format(
-                tags.append(new_tags), mediaId))
-            conn.commit()
-            conn.close()
+            with open('users.json', 'w') as file:
+                json.dump(obj, file, indent=2)
+                
+            return 0
 
-            # Falta hacerlo en los medios dinámicos
+            
 
     def renameTile(self, id, name, adminToken, current=None):
         ''' Renombra el medio de la estructura correspondiente '''
@@ -249,7 +279,21 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                 user = auth_prx.isAuthorized(user_token)
             except IceFlix.Unauthorized as e:
                 raise e
+            return user    
 
+    def check_user_name(self, user_token: str):
+        ''' Comprueba que la sesion del usuario es la actual '''
+
+        try:
+            auth_prx = MediaCatalogServer.main_connection.getAuthenticator()
+        except IceFlix.TemporaryUnavailable:
+            raise IceFlix.TemporaryUnavailable
+        else:
+            try:
+                user_name = auth_prx.whois(user_token)
+            except IceFlix.Unauthorized as e:
+                raise e
+            return user_name    
 
 class MediaCatalogServer(Ice.Application):
     def run(self, argv):

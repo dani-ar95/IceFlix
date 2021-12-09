@@ -8,21 +8,19 @@ c.execute("DROP TABLE media")
 conn.commit()
 
 c.execute("""CREATE TABLE media (
-    id text, 
-    tags text,
-    name text,
-    proxy text)""")
+    id text,
+    name text)""")
 
 
-peli_1 = ("identificador1", "aventura comedia", "Las maravillosas aventuras de Homero y Bartolo", "insertar proxy")
-peli_2 = ("identificador2", "musical", "Cantando LaLaLa", "insertar proxy")
-peli_3 = ("identificador3", "drama familiar", "Los 3 cerditos versión carne y hueso", "insertar proxy")
+peli_1 = ("identificador1", "aventura comedia")
+peli_2 = ("identificador2", "musical")
+peli_3 = ("identificador3", "drama familiar")
 
-c.execute("INSERT INTO media VALUES (?, ?, ?, ?)", (peli_1))
+c.execute("INSERT INTO media VALUES (?, ?)", (peli_1))
 conn.commit()
-c.execute("INSERT INTO media VALUES (?, ?, ?, ?)", (peli_2))
+c.execute("INSERT INTO media VALUES (?, ?)", (peli_2))
 conn.commit()
-c.execute("INSERT INTO media VALUES (?, ?, ?, ?)", (peli_3))
+c.execute("INSERT INTO media VALUES (?, ?)", (peli_3))
 conn.commit()
 
 conn.close()
