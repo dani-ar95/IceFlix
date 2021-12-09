@@ -226,14 +226,14 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         ''' Comprueba si un token es Administrador '''
 
         try:
-            auth_prx = MediaCatalogServer.main_connection.getAuthenticator()
-        except IceFlix.TemporaryUnavailable:
-            raise IceFlix.TemporaryUnavailable
-        else:
-            if auth_prx.isAdmin(admin_token):
-                return True
-            else:
+            is_admin = self._main_prx_.isAdmin(admin_token)
+            if not is_admin:
                 raise IceFlix.Unauthorized
+        except IceFlix.TemporaryUnavailable:
+            print("Se ha perdido conexión con el servidor Main")
+            raise IceFlix.Unauthorized
+        else:
+            return is_admin
 
     def check_user(self, user_token: str):
         ''' Comprueba que la sesion del usuario es la actual '''
@@ -268,6 +268,7 @@ class MediaCatalogServer(Ice.Application):
         adapter.activate()
 
         main_connection.register(media_catalog_proxy)
+        servant._main_prx_ = main_connection
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
