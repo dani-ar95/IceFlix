@@ -62,33 +62,32 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         c = conn.cursor()
         id_list = []
 
+        # Buscar por nombre en la BBDD
         if exact:
-            c.execute("SELECT id FROM media WHERE name='{}'".format(name))
+            c.execute("SELECT id FROM media WHERE name LIKE'{}'".format(name))
         else:
             c.execute(
-                "SELECT id FROM media WHERE LOWER(name) like LOWER('%{}%')".format(name))
+                "SELECT id FROM media WHERE LOWER(name) LIKE LOWER('%{}%')".format(name))
 
-        for media in self._media_.values():
-            if name in self._media_.values().name:
-                id_list.append(media.id)
-
-        for media in self._media_.values():
-            print(type(media))
-            if name in media.info.name:
-                id_list.append(media.mediaId)
-
-        list_returned = c.fetchall()
+        list_returned = c.fetchall() # Ejecuta la query
         conn.close()
 
-<<<<<<< HEAD
-        #for id in list_returned[0]:
-         #   id_list.append(id)
-=======
-        for id in list_returned[0]:
-            id_list.append(id)
->>>>>>> d47aef0dfda55e460d01e45a9cac2be7d1ee9b0f
+        if list_returned: # Si la query devuelve algo, añadirlo al resultado
+            for media in list_returned: # La query devuelve una lista por cada medio, cada lista tiene (id, tag, name, proxy)
+                id_list.append(media[0])
+
+        # Buscar por nombre en los medios dinámicos
+        if exact:
+            for media in self._media_.values():
+                if name == media.info.name:
+                    id_list.append(media.mediaId)
+        else:
+            for media in self._media_.values():
+                if name in media.info.name:
+                    id_list.append(media.mediaId)
 
         return id_list
+
 
     def getTilesByTags(self, tags: list, includeAllTags: bool, userToken, current=None):
         ''' Retorna una lista de IDs de los medios con las tags dadas '''
@@ -101,16 +100,33 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
             conn = sqlite3.connect("media.db")
             c = conn.cursor()
-            ids = []
-            if includeAllTags:
-                ids = c.execute(
-                    "SELECT id FROM media WHERE tags = {}".format(tags))
-            else:
-                ids = c.execute(
-                    "SELECT id FROM media WHERE tags IN {}".format(tags))
+            id_list = []
 
+            # Buscar por tags en BBDD
+            if includeAllTags:
+                c.execute("SELECT id FROM media WHERE tags LIKE {}".format(tags)) # Revisar si funciona cambiando el orden de las tags en la busqueda
+            else:
+                c.execute("SELECT id FROM media WHERE tags IN {}".format(tags))
+
+            list_returned = c.fetchall() # Ejecuta la query
             conn.close()
-            return ids
+            
+            if list_returned: # Si la query devuelve algo, añadirlo al resultado
+                id_list.append([id for id in list_returned])
+
+            # Buscar por tags en medios dinámicos
+            if includeAllTags:
+                for media in self._media_.values():
+                    media_tags = [tag for tag in media.info.tags] # Sacar todos los tags de un medio
+                    if media_tags == tags:                        # Comprobar con los tags que nos piden (no se si funciona cambiando el orden)
+                        id_list.append(media.mediaId)
+            else:
+                for media in self._media_.values():
+                    media_tags = [tag for tag in media.info.tags] # Comprobar que las tags que nos piden estan contenidas en todas las del medio
+                    if tags in media_tags:
+                        id_list.append(media.mediaId)
+
+            return id_list
 
     def addTags(self, mediaId: str, tags: list, userToken, current=None):
         ''' Añade las tags dadas al medio con el ID dado '''
@@ -127,12 +143,20 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             conn = sqlite3.connect("media.db")
             c = conn.cursor()
 
-            current_tags = c.execute(
-                "SELECT tags FROM media WHERE id = ''".format(id))
-            c.execute("UPDATE media SET tags = '{}' WHERE id = '{}'".format(
-                tags.append(current_tags), mediaId))
+            # Cambiar tags del medio en la BBDD
+            c.execute("SELECT tags FROM media WHERE id LIKE ''".format(id)) # Pedir las tags actuales del medio
+            current_tags = c.fetchall() # Ejecuta la query
+            new_tags = [current_tags.append([tag for tag in tags if tag not in current_tags])] # Añade las tags que no tiene
+            c.execute("UPDATE media SET tags = '{}' WHERE id = '{}'".format(new_tags, mediaId)) # ¿Esto se añade como lista? ¿O como tags individuales?
             conn.commit()
             conn.close()
+
+            # Cambiar tags de medios dinámicos
+            for media in self._media_.values():
+                if media.mediaID == mediaId:
+                    media.info.tags.append([tag for tag in tags if tag not in media.info.tags]) # Añade las tags que no tiene
+
+            return 0 # ¿Deberíamos usar los EXIT_OK y eso?
 
     def removeTags(self, mediaId: str, tags: list,  userToken, current=None):
         ''' Elimina las tags dadas del medio con el ID dado '''
@@ -149,13 +173,16 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             conn = sqlite3.connect("media.db")
             c = conn.cursor()
 
-            current_tags = c.execute(
-                "SELECT tags FROM media WHERE id = ''".format(id))
-            new_tags = [x for x in current_tags if x not in tags]
+            # Quitar tags de medios en la BBDD
+            c.execute("SELECT tags FROM media WHERE id LIKE ''".format(id))
+            current_tags = c.fetchall() # Ejecuta la query
+            new_tags = [x for x in current_tags if x not in tags] # Elimina las tags indicadas 
             c.execute("UPDATE media SET tags = '{}' WHERE id = '{}'".format(
                 tags.append(new_tags), mediaId))
             conn.commit()
             conn.close()
+
+            # Falta hacerlo en los medios dinámicos
 
     def renameTile(self, id, name, adminToken, current=None):
         ''' Renombra el medio de la estructura correspondiente '''
@@ -218,10 +245,6 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             except IceFlix.Unauthorized as e:
                 raise e
 
-<<<<<<< HEAD
-
-=======
->>>>>>> d47aef0dfda55e460d01e45a9cac2be7d1ee9b0f
 
 class MediaCatalogServer(Ice.Application):
     def run(self, argv):

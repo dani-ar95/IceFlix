@@ -9,7 +9,7 @@ conn.commit()
 
 c.execute("""CREATE TABLE media (
     id text, 
-    tag text,
+    tags text,
     name text,
     proxy text)""")
 
