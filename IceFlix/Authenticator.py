@@ -76,8 +76,11 @@ class AuthenticatorI(IceFlix.Authenticator):
 
         for i in obj["users"]:
             if i["user"] == user:
-                obj.pop(i)
+                obj["users"].remove(i)
                 break
+
+        with open('users.json', 'w') as file:
+            json.dump(obj, file, indent=2)
 
         if user in self._active_users_.keys():
             self._active_users_.pop(user)
@@ -87,15 +90,14 @@ class AuthenticatorI(IceFlix.Authenticator):
         ''' Comprueba si un token es Administrador '''
 
         try:
-            auth_prx = AuthenticatorServer.main_connection.getAuthenticator()
-        except IceFlix.TemporaryUnavailable:
-            raise IceFlix.TemporaryUnavailable
-        else: 
-            if auth_prx.isAdmin(admin_token):
-                return True
-            else:
+            auth_prx = self._main_prx_.isAdmin(admin_token)
+            if not auth_prx:
                 raise IceFlix.Unauthorized
-
+        except IceFlix.TemporaryUnavailable:
+            print("Se ha perdido conexión con el servidor Main")
+            raise IceFlix.Unauthorized
+        else:
+            return auth_prx
 
     def __init__(self, current=None):
         self._active_users_ = dict()
@@ -118,7 +120,7 @@ class AuthenticatorServer(Ice.Application):
         
         adapter.activate()
         main_connection.register(authenticator_proxy)
-        broker
+        servant._main_prx_ = main_connection
         
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
