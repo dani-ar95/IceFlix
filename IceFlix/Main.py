@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import sys, Ice
+from os import path
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)

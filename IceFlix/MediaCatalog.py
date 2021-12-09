@@ -3,6 +3,7 @@ import sqlite3
 import IceFlix
 import sys
 import Ice
+from os import path
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
@@ -198,7 +199,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         else:
             try:
-                in_ddbb = self.getTitle(id)
+                in_ddbb = self.getTile(id)
             except IceFlix.Unauthorized:
                 raise IceFlix.Unauthorized
 
@@ -212,7 +213,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
             media = self._media_.get(id)
             media.info.name = name
-            self._media_.update(id, media)
+            self._media_.update({id: media})
 
     def updateMedia(self, id, initialName, provider, current=None):
         ''' Añade o actualiza el medio del ID dado '''

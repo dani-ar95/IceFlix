@@ -122,7 +122,15 @@ class Admin(Ice.Application):
                 media_list = self.name_searching(catalog_connection)
                 if media_list == None:
                     return
-
+                print("Estas son las medias disponibles: ")
+                for media in media_list:
+                    print(media.info.name)
+                option = input("Elige una para renombrarla:")
+                new_name = input("Nuevo nombre: ")
+                #Controlar que el admin no meta valores ilegales
+                catalog_connection.renameTile(media_list[int(option)].mediaId,new_name,admin_token)
+                return
+                
             elif option == "2":
                 media_list = self.tag_searching(auth_token, catalog_connection)
                 if media_list == None:
@@ -136,7 +144,8 @@ class Admin(Ice.Application):
                 pass
             elif option == "5":
                 return
-            counter = 0
+            
+            '''counter = 0
             print("Media encontrado:\n")
             for media in media_list:
                 counter += 1
@@ -150,7 +159,7 @@ class Admin(Ice.Application):
             if not selecting_media:
                 return
             else:
-                self.stream_provider(media_list[int(selecting_media) - 1])
+                self.stream_provider(media_list[int(selecting_media) - 1])'''
 
     def stream_provider(self, media, auth_token):
         #media.provider = IceFlix.StreamProviderPrx.checkedCast(media.provider)

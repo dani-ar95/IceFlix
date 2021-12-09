@@ -4,6 +4,7 @@ import sys, Ice
 import json
 import secrets
 from time import sleep
+from os import path
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)

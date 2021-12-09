@@ -6,6 +6,7 @@ import sys
 import Ice
 import socket
 from pathlib import Path
+from os import path
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
@@ -38,11 +39,10 @@ class StreamControllerI(IceFlix.StreamController):
         ''' Comprueba que la sesion del usuario es la actual '''
 
         try:
-            user = self._authenticator_prx_.isAuthorized(user_token)
+            is_user = self._authenticator_prx_.isAuthorized(user_token)
         except IceFlix.Unauthorized as e:
             raise e
-        
-        return user
+        return is_user
 
 
 class StreamControllerServer(Ice.Application):
