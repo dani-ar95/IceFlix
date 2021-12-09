@@ -29,7 +29,7 @@ class StreamProviderI(IceFlix.StreamProvider):
         else:
 
             try:
-                medio_info = self._catalog_prx_.getTitle(mediaId)
+                medio_info = self._catalog_prx_.getTile(mediaId)
             except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
                 raise e
 
