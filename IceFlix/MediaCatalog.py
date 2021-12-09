@@ -11,9 +11,6 @@ class MediaCatalogI(IceFlix.MediaCatalog):
     def __init__(self):
         self._media_ = dict()
 
-    def __init__(self):
-        self._media_ = dict()
-
     def getTile(self, mediaId: str, current=None):
         ''' Retorna un objeto Media con la informacion del medio con el ID dado '''
 
@@ -25,11 +22,11 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         query = c.fetchall()
 
         # Buscar el ID en bbdd y temporal
-        if not query and mediaId not in self.media.keys():
+        if not query and mediaId not in self._media_.keys():
             raise IceFlix.WrongMediaId
 
         # Buscar provider en temporal
-        provider = self._media_.get(mediaId).StreamProvider
+        provider = self._media_.get(mediaId).provider
         if provider:
             try:
                 provider.ice_ping()

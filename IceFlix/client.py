@@ -74,7 +74,7 @@ class Client(Ice.Application):
         #MENU PARA ELEGIR LAS DISTINTAS BUSQUEDAS
         #try:
         while 1:
-            system("clear")
+            #system("clear")
             
             print("1. Búsqueda por nombre")
             print("2. Búsqueda por etiquetas")
@@ -104,9 +104,11 @@ class Client(Ice.Application):
 
     def ask_to_play(self, media_list, auth_token):
         selected_media = self.select_media(media_list)
-        if not selected_media:
+        if selected_media == -1:
+            print("no retorna")
             return 0
         else:
+            print("retorna algo")
             #print("Quieres reproducir el contenido seleccionado?")
             self.stream_provider(selected_media, auth_token)
 
@@ -114,8 +116,7 @@ class Client(Ice.Application):
         #media.provider = IceFlix.StreamProviderPrx.checkedCast(media.provider)
 
         try:
-            stream_controller_proxy = media.provider.getStream(
-                media.mediaId, auth_token)
+            stream_controller_proxy = media.provider.getStream(media.mediaId, auth_token)
         except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
             print(e)
             return
@@ -124,6 +125,7 @@ class Client(Ice.Application):
         sock.bind(("", 10000))
         try:
             config = stream_controller_proxy.getSDP(auth_token, 10000)
+            print("Exito en el controller")
         except IceFlix.Unauthorized:
             print("Usuario no autorizado")
             return
@@ -230,10 +232,11 @@ class Client(Ice.Application):
 
         option = input(
             "Selecciona un media (1-" + str(counter) + "), o deja en blanco para salir: ")
-        while option.isdigit() == False or int(option) < 1 or int(option) > counter or option != "":
-            option = input("Inserta una opción válida: ")
-        
-        selected_media = media_list[option-1]   
+        #while option.isdigit() == False or int(option) < 1 or int(option) > counter or option != "":
+           # option = input("Inserta una opción válida: ")
+        if option == "":
+            return -1
+        selected_media = media_list[int(option)-1]
         return selected_media
 
     

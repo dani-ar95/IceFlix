@@ -13,6 +13,9 @@ import IceFlix
 
 class StreamProviderI(IceFlix.StreamProvider):
 
+    def __init__(self):
+        self._idfiles_ = set()
+
     def getStream(self, mediaId: str, userToken, current=None):
         ''' Factoría de objetos StreamController '''
         
@@ -21,7 +24,7 @@ class StreamProviderI(IceFlix.StreamProvider):
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
 
-        if id not in StreamProviderServer._idfiles_:
+        if mediaId not in self._idfiles_:
             raise IceFlix.WrongMediaId
         else:
 
@@ -41,7 +44,7 @@ class StreamProviderI(IceFlix.StreamProvider):
     def isAvailable(self, mediaId: str, current=None):
         ''' Confirma si existe un medio con ese id'''
 
-        return mediaId in StreamProviderServer._idfiles_
+        return mediaId in self._idfiles_
 
     def uploadMedia(self, fileName: str, uploader, adminToken: str, current=None):
         ''' Permite al administador subir un archivo al sistema '''
@@ -62,7 +65,7 @@ class StreamProviderI(IceFlix.StreamProvider):
 
         # Calcular el identificador del archivo nuevo
         id_hash = hashlib.sha256(bytes).hexdigest()
-        StreamProviderServer._idfiles_.add(id_hash)
+        self._idfiles_.add(id_hash)
 
         # Escribir el archivo nuevo
         new_file_name = os.path.join("media_resources", fileName)
@@ -70,7 +73,7 @@ class StreamProviderI(IceFlix.StreamProvider):
             write_pointer.write(new_file)
 
         try:
-            catalog_prx = StreamProviderServer.main_connection.getCatalog()
+            catalog_prx = self.main_connection.getCatalog()
         except IceFlix.TemporaryUnavailable:
             raise IceFlix.TemporaryUnavailable
         else:
@@ -142,7 +145,6 @@ class StreamProviderServer(Ice.Application):
         candidates = glob.glob(os.path.join(root_folder, '*'), recursive=True)
         prefix_len = len(root_folder) + 1
         self._root_ = root_folder
-        servant._idfiles_ = set()
 
         # stringfield del proxy
         proxy = IceFlix.StreamProviderPrx.checkedCast(stream_provider_proxy)
@@ -152,10 +154,10 @@ class StreamProviderServer(Ice.Application):
             with open("./"+str(filename), "rb") as f:
                 bytes = f.read()
                 id_hash = hashlib.sha256(bytes).hexdigest()
-                self._idfiles_.add(id_hash)
+                servant._idfiles_.add(id_hash)
 
             media_name = os.path.split(filename)
-            catalog_prx.updateMedia(id_hash, media_name, proxy)
+            catalog_prx.updateMedia(id_hash, media_name[1], proxy)
 
         #---------------------------------------------------------
         adapter.activate()
