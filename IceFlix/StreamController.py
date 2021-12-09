@@ -7,7 +7,8 @@ import Ice
 import socket
 from pathlib import Path
 
-Ice.loadSlice("./iceflix.ice")
+SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
+Ice.loadSlice(SLICE_PATH)
 
 
 class StreamControllerI(IceFlix.StreamController):

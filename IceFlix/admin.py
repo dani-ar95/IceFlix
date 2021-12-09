@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from os import system, terminal_size
+from os import system, terminal_size, path
 import Ice
 import sys
 from time import sleep
@@ -9,7 +9,8 @@ import getpass
 import socket
 import iceflixrtsp
 
-Ice.loadSlice("./iceflix.ice")
+SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
+Ice.loadSlice(SLICE_PATH)
 import IceFlix
 
 EXIT_OK = 0

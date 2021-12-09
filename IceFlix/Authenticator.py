@@ -5,7 +5,8 @@ import json
 import secrets
 from time import sleep
 
-Ice.loadSlice("./iceflix.ice")
+SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
+Ice.loadSlice(SLICE_PATH)
 import IceFlix
 
 class AuthenticatorI(IceFlix.Authenticator):
