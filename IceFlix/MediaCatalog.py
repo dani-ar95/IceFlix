@@ -3,8 +3,9 @@ import sqlite3
 import IceFlix
 import sys
 import Ice
-Ice.loadSlice("./iceflix.ice")
 
+SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
+Ice.loadSlice(SLICE_PATH)
 
 class MediaCatalogI(IceFlix.MediaCatalog):
     
