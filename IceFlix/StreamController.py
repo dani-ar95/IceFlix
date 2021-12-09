@@ -40,6 +40,8 @@ class StreamControllerI(IceFlix.StreamController):
             user = self._authenticator_prx_.isAuthorized(user_token)
         except IceFlix.Unauthorized as e:
             raise e
+        
+        return user
 
 
 class StreamControllerServer(Ice.Application):

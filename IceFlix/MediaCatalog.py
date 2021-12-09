@@ -13,7 +13,10 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
     def getTile(self, mediaId: str, current=None):
         ''' Retorna un objeto Media con la informacion del medio con el ID dado '''
-
+        media = self._media_.get(mediaId)
+        if media:
+            return media
+    
         conn = sqlite3.connect("./media.db")
         c = conn.cursor()
         print(mediaId)

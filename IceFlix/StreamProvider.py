@@ -23,22 +23,22 @@ class StreamProviderI(IceFlix.StreamProvider):
             self.check_user(userToken)
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
-
-        if mediaId not in self._idfiles_:
-            raise IceFlix.WrongMediaId
         else:
-
-            try:
-                medio_info = self._catalog_prx_.getTile(mediaId)
-            except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
-                raise e
-
+            if mediaId not in self._idfiles_:
+                raise IceFlix.WrongMediaId
             else:
-                name = medio_info.info.name
-                servant = StreamControllerI(name)
-                servant.authenticator_prx= self.authenticator_prx
-                proxy = current.adapter.addWithUUID(servant)
-                return IceFlix.StreamControllerPrx.checkedCast(proxy)
+                print("consiguiendo titulo")
+                try:
+                    medio_info = self._catalog_prx_.getTile(mediaId)
+                except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
+                    raise IceFlix.WrongMediaId
+                else:
+                    print("se procede a crear el stream")
+                    name = medio_info.info.name
+                    servant = StreamControllerI(name)
+                    servant._authenticator_prx_ = self._authenticator_prx_
+                    proxy = current.adapter.addWithUUID(servant)
+                    return IceFlix.StreamControllerPrx.checkedCast(proxy)
 
 
     def isAvailable(self, mediaId: str, current=None):
@@ -94,7 +94,8 @@ class StreamProviderI(IceFlix.StreamProvider):
             self._idfiles_.remove(id)
             # Avisar al catalog de que no hay medio?
 
-        # Borrar el archivo    
+        # Borrar el archivo        elif userToken is None:
+            raise IceFlix.Unauthorized    
 
     def check_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''
@@ -108,9 +109,11 @@ class StreamProviderI(IceFlix.StreamProvider):
         ''' Comprueba que la sesion del usuario es la actual '''
 
         try:
-            user = self._authenticator_prx_.isAuthorized(user_token)
+            is_user = self._authenticator_prx_.isAuthorized(user_token)
         except IceFlix.Unauthorized as e:
             raise e
+        else:
+            return is_user
 
 class StreamProviderServer(Ice.Application):
     def run(self, argv):
@@ -156,8 +159,8 @@ class StreamProviderServer(Ice.Application):
                 id_hash = hashlib.sha256(bytes).hexdigest()
                 servant._idfiles_.add(id_hash)
 
-            media_name = os.path.split(filename)
-            catalog_prx.updateMedia(id_hash, media_name[1], proxy)
+            #media_name = os.path.split(filename)
+            catalog_prx.updateMedia(id_hash, filename, proxy)
 
         #---------------------------------------------------------
         adapter.activate()

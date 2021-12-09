@@ -3,11 +3,13 @@
 from os import system, terminal_size
 import Ice
 import sys
+import os
 from time import sleep
 import hashlib
 import getpass
 import socket
 import iceflixrtsp
+
 
 Ice.loadSlice("./iceflix.ice")
 import IceFlix
@@ -50,7 +52,7 @@ class Client(Ice.Application):
             
             keyboard = input("MainService@" + user + "> ")
             if keyboard == "catalog_service":
-                self.catalog_service(user, auth_token, catalog_proxy)
+                self.catalog_service(user, catalog_proxy, auth_token)
                 
             elif keyboard == "logout":
                 print("Cerrando sesión...")
@@ -59,17 +61,23 @@ class Client(Ice.Application):
             
             
     def not_logged_prompt(self, main_connection):
+        try:
+            catalog_proxy = main_connection.getCatalog()
+        except IceFlix.TemporaryUnavailable:
+            print("Servicio de catálogo no disponible")
+            sys.exit(1)
+            
         while 1:
                 keyboard = input("MainService@Usuario_anonimo> ")
                 if keyboard == "catalog_service":
-                    self.catalog_service()
+                    self.catalog_service(catalog_proxy)
                 elif keyboard == "exit":
                     sys.exit(0)
                 elif keyboard == "login":
                     self.logged_prompt(main_connection)
         
         
-    def catalog_service(self, user, auth_token, catalog_connection):
+    def catalog_service(self, catalog_connection, user="Usuario_anonimo", auth_token=""):
         ''' Gestiona el comando "catalog_service" '''
         #MENU PARA ELEGIR LAS DISTINTAS BUSQUEDAS
         #try:
@@ -88,7 +96,12 @@ class Client(Ice.Application):
                 media_list = self.name_searching(catalog_connection)
                 if media_list == None:
                     continue
-                self.ask_to_play(media_list, auth_token)
+                try:
+                    self.ask_to_play(media_list, auth_token)
+                except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
+                    print(e)
+                else:
+                    continue    
                 
             elif option == "2":
                 media_list = self.tag_searching(auth_token, catalog_connection)
@@ -110,37 +123,39 @@ class Client(Ice.Application):
         else:
             print("retorna algo")
             #print("Quieres reproducir el contenido seleccionado?")
-            self.stream_provider(selected_media, auth_token)
+            try:
+                self.stream_provider(selected_media, auth_token)
+            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
+                raise e
 
     def stream_provider(self, media, auth_token):
         #media.provider = IceFlix.StreamProviderPrx.checkedCast(media.provider)
-
         try:
             stream_controller_proxy = media.provider.getStream(media.mediaId, auth_token)
         except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
-            print(e)
-            return
+            raise e
+        else:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind(("", 10000))
+            try:
+                config = stream_controller_proxy.getSDP(auth_token, 10000)
+                print("Exito en el controller")
+            except IceFlix.Unauthorized:
+                print("Usuario no autorizado")
+                return
+            print("config")
+            lista = config.split("::")
+            emitter = iceflixrtsp.RTSPEmitter(lista[0], lista[1], lista[2])
+            emitter.start()
+            player = iceflixrtsp.RTSPPlayer()
+            player.play(emitter.playback_uri)
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind(("", 10000))
-        try:
-            config = stream_controller_proxy.getSDP(auth_token, 10000)
-            print("Exito en el controller")
-        except IceFlix.Unauthorized:
-            print("Usuario no autorizado")
-            return
-        lista = config.split("::")
-        emitter = iceflixrtsp.RTSPEmitter(lista[0], lista[1], lista[2])
-        emitter.start()
-        player = iceflixrtsp.RTSPPlayer()
-        player.play(emitter.playback_uri)
-
-        # Stream for 10 seconds
-        sleep(10.0)
-
-        # Stop player and streamer
-        player.stop()
-        emitter.stop()
+            # Stream for 10 seconds
+            sleep(10)
+            # Stop player and streamer
+            player.stop()
+            emitter.stop()
+            sock.close()
 
     
     def manage_tags(self, auth_token, catalog_connection, is_add):
@@ -228,7 +243,7 @@ class Client(Ice.Application):
         print("Media encontrado:\n")
         for media in media_list:
             counter += 1
-            print(str(counter) + media.info.name)
+            print(str(counter) + ". " + os.path.split(media.info.name)[1])
 
         option = input(
             "Selecciona un media (1-" + str(counter) + "), o deja en blanco para salir: ")
