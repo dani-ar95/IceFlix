@@ -49,7 +49,6 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             raise IceFlix.WrongMediaId
 
         
-
     def getTilesByName(self, name, exact: bool, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna una lista de IDs a partir del nombre dado'''
 

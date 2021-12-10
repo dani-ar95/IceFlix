@@ -18,9 +18,9 @@ import IceFlix
 class StreamProviderI(IceFlix.StreamProvider):
 
     def __init__(self):
-        self._idfiles_ = set()
+        self._provider_media_ = dict()
 
-    def getStream(self, mediaId: str, userToken, current=None): # pylint: disable=invalid-name,unused-argument
+    def getStream(self, mediaId: str, userToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Factoría de objetos StreamController '''
         
         try:
@@ -28,27 +28,29 @@ class StreamProviderI(IceFlix.StreamProvider):
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
         else:
-            if mediaId not in self._idfiles_:
-                raise IceFlix.WrongMediaId
-            else:
-                print("consiguiendo titulo")
+            if mediaId not in self._provider_media_.keys(): # Si el medio no pertenece al provider
                 try:
-                    medio_info = self._catalog_prx_.getTile(mediaId)
-                except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
+                    asked_media = self._catalog_prx_.getTile(mediaId) # Pedir medio al catalogo
+                except IceFlix.WrongMediaId:
                     raise IceFlix.WrongMediaId
                 else:
-                    print("se procede a crear el stream")
-                    name = medio_info.info.name
-                    servant = StreamControllerI(name)
-                    servant._authenticator_prx_ = self._authenticator_prx_
-                    proxy = current.adapter.addWithUUID(servant)
-                    return IceFlix.StreamControllerPrx.checkedCast(proxy)
+                    print("consiguiendo titulo")
+                    if mediaId in self._provider_media_.keys():
+                        provide_media = self._provider_media_.get(mediaId)
+                    else:
+                        provide_media = asked_media
+                        print("se procede a crear el stream")
+                        name = provide_media.info.name
+                        servant = StreamControllerI(name)
+                        servant._authenticator_prx_ = self._authenticator_prx_
+                        proxy = current.adapter.addWithUUID(servant)
+                        return IceFlix.StreamControllerPrx.checkedCast(proxy)
 
 
     def isAvailable(self, mediaId: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Confirma si existe un medio con ese id'''
 
-        return mediaId in self._idfiles_
+        return mediaId in self._provider_media_
 
     def uploadMedia(self, fileName: str, uploader, adminToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Permite al administador subir un archivo al sistema '''
@@ -71,7 +73,6 @@ class StreamProviderI(IceFlix.StreamProvider):
                 raise IceFlix.UploadError
 
             id_hash = hashlib.sha256(new_file).hexdigest()
-            self._idfiles_.add(id_hash)
 
             file = path.split(fileName)[1]
             new_file_name = path.join(path.dirname(__file__), "media_resources/" + file)
@@ -79,6 +80,12 @@ class StreamProviderI(IceFlix.StreamProvider):
             with open(new_file_name, "wb") as write_pointer:
                 write_pointer.write(new_file)
 
+            # Crear el media propio
+            info = IceFlix.MediaInfo(new_file_name, [])
+            new_media = IceFlix.Media(id_hash, self._proxy_, info)
+            self._provider_media_.update({id_hash:new_media})
+
+            # Enviar medio al catálogo
             self._catalog_prx_.updateMedia(id_hash, fileName, self._proxy_)
 
             return id_hash
