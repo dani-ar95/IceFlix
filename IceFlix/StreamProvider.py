@@ -36,6 +36,7 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
         else:
+            asked_media = None
             if self.isAvailable(mediaId):
                 provide_media = self._provider_media_.get(mediaId)
             else:
@@ -43,18 +44,18 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
                     asked_media = self._catalog_prx_.getTile(mediaId) # Pedir medio al catalogo
                 except IceFlix.WrongMediaId:
                     raise IceFlix.WrongMediaId
-                finally:
-                    print("consiguiendo titulo")
-                    if self.isAvailable(mediaId):
-                        provide_media = self._provider_media_.get(mediaId)
-                    else:
-                        provide_media = asked_media
-                        print("se procede a crear el stream")
-                        name = provide_media.info.name
-                        servant = StreamControllerI(name)
-                        servant._authenticator_prx_ = self._authenticator_prx_
-                        proxy = current.adapter.addWithUUID(servant)
-                        return IceFlix.StreamControllerPrx.checkedCast(proxy)
+
+            print("consiguiendo titulo")
+            if asked_media:
+                provide_media = asked_media
+            else:
+                print("se procede a crear el stream")
+                name = provide_media.info.name
+                print(provide_media)
+                servant = StreamControllerI(name)
+                servant._authenticator_prx_ = self._authenticator_prx_
+                proxy = current.adapter.addWithUUID(servant)
+                return IceFlix.StreamControllerPrx.checkedCast(proxy)
 
 
     def isAvailable(self, mediaId: str, current=None): # pylint: disable=invalid-name,unused-argument
@@ -175,9 +176,9 @@ class StreamProviderServer(Ice.Application):
         for filename in candidates:
             with open("./"+str(filename), "rb") as f:
                 print("Sirviendo " + str(filename))
-                archivo_leido = f.read()
-                id_hash = hashlib.sha256(archivo_leido).hexdigest()
-                new_media = IceFlix.Media(id_hash, IceFlix.MediaInfo(filename, []))
+                bytes = f.read()
+                id_hash = hashlib.sha256(bytes).hexdigest()
+                new_media = IceFlix.Media(id_hash, proxy, IceFlix.MediaInfo(filename, []))
                 servant._provider_media_.update({id_hash: new_media})
 
             catalog_prx.updateMedia(id_hash, filename, proxy)
