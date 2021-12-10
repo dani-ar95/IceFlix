@@ -29,6 +29,7 @@ class Client(Ice.Application):
         print("         | Iceflix Client |")
         print("         #----------------#\n\n")
 
+
     def logged_prompt(self, main_connection):
         self.format_prompt()
         user = input("Introduce el nombre de usuario: ")
