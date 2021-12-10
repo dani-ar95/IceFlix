@@ -274,7 +274,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         ''' Comprueba que la sesion del usuario es la actual '''
 
         try:
-            auth_prx = MediaCatalogServer.main_connection.getAuthenticator()
+            auth_prx = self._main_prx_.getAuthenticator()
         except IceFlix.TemporaryUnavailable:
             raise IceFlix.TemporaryUnavailable
         else:
@@ -288,7 +288,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         ''' Comprueba que la sesion del usuario es la actual '''
 
         try:
-            auth_prx = MediaCatalogServer.main_connection.getAuthenticator()
+            auth_prx = self._main_prx_.getAuthenticator()
         except IceFlix.TemporaryUnavailable:
             raise IceFlix.TemporaryUnavailable
         else:
@@ -318,6 +318,7 @@ class MediaCatalogServer(Ice.Application):
 
         main_connection.register(media_catalog_proxy)
         servant._main_prx_ = main_connection
+        
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()

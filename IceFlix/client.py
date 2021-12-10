@@ -75,9 +75,9 @@ class Client(Ice.Application):
                 print("Cerrando sesión...")
                 sleep(2)
                 self.not_logged_prompt(main_connection)
-                
+                    
             elif option == "3":
-                self.communicator.destroy()
+                sys.exit(0)
             
             
     def not_logged_prompt(self, main_connection):
@@ -92,32 +92,52 @@ class Client(Ice.Application):
             
             print("1. Servicio de catalogo")
             print("2. Iniciar sesión")
-            print("3. Salir del cliente")
+            print("3. Salir del cliente\n")
             
             option = input("MainService@Usuario_anonimo> ")
             while option.isdigit() == False or int(option) < 1 or int(option) > 3:
                 option = input("Inserta una opción válida: ")
             
             if option == "1":
-                self.catalog_service(catalog_proxy, "Usuario_anonimo", "")
+                self.not_logged_catalog_service(catalog_proxy)
                 
             elif option == "2":
                 self.logged_prompt(main_connection)
                 
             elif option == "3":
-                self.shutdown()
+                Ice.exit(0)
         
         
+    def not_logged_catalog_service(self, catalog_connection):
+        while 1:
+            system("clear")
+            print("Opciones disponibles:")
+            print("1. Búsqueda por nombre")
+            print("2. Volver\n")
+            
+            option = input("CatalogService@Usuario_anonimo> ")
+            while option.isdigit() == False or int(option) < 1 or int(option) > 3:
+                option = input("Inserta una opción válida: ")
+            
+            if option == "1":
+                media_list = self.name_searching(catalog_connection)
+                if len(media_list) == 0:
+                    print("No se han encontrado resultados")
+                else:
+                    for media in media_list:
+                        print(os.path.split(media.info.name)[1])
+                input("Pulsa enter para continuar...")
+                
     def catalog_service(self, catalog_connection, user, auth_token):
         ''' Gestiona el comando "catalog_service" '''
         #MENU PARA ELEGIR LAS DISTINTAS BUSQUEDAS
         #try:
         while 1:
             system("clear")
-            
+            print("Opciones disponibles:")
             print("1. Búsqueda por nombre")
             print("2. Búsqueda por etiquetas")
-            print("3. Salir")
+            print("3. Volver\n")
             
             option = input("CatalogService@" + user + "> ")
             while option.isdigit() == False or int(option) < 1 or int(option) > 3:
@@ -125,7 +145,7 @@ class Client(Ice.Application):
             
             if option == "1":
                 media_list = self.name_searching(catalog_connection)
-                if media_list == None:
+                if len(media_list) == 0:
                     print("No se han encontrado resultados")
                     continue
                 
@@ -161,10 +181,11 @@ class Client(Ice.Application):
                 return 0 
 
     def ask_function(self, user, media_object, auth_token, catalog_connection):
+        print("Opciones disponibles:")
         print("1. Reproducir")
         print("2. Añadir etiquetas")
         print("3. Eliminar etiquetas")
-        print("4. Volver")
+        print("4. Volver\n")
         option = input("CatalogService@" + user + "> ")
         while option.isdigit() == False or int(option) < 1 or int(option) > 4:
             option = input("Inserta una opción válida: ")
@@ -263,7 +284,7 @@ class Client(Ice.Application):
             all_tags = False
 
         try:
-            id_list = catalog_connection.searchByTags(
+            id_list = catalog_connection.getTilesByTags(
                 tag_list, all_tags, auth_token)
         except IceFlix.Unauthorized:
             print("Usuario no autorizado.")
@@ -300,7 +321,7 @@ class Client(Ice.Application):
 
         option = input(
             "Selecciona un media o deja en blanco para salir: ")
-        while option.isdigit() == False or int(option) < 1 or int(option) > counter or option != "":
+        while option.isdigit() == False or int(option) < 1 or int(option) > counter:
             if option == "":
                 return -1
             option = input("Inserta una opción válida: ")        
@@ -312,9 +333,9 @@ class Client(Ice.Application):
     def name_searching(self, catalog_connection):
         media_list = []
         full_title = False
-        
+        print("\nOpciones disponibles:")
         print("1. Buscar medio por nombre completo")
-        print("2. Buscar medio por parte del nombre")
+        print("2. Buscar medio por parte del nombre\n")
         option = input("Opción (1/2): ")
         while option.isdigit() == False or int(option) < 1 or int(option) > 2:
             option = input("Inserta una opción válida: ")
@@ -336,11 +357,19 @@ class Client(Ice.Application):
                         
         return media_list
 
+
     def run(self, argv):
         broker = self.communicator()
-        main_service_proxy = broker.stringToProxy(argv[1])
         connection_tries = 3
-
+        system("clear")
+        print("         #----------------#")
+        print("         | Iceflix Client |")
+        print("         #----------------#\n\n")
+        
+        main_prx_string = input("Introduce el proxy del servicio principal: ")
+        main_service_proxy = broker.stringToProxy(main_prx_string)
+        print("Conectando con el servicio principal...")
+        sleep(1)    #Simula complejidad
         while(connection_tries > 0):
             try:
                 check = main_service_proxy.ice_ping()
@@ -348,13 +377,13 @@ class Client(Ice.Application):
                     break
             except Ice.ConnectionRefusedException:
                 print(
-                    "No ha sido posible conectar con Main Service. Intentando de nuevo en 10s...")
+                    "No ha sido posible contactar con Main Service. Intentando de nuevo en 10s...")
                 connection_tries -= 1
                 if connection_tries == 0:
                     print("Número máximo de intentos alcanzados. Saliendo...")
-                    sleep(2)
+                    sleep(2)    #Simula complejidad
                     return 0
-                sleep(1)  # cambiar a 10 segundoss
+                sleep(10)  # cambiar a 10 segundoss
 
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
             
