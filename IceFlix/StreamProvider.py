@@ -20,7 +20,7 @@ class StreamProviderI(IceFlix.StreamProvider):
     def __init__(self):
         self._idfiles_ = set()
 
-    def getStream(self, mediaId: str, userToken, current=None):
+    def getStream(self, mediaId: str, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Factoría de objetos StreamController '''
         
         try:
@@ -45,58 +45,55 @@ class StreamProviderI(IceFlix.StreamProvider):
                     return IceFlix.StreamControllerPrx.checkedCast(proxy)
 
 
-    def isAvailable(self, mediaId: str, current=None):
+    def isAvailable(self, mediaId: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Confirma si existe un medio con ese id'''
 
         return mediaId in self._idfiles_
 
-    def uploadMedia(self, fileName: str, uploader, adminToken: str, current=None):
+    def uploadMedia(self, fileName: str, uploader, adminToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Permite al administador subir un archivo al sistema '''
 
         try:
             self.check_admin(adminToken)
-        except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
+        except IceFlix.Unauthorized:
                 raise IceFlix.Unauthorized
         else:
-            # Recibir archivo por Uploader
             new_file = b""
             received = b""
-            print(type(uploader))
             
-            uploader.ice_ping()
-            print("antes de recibir")
-            while True:
-                received = uploader.receive(512)
-                print("recibido")
-                if not received: 
-                    print("paramos")
-                    break
-                new_file += received #Raise UploadError ¿?
+            try:
+                while True:
+                    received = uploader.receive(512)
+                    if not received:
+                        break
+                    new_file += received
+            except:
+                raise IceFlix.UploadError
 
-            # Calcular el identificador del archivo nuevo
             id_hash = hashlib.sha256(new_file).hexdigest()
             self._idfiles_.add(id_hash)
 
-            # Escribir el archivo nuevo
             file = path.split(fileName)[1]
             new_file_name = path.join(path.dirname(__file__), "media_resources/" + file)
+
             with open(new_file_name, "wb") as write_pointer:
                 write_pointer.write(new_file)
-            print("archivo creado")
+
             self._catalog_prx_.updateMedia(id_hash, fileName, self._proxy_)
+
             return id_hash
 
-    def deleteMedia(self, mediaId: str, adminToken: str, current=None):
+    def deleteMedia(self, mediaId: str, adminToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Perimite al administrador borrar archivos conociendo su id '''
 
         try:
             self.check_admin(adminToken)
-        except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
-                raise IceFlix.Unauthorized
+        except IceFlix.Unauthorized:
+            raise IceFlix.Unauthorized
 
         try:
             media_file = self._catalog_prx_.getTile(mediaId)
-        except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
+        except IceFlix.WrongMediaId:
             raise IceFlix.WrongMediaId
 
         else:
@@ -109,8 +106,8 @@ class StreamProviderI(IceFlix.StreamProvider):
 
         try:
             user = self._main_prx_.isAdmin(admin_token)
-        except IceFlix.Unauthorized as e:
-            raise e
+        except IceFlix.Unauthorized:
+            raise IceFlix.Unauthorized
         else:
             return user
 
@@ -119,14 +116,17 @@ class StreamProviderI(IceFlix.StreamProvider):
 
         try:
             is_user = self._authenticator_prx_.isAuthorized(user_token)
-        except IceFlix.Unauthorized as e:
-            raise e
+        except IceFlix.Unauthorized:
+            raise IceFlix.Unauthorized
         else:
             return is_user
 
 class StreamProviderServer(Ice.Application):
+    ''' Servidor que envía '''
     def run(self, argv):
-        sleep(3)
+        '''' Inicialización de la clase '''
+
+        sleep(2)
         self.shutdownOnInterrupt()
         main_service_proxy = self.communicator().stringToProxy(argv[1])
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)

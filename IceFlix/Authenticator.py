@@ -13,7 +13,7 @@ import IceFlix
 
 class AuthenticatorI(IceFlix.Authenticator):
 
-    def refreshAuthorization(self, user, passwordHash, current=None):
+    def refreshAuthorization(self, user: str, passwordHash: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Actualiza el token de un usuario registrado '''
 
         with open(USERS_PATH, "r") as f:
@@ -21,23 +21,23 @@ class AuthenticatorI(IceFlix.Authenticator):
 
         for i in obj["users"]:
             if i["user"] == user and i["password"] == passwordHash:
-                print("Usuario autenticado")
                 new_token = secrets.token_urlsafe(40)
                 self._active_users_.update({user:new_token})
                 return new_token
 
         raise IceFlix.Unauthorized
 
-    def isAuthorized(self, userToken, current=None):
+    def isAuthorized(self, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Permite conocer si un token está actualizado en el sistema '''
 
-        if userToken in self._active_users_.values():
-            return True
+        authorized = bool(userToken in self._active_users_.values())
+        if authorized:
+            return authorized
         else:
             raise IceFlix.Unauthorized
 
 
-    def whois(self, userToken, current=None):
+    def whois(self, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Permite conocer el usuario asociado a un token'''
 
         if userToken in self._active_users_.values():
@@ -49,7 +49,7 @@ class AuthenticatorI(IceFlix.Authenticator):
             raise IceFlix.Unauthorized
 
 
-    def addUser(self, user, passwordHash, adminToken, current=None):
+    def addUser(self, user, passwordHash, adminToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Perimte al administrador añadir usuarios al sistema '''
         
         try:
@@ -66,7 +66,7 @@ class AuthenticatorI(IceFlix.Authenticator):
             json.dump(obj, file, indent=2)
 
 
-    def removeUser(self, user, adminToken, current=None):
+    def removeUser(self, user, adminToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Permite al administrador elminar usuarios del sistema '''
 
         try:
@@ -74,8 +74,8 @@ class AuthenticatorI(IceFlix.Authenticator):
         except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
             raise IceFlix.Unauthorized
 
-        with open(USERS_PATH, "r") as f:
-            obj = json.load(f)
+        with open(USERS_PATH, "r") as reading_descriptor:
+            obj = json.load(reading_descriptor)
 
         for i in obj["users"]:
             if i["user"] == user:
@@ -102,7 +102,7 @@ class AuthenticatorI(IceFlix.Authenticator):
         else:
             return is_admin
 
-    def __init__(self, current=None):
+    def __init__(self):
         self._active_users_ = dict()
         
         
@@ -128,4 +128,4 @@ class AuthenticatorServer(Ice.Application):
         broker.waitForShutdown()
         
 if __name__ == '__main__':
-    sys.exit(AuthenticatorServer().main(sys.argv))       
+    sys.exit(AuthenticatorServer().main(sys.argv))

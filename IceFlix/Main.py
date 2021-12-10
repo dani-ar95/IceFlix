@@ -9,29 +9,32 @@ import IceFlix
 
 class MainI(IceFlix.Main):
     
-    def __init__(self, current=None):
+    def __init__(self):
         self._servants_ = set()
 
-    def getAuthenticator(self, current=None):
-        print("getAuthenticator")
+    def getAuthenticator(self, current=None): # pylint: disable=unused-argument
+        ''' Devuelve el proxy a un Servicio de Autenticación válido registrado '''
+
         for servant in self._servants_:
             try:
-
                 is_auth = servant.ice_isA("::IceFlix::Authenticator")
             except Ice.ConnectionRefusedException:
-                pass
+                raise IceFlix.TemporaryUnavailable
             else:
-                if servant.ice_isA("::IceFlix::Authenticator"):
-                    try:
-                        response = servant.ice_ping()
-                    except Ice.ConnectionRefusedException:
-                        self._servants_.remove(servant)
-                    if not response:
-                        return IceFlix.AuthenticatorPrx.checkedCast(servant)
+                if is_auth:
+                    if servant.ice_isA("::IceFlix::Authenticator"):
+                        try:
+                            response = servant.ice_ping()
+                        except Ice.ConnectionRefusedException:
+                            self._servants_.remove(servant)
+                        if not response:
+                            return IceFlix.AuthenticatorPrx.checkedCast(servant)
 
-        raise IceFlix.TemporaryUnavailable("No authenticator available")
+        raise IceFlix.TemporaryUnavailable
 
-    def getCatalog(self, current=None):
+    def getCatalog(self, current=None): # pylint: disable=unused-argument
+        ''' Devuelve el proxy a un Servicio de Catálogo válido registrado '''
+
         for servant in self._servants_:
             try:
                 is_catalog = servant.ice_isA("::IceFlix::MediaCatalog")
@@ -46,14 +49,16 @@ class MainI(IceFlix.Main):
                     if not response:
                         return IceFlix.MediaCatalogPrx.checkedCast(servant)
                 
-        raise IceFlix.TemporaryUnavailable()
+        raise IceFlix.TemporaryUnavailable
 
-    def register(self, service, current=None):
-        print("Bienvenido: " + str(type(service)))
+    def register(self, service, current=None): # pylint: disable=unused-argument
+        ''' Permite registrarse a determinados servicios '''
+
         self._servants_.add(service)
         # Throws UnkownService
 
-    def isAdmin(self, adminToken, current=None):
+    def isAdmin(self, adminToken, current=None): # pylint: disable=unused-argument
+        ''' Verifica que un token es de administración '''
         return adminToken == self._token_
 
 
