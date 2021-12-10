@@ -5,7 +5,13 @@
       "password": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
       "tags": {
         "identificador1": "tag1",
-        "identificador2": "tag2"
+        "identificador2": "tag2",
+        "dc27d25e3891e98bda06f6dd2d809e36cf19b48c62288ddfc5b1574e41e23082": [
+          "hola",
+          "patricio",
+          "kk",
+          "calamardo"
+        ]
       }
     }
   ]

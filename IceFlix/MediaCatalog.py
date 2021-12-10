@@ -9,6 +9,7 @@ from os import path
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 DB_PATH = path.join(path.dirname(__file__), "media.db")
+USERS_PATH = path.join(path.dirname(__file__), "users.json")
 Ice.loadSlice(SLICE_PATH)
 
 class MediaCatalogI(IceFlix.MediaCatalog):
@@ -114,49 +115,37 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
             list_returned = c.fetchall() # Ejecuta la query
             conn.close()
+            
+            for media_id in self._media_.keys():
+                list_returned.append(media_id)
 
-            with open("users.json", "r") as f:
+            with open(USERS_PATH, "r") as f:
                 obj = json.load(f)
                 for i in obj["users"]:
-                    if i["name"] == username:
+                    if i["user"] == username:
                         user_tags = i["tags"]
-
-            if includeAllTags:
-                for media_id in list_returned:
-                    id_tags = user_tags.get(media_id)
-                    valid = bool(x for x in tags in id_tags)
-                    if valid: 
-                        id_list.append(media_id)
-            else:
-                for media_id in list_returned:
-                    id_tags = user_tags.get(media_id)
-                    for x in id_tags:
-                        if x in tags:
-                            valid = True
-                            break
-                    if valid:
-                        id_list.append(media_id)
             
-
-            # Buscar por tags en medios dinámicos
-            valid = False
+            valid = True
             if includeAllTags:
-                for media in self._media_.values():
-                    if media.mediaId in user_tags.keys():
-                        user_tags_for_media = user_tags.get(media.mediaId)
-                        valid = bool(x for x in user_tags_for_media in tags)
-                        if valid and media.mediaId not in id_list:
-                            id_list.append(media.mediaId)
+                for media_id in list_returned:
+                    id_tags = user_tags.get(media_id)
+                    if id_tags:
+                        for tag in tags:
+                            if tag not in id_tags:
+                                valid = False
+                        if valid: 
+                            id_list.append(media_id)
             else:
-                for media in self._media_.values():
-                    if media.mediaId in user_tags.keys():
-                        user_tags_for_media = user_tags.get(media.mediaId)
-                        for tag in user_tags_for_media:
-                            if tag in tags:
+                valid = False
+                for media_id in list_returned:
+                    id_tags = user_tags.get(media_id)
+                    if id_tags:
+                        for x in id_tags:
+                            if x in tags:
                                 valid = True
                                 break
-                        if valid and media.mediaId not in id_list:
-                            id_list.append(media.mediaId)
+                        if valid:
+                            id_list.append(media_id)
 
             return id_list
 
@@ -173,20 +162,23 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                 raise IceFlix.WrongMediaId
 
             # Cambiar tags persistentes
-            with open("users.json", "r") as f:
+            with open(USERS_PATH, "r") as f:
                 obj = json.load(f)
 
             for i in obj["users"]:
                 if i["user"] == user_name:
-                    i.update({mediaId: tags})
+                    actuales = i["tags"].get(mediaId)
+                    for tag in tags:
+                        actuales.append(tag)
+                    i["tags"].update({mediaId:actuales})
                     break
 
-            with open('users.json', 'w') as file:
+            with open(USERS_PATH, 'w') as file:
                 json.dump(obj, file, indent=2)
 
             # Cambiar tags de medios dinámicos, creo que no hace falta
             for media in self._media_.values():
-                if media.mediaID == mediaId:
+                if media.mediaId == mediaId:
                     media.info.tags.append([tag for tag in tags if tag not in media.info.tags]) # Añade las tags que no tiene
 
             return 0 # ¿Deberíamos usar los EXIT_OK y eso?
@@ -201,7 +193,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         else:
 
             # Cambiar tags persistentes
-            with open("users.json", "r") as f:
+            with open(USERS_PATH, "r") as f:
                 obj = json.load(f)
 
             for i in obj["users"]:
@@ -212,7 +204,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                         new_list = [x for x in lista_de_tags_del_medio if x not in tags]
                         user_tags.update({mediaId: new_list})
 
-            with open('users.json', 'w') as file:
+            with open(USERS_PATH, 'w') as file:
                 json.dump(obj, file, indent=2)
                 
             return 0
@@ -286,29 +278,20 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
     def check_user(self, user_token: str):
         ''' Comprueba que la sesion del usuario es la actual '''
-
         try:
-            auth_prx = self._main_prx_.getAuthenticator()
-        except IceFlix.TemporaryUnavailable:
-            raise IceFlix.TemporaryUnavailable
+            user = self._auth_prx_.isAuthorized(user_token)
+        except IceFlix.Unauthorized as e:
+            raise e         
         else:
-            try:
-                user = auth_prx.isAuthorized(user_token)
-            except IceFlix.Unauthorized as e:
-                raise e
             return user
 
     def check_user_name(self, user_token: str):
         ''' Comprueba que la sesion del usuario es la actual '''
         try:
-            auth_prx = self._main_prx_.getAuthenticator()
-        except IceFlix.TemporaryUnavailable:
-            raise IceFlix.TemporaryUnavailable
+            user_name = self._auth_prx_.whois(user_token)
+        except IceFlix.Unauthorized as e:
+            raise e         
         else:
-            try:
-                user_name = auth_prx.whois(user_token)
-            except IceFlix.Unauthorized as e:
-                raise e
             return user_name
 
 class MediaCatalogServer(Ice.Application):
@@ -330,9 +313,13 @@ class MediaCatalogServer(Ice.Application):
         adapter.activate()
 
         main_connection.register(media_catalog_proxy)
-        servant._main_prx_ = main_connection
         
-
+        servant._main_prx_ = main_connection
+        try:
+            servant._auth_prx_ = main_connection.getAuthenticator()
+        except IceFlix.TemporaryUnavailable as e:
+            print(e)
+            
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
 
