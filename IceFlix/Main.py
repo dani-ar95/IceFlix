@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# pylint: disable=invalid-name
 """Modulo Servicio Principal"""
 
 from os import path
@@ -26,7 +27,7 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
             try:
                 is_auth = servant.ice_isA("::IceFlix::Authenticator")
             except Ice.ConnectionRefusedException:
-                raise IceFlix.TemporaryUnavailable
+                break
             else:
                 if is_auth:
                     if servant.ice_isA("::IceFlix::Authenticator"):

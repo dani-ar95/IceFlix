@@ -24,7 +24,7 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
     def refreshAuthorization(self, user: str, passwordHash: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Actualiza el token de un usuario registrado '''
 
-        with open(USERS_PATH, "r") as f:
+        with open(USERS_PATH, "r", encoding="utf8") as f:
             obj = json.load(f)
 
         for i in obj["users"]:
@@ -60,15 +60,15 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
 
         try:
             self.check_admin(adminToken)
-        except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
+        except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
 
-        with open(USERS_PATH, "r") as f:
+        with open(USERS_PATH, "r", encoding="utf8") as f:
             obj = json.load(f)
 
         obj["users"].append({"user": user, "password": passwordHash, "tags": {}})
 
-        with open(USERS_PATH, 'w') as file:
+        with open(USERS_PATH, 'w', encoding="utf8") as file:
             json.dump(obj, file, indent=2)
 
     def removeUser(self, user, adminToken, current=None): # pylint: disable=invalid-name,unused-argument
@@ -76,10 +76,10 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
 
         try:
             self.check_admin(adminToken)
-        except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
+        except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
 
-        with open(USERS_PATH, "r") as reading_descriptor:
+        with open(USERS_PATH, "r", encoding="utf8") as reading_descriptor:
             obj = json.load(reading_descriptor)
 
         for i in obj["users"]:
@@ -87,7 +87,7 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
                 obj["users"].remove(i)
                 break
 
-        with open(USERS_PATH, 'w') as file:
+        with open(USERS_PATH, 'w', encoding="utf8") as file:
             json.dump(obj, file, indent=2)
 
         if user in self._active_users_.keys():
@@ -100,19 +100,20 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
             is_admin = self._main_prx_.isAdmin(admin_token)
             if not is_admin:
                 raise IceFlix.Unauthorized
-        except IceFlix.TemporaryUnavailable:
+        except IceFlix.Unauthorized:
             print("Se ha perdido conexión con el servidor Main")
             raise IceFlix.Unauthorized
         else:
             return is_admin
 
     def __init__(self):
-        self._active_users_ = dict()
+        self._active_users_ = {}
 
 
 class AuthenticatorServer(Ice.Application):
     """Servidor del servicio principal"""
     def run(self, argv):
+        ''' Implementación del servidor de autenticación '''
         sleep(1)
         main_service_proxy = self.communicator().stringToProxy(argv[1])
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
