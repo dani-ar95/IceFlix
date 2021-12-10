@@ -28,12 +28,14 @@ class StreamProviderI(IceFlix.StreamProvider):
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
         else:
-            if mediaId not in self._provider_media_.keys(): # Si el medio no pertenece al provider
+            if self.isAvailable(mediaId):
+                provide_media = self._provider_media_.get(mediaId)
+            else:
                 try:
                     asked_media = self._catalog_prx_.getTile(mediaId) # Pedir medio al catalogo
                 except IceFlix.WrongMediaId:
                     raise IceFlix.WrongMediaId
-                else:
+                finally:
                     print("consiguiendo titulo")
                     if mediaId in self._provider_media_.keys():
                         provide_media = self._provider_media_.get(mediaId)
@@ -50,7 +52,7 @@ class StreamProviderI(IceFlix.StreamProvider):
     def isAvailable(self, mediaId: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Confirma si existe un medio con ese id'''
 
-        return mediaId in self._provider_media_
+        return mediaId in self._provider_media_.keys()
 
     def uploadMedia(self, fileName: str, uploader, adminToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Permite al administador subir un archivo al sistema '''
