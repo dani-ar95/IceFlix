@@ -122,7 +122,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             if includeAllTags:
                 for media_id in list_returned:
                     id_tags = user_tags.get(media_id)
-                    valid = [True if (x for x in tags in id_tags) else False]
+                    valid = bool(x for x in tags in id_tags)
                     if valid: 
                         id_list.append(media_id)
             else:
@@ -182,7 +182,6 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             with open('users.json', 'w') as file:
                 json.dump(obj, file, indent=2)
 
-
             # Cambiar tags de medios dinámicos, creo que no hace falta
             for media in self._media_.values():
                 if media.mediaID == mediaId:
@@ -225,9 +224,21 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             self.check_admin(adminToken)
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
+        else:    
 
-        # Cambiar media en medios dinamicos
-        else:
+            # Buscar id en medios estáticos
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute(
+                "SELECT * FROM media where id LIKE '{}'".format(mediaId))
+            media = conn.commit()
+            conn.close()
+            
+            # Buscar id en medios dinamicos
+            if mediaId not in self._media_.keys() and not media:
+                raise IceFlix.WrongMediaId
+
+            # Cambiar media en medios dinamicos
             if mediaId in self._media_.keys():
                 medio = self._media_.get(mediaId)
                 medio.info.name = name
@@ -238,24 +249,25 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                 in_ddbb = self.getTile(mediaId)
             except IceFlix.Unauthorized:
                 raise IceFlix.Unauthorized
-            # Falta WrongMediaID si no lo encuentra en la bbdd ni en medios dinamicos
-            if in_ddbb:
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute(
-                    "UPDATE media SET name = '{}' WHERE id LIKE '{}'".format(name, mediaId))
-                conn.commit()
-                conn.close()
+
+            else:
+                if in_ddbb:
+                    conn = sqlite3.connect(DB_PATH)
+                    c = conn.cursor()
+                    c.execute(
+                        "UPDATE media SET name = '{}' WHERE id LIKE '{}'".format(name, mediaId))
+                    conn.commit()
+                    conn.close()
 
 
-    def updateMedia(self, id, initialName, provider, current=None):
+    def updateMedia(self, mediaId, initialName, provider, current=None):
         ''' Añade o actualiza el medio del ID dado '''
 
-        info = IceFlix.MediaInfo(initialName, ["tag"])
-        nuevo = IceFlix.Media(id, provider, info)
-        self._media_.update({id: nuevo})
+        info = IceFlix.MediaInfo(initialName, [])
+        nuevo = IceFlix.Media(mediaId, provider, info)
+        self._media_.update({mediaId: nuevo})
         print("Añadido medio:")
-        print({id: nuevo})
+        print({mediaId: nuevo})
 
     def check_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''
@@ -282,11 +294,10 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                 user = auth_prx.isAuthorized(user_token)
             except IceFlix.Unauthorized as e:
                 raise e
-            return user    
+            return user
 
     def check_user_name(self, user_token: str):
         ''' Comprueba que la sesion del usuario es la actual '''
-
         try:
             auth_prx = MediaCatalogServer.main_connection.getAuthenticator()
         except IceFlix.TemporaryUnavailable:
@@ -296,7 +307,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                 user_name = auth_prx.whois(user_token)
             except IceFlix.Unauthorized as e:
                 raise e
-            return user_name    
+            return user_name
 
 class MediaCatalogServer(Ice.Application):
     def run(self, argv):
