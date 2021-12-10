@@ -200,14 +200,15 @@ class Client(Ice.Application):
             
         elif option == "2":
             try:
-                self.manage_tags(media_object, auth_token, catalog_connection, True)
+                self.add_tags(media_object, auth_token, catalog_connection, "add")
             except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                 print(e)
                 raise e
             
         elif option == "3":
+            print("opcion3 ")
             try:
-                self.manage_tags(media_object, auth_token, catalog_connection, False)
+                self.remove_tags(media_object, auth_token, catalog_connection)
             except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                 print(e)
                 raise e
@@ -242,28 +243,30 @@ class Client(Ice.Application):
             sock.close()
 
     
-    def manage_tags(self, media_object, auth_token, catalog_connection, is_add):
+    def add_tags(self, media_object, auth_token, catalog_connection, is_add):
         tags_list = self.ask_for_tags()
-        
-        if is_add:  # Añadir etiquetas
-            try:
-                catalog_connection.addTags(media_object.mediaId, tags_list, auth_token)
-            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
-                print(e)
-                raise e
-            else:
-                print("Etiquetas añadidas correctamente")
-            
-        else:   # Eliminar etiquetas
-            try:
-                catalog_connection.removeTags(media_object.mediaId, tags_list, auth_token)
-            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
-                print(e)
-                raise e
-            else:
-                print("Etiquetas eliminadas correctamente")
+        try:
+            catalog_connection.addTags(media_object.mediaId, tags_list, auth_token)
+        except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
+            print(e)
+            raise e
+        else:
+            print("Etiquetas añadidas correctamente")
+            input("Pulsa enter para continuar...")          
         
         return 0 
+    
+    def remove_tags(self, media_object, auth_token, catalog_connection):
+        tags_list = self.ask_for_tags()
+        try:
+            catalog_connection.removeTags(media_object.mediaId, tags_list, auth_token)
+        except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
+            print(e)
+            raise e
+        else:
+            print("Etiquetas eliminadas correctamente")
+            input("Pulsa enter para continuar...")
+        return 0
     
     
     def tag_searching(self, auth_token, catalog_connection):
