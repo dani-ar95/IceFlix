@@ -177,17 +177,16 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                 json.dump(obj, file, indent=2)
 
             # Cambiar tags de medios dinámicos, creo que no hace falta
-            for media in self._media_.values():
-                if media.mediaId == mediaId:
-                    media.info.tags.append([tag for tag in tags if tag not in media.info.tags]) # Añade las tags que no tiene
+            
 
             return 0 # ¿Deberíamos usar los EXIT_OK y eso?
 
     def removeTags(self, mediaId: str, tags: list,  userToken, current=None):
         ''' Elimina las tags dadas del medio con el ID dado '''
-
+        print("removetags")
         try:
-            user_name = self.check_admin(userToken)
+            user_name = self.check_user_name(userToken)
+            print("saliendo del try")
         except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable) as e:
             raise IceFlix.Unauthorized
         else:
@@ -198,11 +197,13 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
             for i in obj["users"]:
                 if i["user"] == user_name:
-                    user_tags = i["tags"]
-                    if mediaId in user_tags.values():
-                        lista_de_tags_del_medio = user_tags.get(mediaId)
-                        new_list = [x for x in lista_de_tags_del_medio if x not in tags]
-                        user_tags.update({mediaId: new_list})
+                    actuales = i["tags"].get(mediaId)
+                    print(actuales)
+                    for tag in tags:
+                        if tag in actuales:
+                            actuales.remove(tag)
+                    i["tags"].update({mediaId:actuales})
+                    break
 
             with open(USERS_PATH, 'w') as file:
                 json.dump(obj, file, indent=2)
