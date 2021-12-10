@@ -169,7 +169,9 @@ class StreamProviderServer(Ice.Application):
                 print("Sirviendo " + str(filename))
                 bytes = f.read()
                 id_hash = hashlib.sha256(bytes).hexdigest()
-                servant._idfiles_.add(id_hash)
+                info = IceFlix.MediaInfo(filename, [])
+                new_media = IceFlix.Media(id_hash, info)
+                servant._provider_media_.update({id_hash: new_media})
 
             #media_name = os.path.split(filename)
             catalog_prx.updateMedia(id_hash, filename, proxy)
