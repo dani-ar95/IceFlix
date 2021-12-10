@@ -176,7 +176,7 @@ class Admin(Ice.Application):
             print("3. Volver\n")
 
             option = input("Admin_CatalogService@" + user + "> ")
-            while option.isdigit() == False or int(option) < 1 or int(option) > 5:
+            while option.isdigit() == False or int(option) < 1 or int(option) > 3:
                 option = input("Inserta una opción válida: ")
 
             if option == "1":
@@ -227,68 +227,91 @@ class Admin(Ice.Application):
             return 0
         return stream_provider_connection
 
-
     def stream_provider_service(self, admin_token):
-        stream_provider_connection = self.connect_stream_provider()
-        filename = input("Escribe el nombre del video que quieres subir: ")
-        file = path.join(path.dirname(__file__), "local/" + filename)
-        uploader = MediaUploaderI(file)
-        adapter = self.communicator().createObjectAdapterWithEndpoints('MediaUploaderAdapter', 'tcp -p 9100')
-        uploader_proxy = adapter.add(uploader, self.communicator().stringToIdentity('MediaUploader'))
-        uploader_connection = IceFlix.MediaUploaderPrx.checkedCast(uploader_proxy)
-        adapter.activate()
-        print("uploader creado")
-        uploader_connection.ice_ping()
-        print(uploader_connection)
-        try:
-            file_id = stream_provider_connection.uploadMedia(file, uploader_connection, admin_token)
-            print(file_id)
-        except (IceFlix.Unauthorized, IceFlix.UploadError) as e:
-            raise e
+         while 1:
+            system("clear")
+            print("Opciones disponibles:")
+            print("1. Subir un video")
+            print("2. Volver\n")
+            
+            option = input("Admin_StreamProviderService@" + user + "> ")
+            while option.isdigit() == False or int(option) < 1 or int(option) > 3:
+                option = input("Inserta una opción válida: ")
+
+            if option == "1":
+                stream_provider_connection = self.connect_stream_provider()
+                filename = input("Escribe el nombre del video que quieres subir: ")
+                file = path.join(path.dirname(__file__), "local/" + filename)
+                uploader = MediaUploaderI(file)
+                adapter = self.communicator().createObjectAdapterWithEndpoints('MediaUploaderAdapter', 'tcp -p 9100')
+                uploader_proxy = adapter.add(uploader, self.communicator().stringToIdentity('MediaUploader'))
+                uploader_connection = IceFlix.MediaUploaderPrx.checkedCast(uploader_proxy)
+                adapter.activate()
+                uploader_connection.ice_ping()
+                print(uploader_connection)
+                try:
+                    file_id = stream_provider_connection.uploadMedia(file, uploader_connection, admin_token)
+                    print(file_id)
+                except (IceFlix.Unauthorized, IceFlix.UploadError) as e:
+                    raise e
+            
+            elif option == "2":
+                return 0
 
     def stream_provider(self, media, auth_token):
-        #media.provider = IceFlix.StreamProviderPrx.checkedCast(media.provider)
-
         try:
-            stream_controller_proxy = media.provider.getStream(
-                media.id, auth_token)
+            stream_controller_proxy = media.provider.getStream(media.mediaId, auth_token)
         except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
-            print(e)
-            return
+            raise e
+        else:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind(("", 10000))
+            try:
+                config = stream_controller_proxy.getSDP(auth_token, 10000)
+                print("Exito en el controller")
+            except IceFlix.Unauthorized:
+                print("Usuario no autorizado")
+                return
+            print("config")
+            lista = config.split("::")
+            emitter = iceflixrtsp.RTSPEmitter(lista[0], lista[1], lista[2])
+            emitter.start()
+            player = iceflixrtsp.RTSPPlayer()
+            player.play(emitter.playback_uri)
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind(("", 10000))
-        try:
-            config = stream_controller_proxy.getSDP(auth_token, 10000)
-        except IceFlix.Unauthorized:
-            print("Usuario no autorizado")
-            return
-        lista = config.split("::")
-        emitter = iceflixrtsp.RTSPEmitter(lista[0], lista[1], lista[2])
-        emitter.start()
-        player = iceflixrtsp.RTSPPlayer()
-        player.play(emitter.playback_uri)
+            emitter.wait()
+            player.stop()
+            sock.close()
 
-        # Stream for 10 seconds
-        sleep(10.0)
+    def manage_tags(self, media_object, auth_token, catalog_connection, is_add):
+        tags_list = self.ask_for_tags()
 
-        # Stop player and streamer
-        player.stop()
-        emitter.stop()
+        if is_add:  # Añadir etiquetas
+            try:
+                catalog_connection.addTags(media_object.mediaId, tags_list, auth_token)
+            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
+                print(e)
+                raise e
+            else:
+                print("Etiquetas añadidas correctamente")
+
+        else:   # Eliminar etiquetas
+            try:
+                catalog_connection.removeTags(media_object.mediaId, tags_list, auth_token)
+            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
+                print(e)
+                raise e
+            else:
+                print("Etiquetas eliminadas correctamente")
+
+        return 0
 
     def tag_searching(self, auth_token, catalog_connection):
         media_list = []
-        tag_list = []
-
-        print("Inserta sus etiquetas. Para salir, dejar en blanco:")
-        while 1:
-            tag = input("Etiqueta: ")
-            if tag == "":
-                break
-            tag_list.append(tag)
+        tag_list = self.ask_for_tags()
 
         if not tag_list:
-            return
+            return 0
 
         option = input(
             "¿Quieres que tu búsqueda coincida con todas tus etiquetas? (s/n): ")
@@ -302,7 +325,7 @@ class Admin(Ice.Application):
             all_tags = False
 
         try:
-            id_list = catalog_connection.searchByTags(
+            id_list = catalog_connection.getTilesByTags(
                 tag_list, all_tags, auth_token)
         except IceFlix.Unauthorized:
             print("Usuario no autorizado.")
@@ -319,12 +342,13 @@ class Admin(Ice.Application):
     def name_searching(self, catalog_connection):
         media_list = []
         full_title = False
-
-        print("1. Buscar por nombre completo")
-        print("2. Buscar por parte del nombre")
+        print("\nOpciones disponibles:")
+        print("1. Buscar medio por nombre completo")
+        print("2. Buscar medio por parte del nombre\n")
         option = input("Opción (1/2): ")
         while option.isdigit() == False or int(option) < 1 or int(option) > 2:
             option = input("Inserta una opción válida: ")
+
         if option == "1":
             full_title = True
         elif option == "2":
@@ -339,6 +363,7 @@ class Admin(Ice.Application):
                 media_list.append(catalog_connection.getTile(id))
             except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
                 print(e)
+
         return media_list
 
     def select_media(self, media_list):
