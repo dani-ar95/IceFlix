@@ -181,7 +181,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                 json.dump(obj, file, indent=2)
 
 
-            # Cambiar tags de medios dinámicos
+            # Cambiar tags de medios dinámicos, creo que no hace falta
             for media in self._media_.values():
                 if media.mediaID == mediaId:
                     media.info.tags.append([tag for tag in tags if tag not in media.info.tags]) # Añade las tags que no tiene
@@ -216,7 +216,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
             
 
-    def renameTile(self, id, name, adminToken, current=None):
+    def renameTile(self, mediaId, name, adminToken, current=None):
         ''' Renombra el medio de la estructura correspondiente '''
 
         try:
@@ -224,26 +224,27 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
 
-        if id not in self._media_.keys():
-            raise IceFlix.WrongMediaId
-
+        # Cambiar media en medios dinamicos
         else:
+            if mediaId in self._media_.keys():
+                medio = self._media_.get(mediaId)
+                medio.info.name = name
+                self._media_.update({mediaId: medio})
+
+            # Buscar medio en bbdd
             try:
-                in_ddbb = self.getTile(id)
+                in_ddbb = self.getTile(mediaId)
             except IceFlix.Unauthorized:
                 raise IceFlix.Unauthorized
-
+            # Falta WrongMediaID si no lo encuentra en la bbdd ni en medios dinamicos
             if in_ddbb:
                 conn = sqlite3.connect("media.db")
                 c = conn.cursor()
                 c.execute(
-                    "UPDATE media SET name = '{}' WHERE id = '{}'".format(name, id))
+                    "UPDATE media SET name = '{}' WHERE id LIKE '{}'".format(name, mediaId))
                 conn.commit()
                 conn.close()
 
-            media = self._media_.get(id)
-            media.info.name = name
-            self._media_.update({id: media})
 
     def updateMedia(self, id, initialName, provider, current=None):
         ''' Añade o actualiza el medio del ID dado '''

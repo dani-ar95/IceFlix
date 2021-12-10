@@ -21,7 +21,7 @@ class StreamControllerI(IceFlix.StreamController):
 
     def getSDP(self, userToken, port: int, current=None):
         ''' Retorna la configuracion del flujo SDP '''
-
+        # Aquí hay que hacer algo más, porque pone que el flujo es una url
         try:
             authenticated = self.check_user(userToken)
         except IceFlix.Unauthorized as e:
@@ -55,14 +55,12 @@ class StreamControllerServer(Ice.Application):
         broker = self.communicator()
         servant = StreamControllerI("default")
 
-        adapter = broker.createObjectAdapterWithEndpoints(
-            'StreamControllerAdapter', 'tcp -p 9094')
-        stream_controller_proxy = adapter.add(
-            servant, broker.stringToIdentity('StreamController'))
+        #adapter = broker.createObjectAdapterWithEndpoints('StreamControllerAdapter', 'tcp -p 9094')
+        #stream_controller_proxy = adapter.add(servant, broker.stringToIdentity('StreamController'))
 
-        adapter.activate()
+        #adapter.activate()
 
-        main_connection.register(stream_controller_proxy)
+        #main_connection.register(stream_controller_proxy)
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
