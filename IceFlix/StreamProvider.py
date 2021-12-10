@@ -61,9 +61,12 @@ class StreamProviderI(IceFlix.StreamProvider):
         # Recibir archivo por Uploader
         new_file = bytes
         received = bytes
+        print("antes de recibir")
         while True:
             received = uploader.receive(512)
+            print("recibido")
             if not received: 
+                print("paramos")
                 break
             new_file += received #Raise UploadError ¿?
 
@@ -75,9 +78,9 @@ class StreamProviderI(IceFlix.StreamProvider):
         new_file_name = path.join("media_resources", fileName)
         with open(new_file_name, "wb") as write_pointer:
             write_pointer.write(new_file)
-
+        print("archivo creado")
         try:
-            catalog_prx = self.main_connection.getCatalog()
+            catalog_prx = self._main_prx_.getCatalog()
         except IceFlix.TemporaryUnavailable:
             raise IceFlix.TemporaryUnavailable
         else:

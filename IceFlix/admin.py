@@ -129,11 +129,11 @@ class Admin(Ice.Application):
                 option = input("Elige una media: ")
                 media_elegida = media_list[int(option)]
                 print("Opciones: ")
-                print("0. Añadir etiquetas")
-                print("1. Eliminar etiquetas")
-                print("2. Reproducir")
-                print("3. Renombra nombra")
-                print("4. Eliminar video")
+                print("1. Añadir etiquetas")
+                print("2. Eliminar etiquetas")
+                print("3. Reproducir")
+                print("4. Renombra nombra")
+                print("5. Eliminar video")
                 option = input("Elige una opcion: ")
                 if option == "1":
                     print("Introcuce las etiquetas que quieras de una en una")
@@ -142,7 +142,10 @@ class Admin(Ice.Application):
                         catalog_connection.addTags(media_elegida.mediaId, [etiqueta], auth_token)
                     except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                         raise e
-                return
+                    return
+                elif option == 5:
+                    stream_provider_connection = self.connect_stream_provider()
+                    stream_provider_connection.deleteMedia(media_elegida.mediaId, admin_token) 
                 
             elif option == "2":
                 media_list = self.tag_searching(auth_token, catalog_connection)
@@ -150,7 +153,6 @@ class Admin(Ice.Application):
                     return
 
             elif option == "3":
-                
                 pass
             elif option == "5":
                 return
@@ -171,7 +173,7 @@ class Admin(Ice.Application):
             else:
                 self.stream_provider(media_list[int(selecting_media) - 1])'''
 
-    def stream_provider_service(self, admin_token):
+    def connect_stream_provider(self):
         stream_provider_proxy = input("Introduce el proxy del stream provider: ")
         proxy = self.communicator().stringToProxy(stream_provider_proxy)
         stream_provider_connection = IceFlix.StreamProviderPrx.checkedCast(proxy)
@@ -179,15 +181,21 @@ class Admin(Ice.Application):
             check = stream_provider_connection.ice_ping()
         except Ice.ConnectionRefusedException:
             print("No ha sido posible conectar con Stream Provider")
-            return
+            return 0
+        return stream_provider_connection
+
+    def stream_provider_service(self, admin_token):
+        stream_provider_connection = self.connect_stream_provider()
         filename = input("Escribe el nombre del video que quieres subir: ")
-        file = path.join(path.dirname(__file__), filename)
+        file = path.join(path.dirname(__file__), "local/" + filename)
         uploader = MediaUploaderI(file)
         adapter = self.communicator().createObjectAdapterWithEndpoints('MediaUploaderAdapter', 'tcp -p 9080')
         uploader_proxy = adapter.add(uploader, self.communicator().stringToIdentity('MediaUploader'))
         uploader_connection = IceFlix.MediaUploaderPrx.checkedCast(uploader_proxy)
+        print("uploader creado")
         try:
             file_id = stream_provider_connection.uploadMedia(file, uploader_connection, admin_token)
+            print(file_id)
         except (IceFlix.Unauthorized, IceFlix.UploadError) as e:
             raise e
 

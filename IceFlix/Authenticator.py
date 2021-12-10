@@ -109,7 +109,6 @@ class AuthenticatorI(IceFlix.Authenticator):
 class AuthenticatorServer(Ice.Application):
     def run(self, argv):
         sleep(1)
-        self.shutdownOnInterrupt()
         main_service_proxy = self.communicator().stringToProxy(argv[1])
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
         if not main_connection:
