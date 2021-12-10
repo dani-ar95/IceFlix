@@ -13,7 +13,7 @@ except ImportError:
     Ice.loadSlice(SLICE_PATH)
     import IceFlix
 
-class MainI(IceFlix.Main):
+class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
     """Sirviente del servicio principal"""
 
     def __init__(self):
@@ -70,7 +70,8 @@ class MainI(IceFlix.Main):
 
 class MainServer(Ice.Application):
     """Servidor del servicio principal"""
-    def run(self, args):
+    def run(self):
+        ''' Implementación del servidor principal '''
         broker = self.communicator()
         servant = MainI()
         properties = broker.getProperties()
