@@ -1,28 +1,36 @@
 #!/usr/bin/python3
+# pylint: disable=invalid-name
+''' Servicio de Streaming '''
 
-from StreamController import StreamControllerI
 from os import path, remove
 import hashlib
 import glob
-import logging
 import sys
-import Ice
 from time import sleep
+import Ice
 
+try:
+    import IceFlix
+except ImportError:
+    Ice.loadSlice(path.join(path.dirname(__file__), "iceflix.ice"))
+    import IceFlix
 
-SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
-Ice.loadSlice(SLICE_PATH)
-import IceFlix
+from StreamController import StreamControllerI # pylint: disable=import-error
 
-
-class StreamProviderI(IceFlix.StreamProvider):
+class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-class
+    ''' Instancia de Stream Provider '''
 
     def __init__(self):
-        self._provider_media_ = dict()
+        self._provider_media_ = {}
+
+        self._proxy_ = None
+        self._catalog_prx_ = None
+        self._authenticator_prx_ = None
+        self._main_prx_ = None
 
     def getStream(self, mediaId: str, userToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Factoría de objetos StreamController '''
-        
+
         try:
             self.check_user(userToken)
         except IceFlix.Unauthorized:
@@ -37,7 +45,7 @@ class StreamProviderI(IceFlix.StreamProvider):
                     raise IceFlix.WrongMediaId
                 finally:
                     print("consiguiendo titulo")
-                    if mediaId in self._provider_media_.keys():
+                    if self.isAvailable(mediaId):
                         provide_media = self._provider_media_.get(mediaId)
                     else:
                         provide_media = asked_media
@@ -52,7 +60,7 @@ class StreamProviderI(IceFlix.StreamProvider):
     def isAvailable(self, mediaId: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Confirma si existe un medio con ese id'''
 
-        return mediaId in self._provider_media_.keys()
+        return mediaId in self._provider_media_
 
     def uploadMedia(self, fileName: str, uploader, adminToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Permite al administador subir un archivo al sistema '''
@@ -60,11 +68,11 @@ class StreamProviderI(IceFlix.StreamProvider):
         try:
             self.check_admin(adminToken)
         except IceFlix.Unauthorized:
-                raise IceFlix.Unauthorized
+            raise IceFlix.Unauthorized
         else:
             new_file = b""
             received = b""
-            
+
             try:
                 while True:
                     received = uploader.receive(512)
@@ -132,22 +140,20 @@ class StreamProviderI(IceFlix.StreamProvider):
 
 class StreamProviderServer(Ice.Application):
     ''' Servidor que envía '''
+
     def run(self, argv):
         '''' Inicialización de la clase '''
 
         sleep(2)
-        self.shutdownOnInterrupt()
         main_service_proxy = self.communicator().stringToProxy(argv[1])
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
-        if not main_connection:
-            raise RuntimeError("Invalid proxy")
 
         broker = self.communicator()
         try:
             catalog_prx = main_connection.getCatalog()
         except IceFlix.TemporaryUnavailable:
             raise IceFlix.TemporaryUnavailable
-        
+
         try:
             authenticator_prx = main_connection.getAuthenticator()
         except IceFlix.TemporaryUnavailable:
@@ -157,7 +163,7 @@ class StreamProviderServer(Ice.Application):
 
         adapter = broker.createObjectAdapterWithEndpoints('StreamProviderAdapter', 'tcp -p 9095')
         stream_provider_proxy = adapter.add(servant, broker.stringToIdentity('StreamProvider'))
-        #---------------------------------------------------------
+
         root_folder = path.join(path.dirname(__file__), "media_resources")
         print(f"Sirviendo el directorio: {root_folder}")
         candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
@@ -169,16 +175,13 @@ class StreamProviderServer(Ice.Application):
         for filename in candidates:
             with open("./"+str(filename), "rb") as f:
                 print("Sirviendo " + str(filename))
-                bytes = f.read()
-                id_hash = hashlib.sha256(bytes).hexdigest()
-                info = IceFlix.MediaInfo(filename, [])
-                new_media = IceFlix.Media(id_hash, info)
+                archivo_leido = f.read()
+                id_hash = hashlib.sha256(archivo_leido).hexdigest()
+                new_media = IceFlix.Media(id_hash, IceFlix.MediaInfo(filename, []))
                 servant._provider_media_.update({id_hash: new_media})
 
-            #media_name = os.path.split(filename)
             catalog_prx.updateMedia(id_hash, filename, proxy)
 
-        #---------------------------------------------------------
         adapter.activate()
 
         servant._proxy_ = proxy
