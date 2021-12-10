@@ -170,10 +170,8 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
     def removeTags(self, mediaId: str, tags: list,  userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Elimina las tags dadas del medio con el ID dado '''
-        print("removetags")
         try:
             user_name = self.check_user_name(userToken)
-            print("saliendo del try")
         except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable) as e:
             raise IceFlix.Unauthorized
         else:
@@ -185,7 +183,6 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             for i in obj["users"]:
                 if i["user"] == user_name:
                     actuales = i["tags"].get(mediaId)
-                    print(actuales)
                     for tag in tags:
                         if tag in actuales:
                             actuales.remove(tag)

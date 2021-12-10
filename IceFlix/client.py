@@ -147,7 +147,8 @@ class Client(Ice.Application):
             if option == "1":
                 media_list = self.name_searching(catalog_connection)
                 if len(media_list) == 0:
-                    print("No se han encontrado resultados")
+                    print("\nNo se han encontrado resultados")
+                    input("Pulsa enter para continuar...")
                     continue
                 
                 selected_media = self.select_media(media_list)
@@ -163,8 +164,9 @@ class Client(Ice.Application):
                 
             elif option == "2":
                 media_list = self.tag_searching(auth_token, catalog_connection)
-                if media_list == None:
-                    print("No se han encontrado resultados")
+                if media_list == -1:
+                    print("\nNo se han encontrado resultados")
+                    input("Pulsa enter para continuar...")
                     continue
                 
                 selected_media = self.select_media(media_list)
@@ -230,7 +232,7 @@ class Client(Ice.Application):
                 print("Exito en el controller")
             except IceFlix.Unauthorized:
                 print("Usuario no autorizado")
-                return
+                return 1
             print("config")
             lista = config.split("::")
             emitter = iceflixrtsp.RTSPEmitter(lista[0], lista[1], lista[2])
@@ -274,7 +276,7 @@ class Client(Ice.Application):
         tag_list = self.ask_for_tags()
         
         if not tag_list:
-            return 0
+            return -1
 
         option = input(
             "¿Quieres que tu búsqueda coincida con todas tus etiquetas? (s/n): ")
