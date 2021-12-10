@@ -19,16 +19,28 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         # Obtener medios de la base de datos
         
 
-    def getTile(self, mediaId: str, current=None):
+    def getTile(self, mediaId: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna un objeto Media con la informacion del medio con el ID dado '''
+
+        # Buscar en medios tmeporales
         media = self._media_.get(mediaId)
         if media:
-            return media
+            provider = self._media_.get(mediaId).provider #  Preguntar esto
+            if provider:
+                try:
+                    provider.ice_ping()
+                except Ice.ConnectionRefusedException:
+                    raise IceFlix.TemporaryUnavailable
+                else:
+                    return self._media_.get(mediaId)
+            else:
+                raise IceFlix.TemporaryUnavailable
     
+        # Buscar ID en bbdd
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         print(mediaId)
-        c.execute("SELECT * FROM media WHERE id LIKE '{}'".format(mediaId))
+        c.execute("SELECT * FROM media WHERE id LIKE '{}'".format(mediaId)) # pylint: disable=invalid-name,unused-argument
 
         query = c.fetchall()
 
@@ -36,34 +48,9 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         if not query and mediaId not in self._media_.keys():
             raise IceFlix.WrongMediaId
 
-        # Buscar provider en temporal
-        provider = self._media_.get(mediaId).provider
-        if provider:
-            try:
-                provider.ice_ping()
-            except Ice.ConnectionRefusedException:
-                raise IceFlix.TemporaryUnavailable
-            else:
-                return self._media_.get(mediaId)
-        else:
-            # Buscar provider en bbdd
-            try:
-                provider = current.adapter.getCommunicator(
-                ).stringToProxy(query[0][3])
-            except Ice.NoEndpointException:
-                raise IceFlix.TemporaryUnavailable
+        
 
-        name = query.pop(0)
-        tags = []
-        while(query):
-            tags.append(query.pop(0))
-
-        info = IceFlix.MediaInfo(name, tags)
-        media_obj = IceFlix.Media(mediaId, provider, info)
-        conn.close()
-        return media_obj
-
-    def getTilesByName(self, name, exact: bool, current=None):
+    def getTilesByName(self, name, exact: bool, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna una lista de IDs a partir del nombre dado'''
 
         conn = sqlite3.connect(DB_PATH)
@@ -97,7 +84,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         return id_list
 
 
-    def getTilesByTags(self, tags: list, includeAllTags: bool, userToken, current=None):
+    def getTilesByTags(self, tags: list, includeAllTags: bool, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna una lista de IDs de los medios con las tags dadas '''
 
         try:
@@ -149,7 +136,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
             return id_list
 
-    def addTags(self, mediaId: str, tags: list, userToken, current=None):
+    def addTags(self, mediaId: str, tags: list, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Añade las tags dadas al medio con el ID dado '''
 
         try:
@@ -181,7 +168,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
             return 0 # ¿Deberíamos usar los EXIT_OK y eso?
 
-    def removeTags(self, mediaId: str, tags: list,  userToken, current=None):
+    def removeTags(self, mediaId: str, tags: list,  userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Elimina las tags dadas del medio con el ID dado '''
         print("removetags")
         try:
@@ -212,7 +199,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
             
 
-    def renameTile(self, mediaId, name, adminToken, current=None):
+    def renameTile(self, mediaId, name, adminToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Renombra el medio de la estructura correspondiente '''
 
         try:
@@ -255,7 +242,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                     conn.close()
 
 
-    def updateMedia(self, mediaId, initialName, provider, current=None):
+    def updateMedia(self, mediaId, initialName, provider, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Añade o actualiza el medio del ID dado '''
 
         info = IceFlix.MediaInfo(initialName, [])
