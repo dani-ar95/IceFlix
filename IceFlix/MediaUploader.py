@@ -11,20 +11,17 @@ import IceFlix
 class MediaUploaderI(IceFlix.MediaUploader):
 
     def __init__(self, file_name):
-        print("Inicializando uploader")
         try:
-            self._fd_ = open(file_name, "rb")
+            self.__fd__ = open(file_name, "rb") # pylint: disable=consider-using-with
         except FileNotFoundError:
             print("Archivo no encontrado: " + str(file_name))
 
-    def receive(self, size: int, current=None):
-        print("retorna chunk")
-        chunk = self._fd_.read(size)
+    def receive(self, size: int, current=None): # pylint: disable=unused-argument
+        chunk = self.__fd__.read(size)
         return chunk
 
-    def close(self, current=None):
-        # Código método Close
-        pass
+    def close(self, current=None): # pylint: disable=unused-argument
+        self.__fd__.close()
 
 
 class MediaUploaderServer(Ice.Application):

@@ -15,6 +15,8 @@ class MediaCatalogI(IceFlix.MediaCatalog):
     
     def __init__(self):
         self._media_ = dict()
+        # Obtener medios de la base de datos
+        
 
     def getTile(self, mediaId: str, current=None):
         ''' Retorna un objeto Media con la informacion del medio con el ID dado '''
