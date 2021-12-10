@@ -22,7 +22,15 @@ class Client(Ice.Application):
         sha.update(password.encode())
         return sha.hexdigest()
 
+    def format_prompt(self):
+        ''' Formatea la consola '''
+        system("clear")
+        print("         #----------------#")
+        print("         | Iceflix Client |")
+        print("         #----------------#\n\n")
+
     def logged_prompt(self, main_connection):
+        self.format_prompt()
         user = input("Introduce el nombre de usuario: ")
         password = getpass.getpass("Password: ")
         hash_password = self.calculate_hash(password)
@@ -49,15 +57,26 @@ class Client(Ice.Application):
             sys.exit(1)
             
         while 1:
+            system("clear")
+            print("Opciones disponibles")
+            print("1. Servicio de catalogo")
+            print("2. Cerrar sesión")
+            print("3. Salir del cliente\n")
             
-            keyboard = input("MainService@" + user + "> ")
-            if keyboard == "catalog_service":
-                self.catalog_service(user, catalog_proxy, auth_token)
+            option = input("IceFlix_MainService@" + user + "> ")
+            if option == "1":
+                self.catalog_service(catalog_proxy, user, auth_token)
                 
-            elif keyboard == "logout":
+            elif option == "2":
                 print("Cerrando sesión...")
-                system("clear")
+                sleep(2)
                 self.not_logged_prompt(main_connection)
+                
+            elif option == "3":
+                sys.exit(0)
+                
+            while option.isdigit() == False or int(option) < 1 or int(option) > 3:
+                    option = input("Inserta una opción válida: ")
             
             
     def not_logged_prompt(self, main_connection):
@@ -68,65 +87,109 @@ class Client(Ice.Application):
             sys.exit(1)
             
         while 1:
-                keyboard = input("MainService@Usuario_anonimo> ")
-                if keyboard == "catalog_service":
-                    self.catalog_service(catalog_proxy)
-                elif keyboard == "exit":
-                    sys.exit(0)
-                elif keyboard == "login":
-                    self.logged_prompt(main_connection)
+            system("clear")
+            
+            print("1. Servicio de catalogo")
+            print("2. Iniciar sesión")
+            print("3. Salir del cliente")
+            
+            option = input("MainService@Usuario_anonimo> ")
+            if option == "1":
+                self.catalog_service(catalog_proxy, "Usuario_anonimo", "")
+                
+            elif option == "2":
+                self.logged_prompt(main_connection)
+                
+            elif option == "3":
+                sys.exit(0)
+
+            while option.isdigit() == False or int(option) < 1 or int(option) > 3:
+                option = input("Inserta una opción válida: ")
         
         
-    def catalog_service(self, catalog_connection, user="Usuario_anonimo", auth_token=""):
+    def catalog_service(self, catalog_connection, user, auth_token):
         ''' Gestiona el comando "catalog_service" '''
         #MENU PARA ELEGIR LAS DISTINTAS BUSQUEDAS
         #try:
         while 1:
-            #system("clear")
+            system("clear")
             
             print("1. Búsqueda por nombre")
             print("2. Búsqueda por etiquetas")
             print("3. Salir")
             
-            option = input("CatalogService@" + user + "> ")
-            while option.isdigit() == False or int(option) < 1 or int(option) > 4:
-                    option = input("Inserta una opción válida: ")
+            option = input("CatalogServi@" + user + "> ")
+            #while option.isdigit() == False or int(option) < 1 or int(option) > 4:
+             #   option = input("Inserta una opción válida: ")
             
             if option == "1":
                 media_list = self.name_searching(catalog_connection)
                 if media_list == None:
+                    print("No se han encontrado resultados")
                     continue
+                
+                selected_media = self.select_media(media_list)
+                if selected_media == -1:
+                    continue
+                
                 try:
-                    self.ask_to_play(media_list, auth_token)
+                    self.ask_function(user ,selected_media, auth_token, catalog_connection)
                 except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                     print(e)
                 else:
-                    continue    
+                    continue
                 
             elif option == "2":
                 media_list = self.tag_searching(auth_token, catalog_connection)
                 if media_list == None:
-                    return
-                selected_media = self.select_media(media_list)
-                if not selected_media:
+                    print("No se han encontrado resultados")
                     continue
-                self.stream_provider(selected_media, auth_token)
+                
+                selected_media = self.select_media(media_list)
+                if selected_media == -1:
+                    continue
+                
+                try:
+                    self.ask_function(user ,selected_media, auth_token, catalog_connection)
+                except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
+                    print(e)
+                else:
+                    continue
                 
             elif option == "3":
                 return 0 
 
-    def ask_to_play(self, media_list, auth_token):
-        selected_media = self.select_media(media_list)
-        if selected_media == -1:
-            print("no retorna")
-            return 0
-        else:
-            print("retorna algo")
-            #print("Quieres reproducir el contenido seleccionado?")
+    def ask_function(self, user, media_object, auth_token, catalog_connection):
+        print("1. Reproducir")
+        print("2. Añadir etiquetas")
+        print("3. Eliminar etiquetas")
+        print("4. Volver")
+        option = input("CatalogService@" + user + "> ")
+        while option.isdigit() == False or int(option) < 1 or int(option) > 4:
+            option = input("Inserta una opción válida: ")
+        if option == "1":
             try:
-                self.stream_provider(selected_media, auth_token)
+                self.stream_provider(media_object, auth_token)
             except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
+                print(e)
                 raise e
+            
+        elif option == "2":
+            try:
+                self.manage_tags(media_object, auth_token, catalog_connection, True)
+            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
+                print(e)
+                raise e
+            
+        elif option == "3":
+            try:
+                self.manage_tags(media_object, auth_token, catalog_connection, False)
+            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
+                print(e)
+                raise e
+            
+        elif option == "4":
+            return 0    
 
     def stream_provider(self, media, auth_token):
         #media.provider = IceFlix.StreamProviderPrx.checkedCast(media.provider)
@@ -150,43 +213,31 @@ class Client(Ice.Application):
             player = iceflixrtsp.RTSPPlayer()
             player.play(emitter.playback_uri)
 
-            # Stream for 10 seconds
-            sleep(10)
-            # Stop player and streamer
+            emitter.wait()
             player.stop()
-            emitter.stop()
             sock.close()
 
     
-    def manage_tags(self, auth_token, catalog_connection, is_add):
+    def manage_tags(self, media_object, auth_token, catalog_connection, is_add):
         tags_list = self.ask_for_tags()
-        
-        if not tags_list:
-            return 0
-        
-        media_list = self.name_searching(catalog_connection)
-        if not media_list:
-            return 0
-        
-        selected_media = self.select_media(media_list)
-        if not selected_media:
-            return 0
         
         if is_add:  # Añadir etiquetas
             try:
-                catalog_connection.addTags(selected_media.mediaId, tags_list, auth_token)
+                catalog_connection.addTags(media_object.mediaId, tags_list, auth_token)
             except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                 print(e)
-                return 1
-            print("Etiquetas añadidas correctamente")
+                raise e
+            else:
+                print("Etiquetas añadidas correctamente")
             
         else:   # Eliminar etiquetas
             try:
-                catalog_connection.removeTags(selected_media.mediaId, tags_list, auth_token)
+                catalog_connection.removeTags(media_object.mediaId, tags_list, auth_token)
             except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                 print(e)
-                return 1
-            print("Etiquetas eliminadas correctamente")
+                raise e
+            else:
+                print("Etiquetas eliminadas correctamente")
         
         return 0 
     

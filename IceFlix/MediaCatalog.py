@@ -4,9 +4,11 @@ import IceFlix
 import sys
 import json
 import Ice
+from time import sleep
 from os import path
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
+DB_PATH = path.join(path.dirname(__file__), "media.db")
 Ice.loadSlice(SLICE_PATH)
 
 class MediaCatalogI(IceFlix.MediaCatalog):
@@ -20,7 +22,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         if media:
             return media
     
-        conn = sqlite3.connect("./media.db")
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         print(mediaId)
         c.execute("SELECT * FROM media WHERE id LIKE '{}'".format(mediaId))
@@ -61,7 +63,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
     def getTilesByName(self, name, exact: bool, current=None):
         ''' Retorna una lista de IDs a partir del nombre dado'''
 
-        conn = sqlite3.connect("./media.db")
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         id_list = []
 
@@ -101,7 +103,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             raise IceFlix.Unauthorized
         else:
 
-            conn = sqlite3.connect("media.db")
+            conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             id_list = []
 
@@ -298,7 +300,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
 class MediaCatalogServer(Ice.Application):
     def run(self, argv):
-        # sleep(1)
+        sleep(2)
         main_service_proxy = self.communicator().stringToProxy(argv[1])
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
         if not main_connection:

@@ -7,6 +7,7 @@ import glob
 import logging
 import sys
 import Ice
+from time import sleep
 
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
@@ -113,6 +114,8 @@ class StreamProviderI(IceFlix.StreamProvider):
             user = self._main_prx_.isAdmin(admin_token)
         except IceFlix.Unauthorized as e:
             raise e
+        else:
+            return user
 
     def check_user(self, user_token: str):
         ''' Comprueba que la sesion del usuario es la actual '''
@@ -126,7 +129,7 @@ class StreamProviderI(IceFlix.StreamProvider):
 
 class StreamProviderServer(Ice.Application):
     def run(self, argv):
-        # sleep(1)
+        sleep(3)
         self.shutdownOnInterrupt()
         main_service_proxy = self.communicator().stringToProxy(argv[1])
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
