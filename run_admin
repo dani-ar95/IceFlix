@@ -1,0 +1,5 @@
+#!/bin/bash
+python3 IceFlix/admin.py "Main:tcp -p 9090" admin
+trap 'kill $(jobs -p)' SIGINT SIGTERM EXIT
+wait
+exit 0

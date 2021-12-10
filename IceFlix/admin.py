@@ -122,7 +122,7 @@ class Admin(Ice.Application):
             if option == "1":
                 media_list = self.name_searching(catalog_connection)
                 if media_list == None:
-                    return
+                    continue
                 print("Estas son las medias disponibles: ")
                 for media in media_list:
                     print(media.info.name)
@@ -143,7 +143,7 @@ class Admin(Ice.Application):
                     except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                         raise e
                     return
-                elif option == 5:
+                elif option == "5":
                     stream_provider_connection = self.connect_stream_provider()
                     stream_provider_connection.deleteMedia(media_elegida.mediaId, admin_token) 
                 
@@ -184,20 +184,25 @@ class Admin(Ice.Application):
             return 0
         return stream_provider_connection
 
+
     def stream_provider_service(self, admin_token):
         stream_provider_connection = self.connect_stream_provider()
         filename = input("Escribe el nombre del video que quieres subir: ")
         file = path.join(path.dirname(__file__), "local/" + filename)
         uploader = MediaUploaderI(file)
-        adapter = self.communicator().createObjectAdapterWithEndpoints('MediaUploaderAdapter', 'tcp -p 9080')
+        adapter = self.communicator().createObjectAdapterWithEndpoints('MediaUploaderAdapter', 'tcp -p 9100')
         uploader_proxy = adapter.add(uploader, self.communicator().stringToIdentity('MediaUploader'))
         uploader_connection = IceFlix.MediaUploaderPrx.checkedCast(uploader_proxy)
+        adapter.activate()
         print("uploader creado")
+        uploader_connection.ice_ping()
+        print(uploader_connection)
         try:
             file_id = stream_provider_connection.uploadMedia(file, uploader_connection, admin_token)
             print(file_id)
         except (IceFlix.Unauthorized, IceFlix.UploadError) as e:
             raise e
+        
 
     def renameTile(media_list,catalog_connection,admin_token):
         option = input("Elige una para renombrarla:")

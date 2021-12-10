@@ -11,12 +11,14 @@ import IceFlix
 class MediaUploaderI(IceFlix.MediaUploader):
 
     def __init__(self, file_name):
+        print("Inicializando uploader")
         try:
-            self.__fd__ = open(file_name, "rb")
+            self._fd_ = open(file_name, "rb")
         except FileNotFoundError:
             print("Archivo no encontrado: " + str(file_name))
 
     def receive(self, size: int, current=None):
+        print("retorna chunk")
         chunk = self._fd_.read(size)
         return chunk
 

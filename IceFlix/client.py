@@ -64,6 +64,10 @@ class Client(Ice.Application):
             print("3. Salir del cliente\n")
             
             option = input("IceFlix_MainService@" + user + "> ")
+                
+            while option.isdigit() == False or int(option) < 1 or int(option) > 3:
+                option = input("Inserta una opción válida: ")
+            
             if option == "1":
                 self.catalog_service(catalog_proxy, user, auth_token)
                 
@@ -73,10 +77,7 @@ class Client(Ice.Application):
                 self.not_logged_prompt(main_connection)
                 
             elif option == "3":
-                sys.exit(0)
-                
-            while option.isdigit() == False or int(option) < 1 or int(option) > 3:
-                    option = input("Inserta una opción válida: ")
+                self.communicator.destroy()
             
             
     def not_logged_prompt(self, main_connection):
@@ -94,6 +95,9 @@ class Client(Ice.Application):
             print("3. Salir del cliente")
             
             option = input("MainService@Usuario_anonimo> ")
+            while option.isdigit() == False or int(option) < 1 or int(option) > 3:
+                option = input("Inserta una opción válida: ")
+            
             if option == "1":
                 self.catalog_service(catalog_proxy, "Usuario_anonimo", "")
                 
@@ -101,10 +105,7 @@ class Client(Ice.Application):
                 self.logged_prompt(main_connection)
                 
             elif option == "3":
-                sys.exit(0)
-
-            while option.isdigit() == False or int(option) < 1 or int(option) > 3:
-                option = input("Inserta una opción válida: ")
+                self.shutdown()
         
         
     def catalog_service(self, catalog_connection, user, auth_token):
@@ -118,9 +119,9 @@ class Client(Ice.Application):
             print("2. Búsqueda por etiquetas")
             print("3. Salir")
             
-            option = input("CatalogServi@" + user + "> ")
-            #while option.isdigit() == False or int(option) < 1 or int(option) > 4:
-             #   option = input("Inserta una opción válida: ")
+            option = input("CatalogService@" + user + "> ")
+            while option.isdigit() == False or int(option) < 1 or int(option) > 3:
+                option = input("Inserta una opción válida: ")
             
             if option == "1":
                 media_list = self.name_searching(catalog_connection)
@@ -167,6 +168,7 @@ class Client(Ice.Application):
         option = input("CatalogService@" + user + "> ")
         while option.isdigit() == False or int(option) < 1 or int(option) > 4:
             option = input("Inserta una opción válida: ")
+            
         if option == "1":
             try:
                 self.stream_provider(media_object, auth_token)
@@ -297,11 +299,12 @@ class Client(Ice.Application):
             print(str(counter) + ". " + os.path.split(media.info.name)[1])
 
         option = input(
-            "Selecciona un media (1-" + str(counter) + "), o deja en blanco para salir: ")
-        #while option.isdigit() == False or int(option) < 1 or int(option) > counter or option != "":
-           # option = input("Inserta una opción válida: ")
-        if option == "":
-            return -1
+            "Selecciona un media o deja en blanco para salir: ")
+        while option.isdigit() == False or int(option) < 1 or int(option) > counter or option != "":
+            if option == "":
+                return -1
+            option = input("Inserta una opción válida: ")        
+
         selected_media = media_list[int(option)-1]
         return selected_media
 

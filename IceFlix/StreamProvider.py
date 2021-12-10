@@ -57,34 +57,33 @@ class StreamProviderI(IceFlix.StreamProvider):
             self.check_admin(adminToken)
         except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
                 raise IceFlix.Unauthorized
-
-        # Recibir archivo por Uploader
-        new_file = bytes
-        received = bytes
-        print("antes de recibir")
-        while True:
-            received = uploader.receive(512)
-            print("recibido")
-            if not received: 
-                print("paramos")
-                break
-            new_file += received #Raise UploadError ¿?
-
-        # Calcular el identificador del archivo nuevo
-        id_hash = hashlib.sha256(bytes).hexdigest()
-        self._idfiles_.add(id_hash)
-
-        # Escribir el archivo nuevo
-        new_file_name = path.join("media_resources", fileName)
-        with open(new_file_name, "wb") as write_pointer:
-            write_pointer.write(new_file)
-        print("archivo creado")
-        try:
-            catalog_prx = self._main_prx_.getCatalog()
-        except IceFlix.TemporaryUnavailable:
-            raise IceFlix.TemporaryUnavailable
         else:
-            catalog_prx.updateMedia(id_hash, fileName, self._proxy_)
+            # Recibir archivo por Uploader
+            new_file = b""
+            received = b""
+            print(type(uploader))
+            
+            uploader.ice_ping()
+            print("antes de recibir")
+            while True:
+                received = uploader.receive(512)
+                print("recibido")
+                if not received: 
+                    print("paramos")
+                    break
+                new_file += received #Raise UploadError ¿?
+
+            # Calcular el identificador del archivo nuevo
+            id_hash = hashlib.sha256(new_file).hexdigest()
+            self._idfiles_.add(id_hash)
+
+            # Escribir el archivo nuevo
+            file = path.split(fileName)[1]
+            new_file_name = path.join(path.dirname(__file__), "media_resources/" + file)
+            with open(new_file_name, "wb") as write_pointer:
+                write_pointer.write(new_file)
+            print("archivo creado")
+            self._catalog_prx_.updateMedia(id_hash, fileName, self._proxy_)
             return id_hash
 
     def deleteMedia(self, mediaId: str, adminToken: str, current=None):
@@ -94,11 +93,6 @@ class StreamProviderI(IceFlix.StreamProvider):
             self.check_admin(adminToken)
         except (IceFlix.TemporaryUnavailable, IceFlix.Unauthorized) as e:
                 raise IceFlix.Unauthorized
-
-        if id not in self._idfiles_:
-            raise IceFlix.WrongMediaID
-        else:
-            self._idfiles_.remove(id)
 
         try:
             media_file = self._catalog_prx_.getTile(mediaId)
@@ -154,9 +148,8 @@ class StreamProviderServer(Ice.Application):
 
         adapter = broker.createObjectAdapterWithEndpoints('StreamProviderAdapter', 'tcp -p 9095')
         stream_provider_proxy = adapter.add(servant, broker.stringToIdentity('StreamProvider'))
-
         #---------------------------------------------------------
-        root_folder = "media_resources"
+        root_folder = path.join(path.dirname(__file__), "media_resources")
         print(f"Sirviendo el directorio: {root_folder}")
         candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
 
@@ -177,7 +170,7 @@ class StreamProviderServer(Ice.Application):
         #---------------------------------------------------------
         adapter.activate()
 
-        servant._proxy_ = stream_provider_proxy
+        servant._proxy_ = proxy
 
         servant._catalog_prx_ = catalog_prx
         servant._authenticator_prx_ = authenticator_prx
