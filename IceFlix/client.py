@@ -147,7 +147,8 @@ class Client(Ice.Application):
             if option == "1":
                 media_list = self.name_searching(catalog_connection)
                 if len(media_list) == 0:
-                    print("No se han encontrado resultados")
+                    print("\nNo se han encontrado resultados")
+                    input("Pulsa enter para continuar...")
                     continue
                 
                 selected_media = self.select_media(media_list)
@@ -163,8 +164,9 @@ class Client(Ice.Application):
                 
             elif option == "2":
                 media_list = self.tag_searching(auth_token, catalog_connection)
-                if media_list == None:
-                    print("No se han encontrado resultados")
+                if media_list == -1:
+                    print("\nNo se han encontrado resultados")
+                    input("Pulsa enter para continuar...")
                     continue
                 
                 selected_media = self.select_media(media_list)
@@ -200,14 +202,15 @@ class Client(Ice.Application):
             
         elif option == "2":
             try:
-                self.manage_tags(media_object, auth_token, catalog_connection, True)
+                self.add_tags(media_object, auth_token, catalog_connection, "add")
             except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                 print(e)
                 raise e
             
         elif option == "3":
+            print("opcion3 ")
             try:
-                self.manage_tags(media_object, auth_token, catalog_connection, False)
+                self.remove_tags(media_object, auth_token, catalog_connection)
             except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                 print(e)
                 raise e
@@ -229,7 +232,7 @@ class Client(Ice.Application):
                 print("Exito en el controller")
             except IceFlix.Unauthorized:
                 print("Usuario no autorizado")
-                return
+                return 1
             print("config")
             lista = config.split("::")
             emitter = iceflixrtsp.RTSPEmitter(lista[0], lista[1], lista[2])
@@ -242,28 +245,30 @@ class Client(Ice.Application):
             sock.close()
 
     
-    def manage_tags(self, media_object, auth_token, catalog_connection, is_add):
+    def add_tags(self, media_object, auth_token, catalog_connection, is_add):
         tags_list = self.ask_for_tags()
-        
-        if is_add:  # Añadir etiquetas
-            try:
-                catalog_connection.addTags(media_object.mediaId, tags_list, auth_token)
-            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
-                print(e)
-                raise e
-            else:
-                print("Etiquetas añadidas correctamente")
-            
-        else:   # Eliminar etiquetas
-            try:
-                catalog_connection.removeTags(media_object.mediaId, tags_list, auth_token)
-            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
-                print(e)
-                raise e
-            else:
-                print("Etiquetas eliminadas correctamente")
+        try:
+            catalog_connection.addTags(media_object.mediaId, tags_list, auth_token)
+        except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
+            print(e)
+            raise e
+        else:
+            print("Etiquetas añadidas correctamente")
+            input("Pulsa enter para continuar...")          
         
         return 0 
+    
+    def remove_tags(self, media_object, auth_token, catalog_connection):
+        tags_list = self.ask_for_tags()
+        try:
+            catalog_connection.removeTags(media_object.mediaId, tags_list, auth_token)
+        except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
+            print(e)
+            raise e
+        else:
+            print("Etiquetas eliminadas correctamente")
+            input("Pulsa enter para continuar...")
+        return 0
     
     
     def tag_searching(self, auth_token, catalog_connection):
@@ -271,7 +276,7 @@ class Client(Ice.Application):
         tag_list = self.ask_for_tags()
         
         if not tag_list:
-            return 0
+            return -1
 
         option = input(
             "¿Quieres que tu búsqueda coincida con todas tus etiquetas? (s/n): ")

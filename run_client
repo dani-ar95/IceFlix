@@ -1,4 +1,4 @@
 #!/bin/bash
-python3 IceFlix/client.py "Main:tcp -p 9090"
+python3 IceFlix/client.py
 trap "kill 0" SIGINT
 wait
