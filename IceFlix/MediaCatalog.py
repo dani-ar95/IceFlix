@@ -240,7 +240,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                 raise IceFlix.Unauthorized
             # Falta WrongMediaID si no lo encuentra en la bbdd ni en medios dinamicos
             if in_ddbb:
-                conn = sqlite3.connect("media.db")
+                conn = sqlite3.connect(DB_PATH)
                 c = conn.cursor()
                 c.execute(
                     "UPDATE media SET name = '{}' WHERE id LIKE '{}'".format(name, mediaId))
