@@ -39,6 +39,7 @@ class Cliente(Ice.Application):
         if is_admin:
             self._admin_token_ = token
         else:
+            self._admin_token_ = None
             print("Ese token no corresponde al de administración")
             input("Pulsa Enter para continuar...")
 
@@ -75,6 +76,15 @@ class Cliente(Ice.Application):
 
             self._main_prx_ = main_connection
 
+            try:
+                self._auth_prx_ = self._main_prx_.getAuthenticator()
+            except IceFlix.TemporaryUnavailable:
+                pass
+            try:
+                self._catalog_prx_ = self._main_prx_.getCatalog()
+            except IceFlix.TemporaryUnavailable:
+                pass
+
     def login(self):
         user = input("Nombre de usuario: ")
         password = getpass.getpass("Contraseña: ")
@@ -96,10 +106,15 @@ class Cliente(Ice.Application):
         self._user_token_ = None
 
     def create_prompt(self, servicio: str):
-        if self._username_:
-            return servicio + "@" + self._username_ + "> "
+        if self._username_ and self._admin_token_:
+            return "Admin>>" + servicio + "@" + self._username_ + "> "
         else:
-            return servicio + "@Anónimo> "
+            if self._username_:
+                return servicio + "@" + self._username_ + "> "
+            elif self._admin_token_:
+                return "Admin>>" + servicio + "@Anónimo> "
+            else:
+                return servicio + "@Anónimo> "
 
     def catalog_service(self):
         ''' Gestiona el comando "catalog_service" '''
@@ -113,6 +128,7 @@ class Cliente(Ice.Application):
 
         while 1:
             system("clear")
+            self.format_prompt()
             print("Opciones disponibles:")
             print("1. Búsqueda por nombre")
             print("2. Búsqueda por etiquetas")
@@ -249,7 +265,7 @@ class Cliente(Ice.Application):
         print("Videos encontrados:\n")
         for media in media_list:
             counter += 1
-            print(str(counter) + ". " + os.path.split(media.info.name)[1])
+            print(str(counter) + ". " + path.split(media.info.name)[1])
 
         option = input("Selecciona un video o deja en blanco para salir: ")
         while option.isdigit() == False or int(option) < 1 or int(option) > counter:
@@ -267,7 +283,7 @@ class Cliente(Ice.Application):
         print("4. Renombra título")
         print("5. Eliminar video")
         
-        option = input("Admin_CatalogService@" + user + "> ")
+        option = input(self.create_prompt("CatalogService"))
         while option.isdigit() == False or int(option) < 1 or int(option) > 5:
             option = input("Inserta una opción válida: ")
             
@@ -391,7 +407,7 @@ class Cliente(Ice.Application):
 
         while 1:
             system("clear")
-
+            self.format_prompt()
             print("1. Añadir usuario")
             print("2. Eliminar usuario")
             print("3. Salir")
@@ -403,11 +419,12 @@ class Cliente(Ice.Application):
             if option == "1":
                 new_user = input("Introduce el nuevo nombre de usuario: ")
                 new_password = getpass.getpass("Nueva Password: ")
-                new_hash_password = hashlib.sha256(password.encode()).hexdigest()
+                new_hash_password = hashlib.sha256(new_password.encode()).hexdigest()
                 try:
                     self._auth_prx_.addUser(new_user, new_hash_password, self._admin_token_)
                 except IceFlix.Unauthorized:
                     print(IceFlix.Unauthorized)
+                    input()
                 continue
             
             elif option == "2":
@@ -424,6 +441,7 @@ class Cliente(Ice.Application):
     def stream_provider_service(self):
          while 1:
             system("clear")
+            self.format_prompt()
             print("Opciones disponibles:")
             print("1. Subir un video")
             print("2. Volver\n")
@@ -455,6 +473,7 @@ class Cliente(Ice.Application):
     def main_menu(self):
         while 1:
             system("clear")
+            self.format_prompt()
             print("Opciones disponibles: ")
             print("1. Introducir token de administración")
             print("2. Login")
@@ -464,7 +483,7 @@ class Cliente(Ice.Application):
             print("6. Servicio de Streaming")
             print("7. Salir del cliente\n")
 
-            option = input("IceFlix_MainService> ")
+            option = input(self.create_prompt("MainService"))
                     
             while option.isdigit() == False or int(option) < 1 or int(option) > 7:
                 if option == "":
