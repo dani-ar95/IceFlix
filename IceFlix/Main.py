@@ -64,7 +64,7 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
 class MainServer(Ice.Application):
     """Servidor del servicio principal"""
 
-    def run(self, args):
+    def run(self, argv):
         ''' Implementación del servidor principal '''
         broker = self.communicator()
         servant = MainI()

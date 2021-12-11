@@ -77,7 +77,7 @@ class Admin(Ice.Application):
                 self.authenticator_service(user, auth_token, authenticator_proxy, admin_token)
 
             elif option == "3":
-                self.stream_provider_service(admin_token)
+                self.stream_provider_service(admin_token, user)
 
             elif option == "4":
                 print("Cerrando sesión...")
@@ -131,7 +131,7 @@ class Admin(Ice.Application):
                     print("No se han encontrado resultados")
                 else:
                     for media in media_list:
-                        print(os.path.split(media.info.name)[1])
+                        print(path.split(media.info.name)[1])
                 input("Pulsa enter para continuar...")
 
     def authenticator_service(self, user, auth_token, auth_connection, admin_token):
@@ -227,7 +227,7 @@ class Admin(Ice.Application):
             return 0
         return stream_provider_connection
 
-    def stream_provider_service(self, admin_token):
+    def stream_provider_service(self, admin_token, user):
          while 1:
             system("clear")
             print("Opciones disponibles:")
@@ -371,11 +371,11 @@ class Admin(Ice.Application):
         print("Media encontrado:\n")
         for media in media_list:
             counter += 1
-            print(str(counter) + ". " + os.path.split(media.info.name)[1])
+            print(str(counter) + ". " + path.split(media.info.name)[1])
 
         option = input(
             "Selecciona un media o deja en blanco para salir: ")
-        while option.isdigit() == False or int(option) < 1 or int(option) > counter or option != "":
+        while option.isdigit() == False or int(option) < 1 or int(option) > counter:
             if option == "":
                 return -1
             option = input("Inserta una opción válida: ")        
@@ -387,7 +387,7 @@ class Admin(Ice.Application):
         print("1. Reproducir")
         print("2. Añadir etiquetas")
         print("3. Eliminar etiquetas")
-        print("4. Renombra titulo")
+        print("4. Renombra título")
         print("5. Eliminar video")
         
         option = input("Admin_CatalogService@" + user + "> ")
@@ -399,35 +399,46 @@ class Admin(Ice.Application):
                 self.stream_provider(media_object, auth_token)
             except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                 print(e)
-                raise e
+                input("Presiona Enter para continuar...")
             
         elif option == "2":
             try:
                 self.manage_tags(media_object, auth_token, catalog_connection, True)
             except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                 print(e)
-                raise e
+                input("Presiona Enter para continuar...")
             
         elif option == "3":
             try:
                 self.manage_tags(media_object, auth_token, catalog_connection, False)
             except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                 print(e)
-                raise e
+                input("Presiona Enter para continuar...")
 
         elif option == "4":
             try:
                 self.renameTile(media_object, catalog_connection, admin_token)
             except (IceFlix.Unathorized, IceFlix.WrongMediaId) as e:
                 print(e)
-                raise e
+                input("Presiona Enter para continuar...")
+            print("Título renombrado correctamente")
+            input("Presiona Enter para continuar...")
 
         elif option == "5":
-            return 0 
+            stream_provider_connection = self.connect_stream_provider()
+            print("conectado")
+            try:
+                stream_provider_connection.deleteMedia(media_object.mediaId, admin_token)
+                print("deleteado")
+            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
+                print(e)
+                input("Presiona Enter para continuar...")
+            print("Video borrado correctamente")
+            input("Presiona Enter para continuar...")
+
 
     def renameTile(media_object,catalog_connection,admin_token):
         new_name = input("Nuevo nombre: ")
-        #Controlar que el admin no meta valores ilegales
         catalog_connection.renameTile(media_object.mediaId,new_name,admin_token)
 
     def run(self, argv):
