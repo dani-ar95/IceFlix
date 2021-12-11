@@ -16,7 +16,15 @@ class MediaCatalogI(IceFlix.MediaCatalog):
     
     def __init__(self):
         self._media_ = dict()
-        # Obtener medios de la base de datos
+        # Añadir medios de la bbdd 
+        conn = sqlite3.connect(DB_PATH)
+        ddbb_cursor = conn.cursor()
+        ddbb_cursor.execute("SELECT * FROM media")
+        query = ddbb_cursor.fetchall()
+        conn.close()
+        if query:
+            for media in query:
+                self._media_.append(IceFlix.Media(media[0], None, IceFlix.MediaInfo(media[1], [])))
         
 
     def getTile(self, mediaId: str, current=None): # pylint: disable=invalid-name,unused-argument
@@ -52,25 +60,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
     def getTilesByName(self, name, exact: bool, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna una lista de IDs a partir del nombre dado'''
 
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
         id_list = []
-
-        # Buscar por nombre en la BBDD
-        if exact:
-            c.execute("SELECT id FROM media WHERE name LIKE'{}'".format(name))
-        else:
-            c.execute(
-                "SELECT id FROM media WHERE LOWER(name) LIKE LOWER('%{}%')".format(name))
-
-        list_returned = c.fetchall() # Ejecuta la query
-        conn.close()
-
-        if list_returned: # Si la query devuelve algo, añadirlo al resultado
-            for media in list_returned: # La query devuelve una lista por cada medio, cada lista tiene (id, tag, name, proxy)
-                id_list.append(media[0])
-
-        # Buscar por nombre en los medios dinámicos
         if exact:
             for media in self._media_.values():
                 if name == media.info.name:
@@ -162,10 +152,6 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             with open(USERS_PATH, 'w') as file:
                 json.dump(obj, file, indent=2)
 
-            # Cambiar tags de medios dinámicos, creo que no hace falta
-            
-
-            return 0 # ¿Deberíamos usar los EXIT_OK y eso?
 
     def removeTags(self, mediaId: str, tags: list,  userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Elimina las tags dadas del medio con el ID dado '''
@@ -190,10 +176,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
             with open(USERS_PATH, 'w') as file:
                 json.dump(obj, file, indent=2)
-                
-            return 0
 
-            
 
     def renameTile(self, mediaId, name, adminToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Renombra el medio de la estructura correspondiente '''
@@ -265,7 +248,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         try:
             user = self._auth_prx_.isAuthorized(user_token)
         except IceFlix.Unauthorized as e:
-            raise e         
+            raise e
         else:
             return user
 
@@ -274,7 +257,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         try:
             user_name = self._auth_prx_.whois(user_token)
         except IceFlix.Unauthorized as e:
-            raise e         
+            raise e
         else:
             return user_name
 
@@ -297,13 +280,13 @@ class MediaCatalogServer(Ice.Application):
         adapter.activate()
 
         main_connection.register(media_catalog_proxy)
-        
+
         servant._main_prx_ = main_connection
         try:
             servant._auth_prx_ = main_connection.getAuthenticator()
         except IceFlix.TemporaryUnavailable as e:
             print(e)
-            
+
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
 

@@ -4,8 +4,8 @@ conn = sqlite3.connect("media.db")
 
 c = conn.cursor()
 
-c.execute("DROP TABLE media")
-conn.commit()
+#c.execute("DROP TABLE media")
+#conn.commit()
 
 c.execute("""CREATE TABLE media (
     id text,
