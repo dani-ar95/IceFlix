@@ -3,6 +3,7 @@
 from os import path
 import sys
 import Ice
+import iceflixrtsp
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
@@ -25,11 +26,11 @@ class StreamControllerI(IceFlix.StreamController):
         except IceFlix.Unauthorized as e:
             raise e
         else:    
-            path = self._filename_
-            return str(path) + "::127.0.0.1::" + str(port)
+            self._emitter_ = iceflixrtsp.RTSPEmitter(self._filename_, "127.0.0.1", str(port))
+            return self._emitter_.playback_uri
 
     def stop(self):
-        pass
+        self._emitter_.stop()
 
     def check_user(self, user_token):
         ''' Comprueba que la sesion del usuario es la actual '''
