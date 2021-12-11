@@ -25,11 +25,12 @@ class StreamControllerI(IceFlix.StreamController):
             authenticated = self.check_user(userToken)
         except IceFlix.Unauthorized as e:
             raise e
-        else:    
-            self._emitter_ = iceflixrtsp.RTSPEmitter(self._filename_, "127.0.0.1", str(port))
+        else:
+            self._emitter_ = iceflixrtsp.RTSPEmitter(self._filename_, "127.0.0.1", port)
+            self._emitter_.start()
             return self._emitter_.playback_uri
 
-    def stop(self):
+    def stop(self, current=None):
         self._emitter_.stop()
 
     def check_user(self, user_token):

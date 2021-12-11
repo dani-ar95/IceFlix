@@ -240,8 +240,8 @@ class Client(Ice.Application):
         except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
             raise e
         else:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.bind(("", 9998))
+            #sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            #sock.bind(("", 9998))
             try:
                 config_url = stream_controller_proxy.getSDP(auth_token, 9998)
                 print(config_url)
@@ -249,17 +249,18 @@ class Client(Ice.Application):
             except IceFlix.Unauthorized:
                 print("Usuario no autorizado")
                 return 1
-
-            player = iceflixrtsp.RTSPPlayer()
-            player.play(config_url)
-            print("Introduce q para parar o presiona enter para seguir navegando")
-            if input() == "":
-                return 0
-            elif input() == "q":
-                stream_controller_proxy.stop()
-                player.stop()
-                sock.close()
-                return 0
+            else:
+                player = iceflixrtsp.RTSPPlayer()
+                player.play(config_url)
+                print("Introduce q para parar o presiona enter para seguir navegando")
+                key = input()
+                if key == "":
+                    return 0
+                elif key == "q":
+                    stream_controller_proxy.stop()
+                    player.stop()
+                    #sock.close()
+                    return 0
 
     
     def add_tags(self, media_object, auth_token, catalog_connection, is_add):
