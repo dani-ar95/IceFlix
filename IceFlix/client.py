@@ -32,8 +32,8 @@ class Client(Ice.Application):
 
     def logged_prompt(self, main_connection):
         self.format_prompt()
-        user = input("Introduce el nombre de usuario: ")
-        password = getpass.getpass("Password: ")
+        user = input("Nombre de usuario: ")
+        password = getpass.getpass("Contraseña: ")
         hash_password = self.calculate_hash(password)
 
         try:
@@ -59,7 +59,7 @@ class Client(Ice.Application):
             
         while 1:
             system("clear")
-            print("Opciones disponibles")
+            print("Opciones disponibles:")
             print("1. Servicio de catalogo")
             print("2. Cerrar sesión")
             print("3. Salir del cliente\n")
@@ -67,14 +67,17 @@ class Client(Ice.Application):
             option = input("IceFlix_MainService@" + user + "> ")
                 
             while option.isdigit() == False or int(option) < 1 or int(option) > 3:
-                option = input("Inserta una opción válida: ")
+                if option == "":
+                    option = input("IceFlix_MainService@" + user + "> ")
+                else:
+                    option = input("Inserta una opción válida: ")
             
             if option == "1":
                 self.catalog_service(catalog_proxy, user, auth_token)
                 
             elif option == "2":
                 print("Cerrando sesión...")
-                sleep(2)
+                sleep(1)
                 self.not_logged_prompt(main_connection)
                     
             elif option == "3":
@@ -90,14 +93,17 @@ class Client(Ice.Application):
             
         while 1:
             system("clear")
-            
+            print("Opciones disponibles:")
             print("1. Servicio de catalogo")
             print("2. Iniciar sesión")
             print("3. Salir del cliente\n")
             
             option = input("MainService@Usuario_anonimo> ")
             while option.isdigit() == False or int(option) < 1 or int(option) > 3:
-                option = input("Inserta una opción válida: ")
+                if option == "":
+                    option = input("MainService@Usuario_anonimo> ")
+                else:
+                    option = input("Inserta una opción válida: ")
             
             if option == "1":
                 self.not_logged_catalog_service(catalog_proxy)
@@ -118,7 +124,10 @@ class Client(Ice.Application):
             
             option = input("CatalogService@Usuario_anonimo> ")
             while option.isdigit() == False or int(option) < 1 or int(option) > 3:
-                option = input("Inserta una opción válida: ")
+                if option == "":
+                    option = input("CatalogService@Usuario_anonimo> ")
+                else:
+                    option = input("Inserta una opción válida: ")
             
             if option == "1":
                 media_list = self.name_searching(catalog_connection)
@@ -142,7 +151,10 @@ class Client(Ice.Application):
             
             option = input("CatalogService@" + user + "> ")
             while option.isdigit() == False or int(option) < 1 or int(option) > 3:
-                option = input("Inserta una opción válida: ")
+                if option == "":
+                    option = input("CatalogService@" + user + "> ")
+                else:
+                    option = input("Inserta una opción válida: ")
             
             if option == "1":
                 media_list = self.name_searching(catalog_connection)
@@ -226,23 +238,24 @@ class Client(Ice.Application):
             raise e
         else:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.bind(("", 10000))
+            sock.bind(("", 9999))
             try:
-                config = stream_controller_proxy.getSDP(auth_token, 10000)
+                config_url = stream_controller_proxy.getSDP(auth_token, 9999)
                 print("Exito en el controller")
             except IceFlix.Unauthorized:
                 print("Usuario no autorizado")
                 return 1
-            print("config")
-            lista = config.split("::")
-            emitter = iceflixrtsp.RTSPEmitter(lista[0], lista[1], lista[2])
-            emitter.start()
-            player = iceflixrtsp.RTSPPlayer()
-            player.play(emitter.playback_uri)
 
-            emitter.wait()
-            player.stop()
-            sock.close()
+            player = iceflixrtsp.RTSPPlayer()
+            player.play(config_url)
+            print("Introduce q para parar o presiona enter para seguir navegando")
+            if input() == "":
+                return 0
+            elif input() == "q":
+                stream_controller_proxy.stop()
+                player.stop()
+                sock.close()
+                return 0
 
     
     def add_tags(self, media_object, auth_token, catalog_connection, is_add):
@@ -367,10 +380,7 @@ class Client(Ice.Application):
     def run(self, argv):
         broker = self.communicator()
         connection_tries = 3
-        system("clear")
-        print("         #----------------#")
-        print("         | Iceflix Client |")
-        print("         #----------------#\n\n")
+        self.format_prompt()
         
         main_prx_string = input("Introduce el proxy del servicio principal: ")
         main_service_proxy = broker.stringToProxy(main_prx_string)
