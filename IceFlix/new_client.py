@@ -2,9 +2,11 @@
 
 from MediaUploader import MediaUploaderI
 from os import system, terminal_size, path
+from time import sleep
 import Ice
 import sys
-from time import sleep
+import os
+import signal
 import hashlib
 import getpass
 import iceflixrtsp
@@ -45,23 +47,21 @@ class Cliente(Ice.Application):
 
     def set_main_proxy(self):
         proxy = input("Introduce el proxy al servicio principal: ")
+        while proxy == "":
+            proxy = input("Introduce el proxy al servicio principal: ")
         connection_tries = 3
         try:
             main_proxy = self.communicator().stringToProxy(proxy)
+            main_connection = IceFlix.MainPrx.checkedCast(main_proxy)
         except:
             print("La conexión no ha sido posible")
-            sys.exit(1)
+            input()
+            os._exit(0)
         else:
-            try:
-                main_connection = IceFlix.MainPrx.checkedCast(main_proxy)
-            except:
-                print("La conexión no ha sido posible")
-                sys.exit(1)
             print("Conectando con el servicio principal...")
             sleep(1)    #Simula complejidad
             while(connection_tries > 0):
                 try:
-                    print("antes del isA")
                     check = main_connection.ice_isA("::IceFlix::Main")
                     if check:
                         break
@@ -71,7 +71,7 @@ class Cliente(Ice.Application):
                     if connection_tries == 0:
                         print("Número máximo de intentos alcanzados. Saliendo...")
                         sleep(2)    #Simula complejidad
-                        sys.exit(1)
+                        return signal.SIGINT
                     sleep(10)  # cambiar a 10 segundoss
 
             self._main_prx_ = main_connection
@@ -93,13 +93,16 @@ class Cliente(Ice.Application):
             try:
                 self._auth_prx_ = self._main_prx_.getAuthenticator()
             except IceFlix.TemporaryUnavailable:
-                print(IceFlix.TemporaryUnavailable)
+                print(IceFlix.TemporaryUnavailable())
+                input()
         try:
             self._user_token_ = self._auth_prx_.refreshAuthorization(user, hash_password)
         except IceFlix.Unauthorized:
-            print(IceFlix.Unauthorized)
+            print(IceFlix.Unauthorized())
+            input()
         else:
-            self._username_ = user    
+            self._username_ = user
+            input("Registrado correctamente. Pulsa Enter para continuar...")
 
     def logout(self):
         self._username_ = None
@@ -124,7 +127,7 @@ class Cliente(Ice.Application):
             try:
                 self._catalog_prx_ = self._main_prx_.getCatalog()
             except IceFlix.TemporaryUnavailable:
-                print(IceFlix.TemporaryUnavailable)
+                print(IceFlix.TemporaryUnavailable())
 
         while 1:
             system("clear")
@@ -166,7 +169,6 @@ class Cliente(Ice.Application):
                     input("Pulsa enter para continuar...")
                     continue
                 elif media_list == 0:
-                    print("No autorizado")
                     input("Pulsa enter para continuar...")
                     continue
                 
@@ -200,7 +202,9 @@ class Cliente(Ice.Application):
             full_title = False
         
         title = input("\nInsertar titulo: ")
-        
+        while title == "":
+            title = input("\nInsertar titulo: ")
+
         id_list = self._catalog_prx_.getTilesByName(title, full_title)
 
         if len(id_list) > 0:
@@ -208,7 +212,7 @@ class Cliente(Ice.Application):
                 try:
                     media_list.append(self._catalog_prx_.getTile(id))
                 except(IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
-                    print(e)
+                    pass
         else:
             return []
                         
@@ -234,7 +238,7 @@ class Cliente(Ice.Application):
         try:
             id_list = self._catalog_prx_.getTilesByTags(tag_list, all_tags, self._user_token_)
         except IceFlix.Unauthorized:
-            print(IceFlix.Unauthorized)
+            print(IceFlix.Unauthorized())
             return 0
 
         if len(id_list) > 0:
@@ -282,9 +286,10 @@ class Cliente(Ice.Application):
         print("3. Eliminar etiquetas")
         print("4. Renombra título")
         print("5. Eliminar video")
+        print("6. Volver\n")
         
         option = input(self.create_prompt("CatalogService"))
-        while option.isdigit() == False or int(option) < 1 or int(option) > 5:
+        while option.isdigit() == False or int(option) < 1 or int(option) > 6:
             option = input("Inserta una opción válida: ")
             
         if option == "1":
@@ -293,10 +298,6 @@ class Cliente(Ice.Application):
             except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                 print(e)
                 input("Presiona Enter para continuar...")
-            else:
-                if video == 1:
-                    print("No autorizado")
-                    input("Pulsa enter para continuar...")
             
         elif option == "2":
             try:
@@ -318,49 +319,53 @@ class Cliente(Ice.Application):
             except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                 print(e)
                 input("Presiona Enter para continuar...")
-            print("Título renombrado correctamente")
-            input("Presiona Enter para continuar...")
+            else:
+                print("Título renombrado correctamente")
+                input("Presiona Enter para continuar...")
 
         elif option == "5":
             if not self._stream_provider_prx_:
-                self.connect_stream_provider()
+                retorno = self.connect_stream_provider()
+                if retorno == 0:
+                    return 0
             try:
-                self._stream_provider_prx_.deleteMedia(media_object.mediaId)
+                self._stream_provider_prx_.deleteMedia(media_object.mediaId, self._admin_token_)
             except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                 print(e)
                 input("Presiona Enter para continuar...")
-            print("Video borrado correctamente")
-            input("Presiona Enter para continuar...")
+            else:
+                print("Video borrado correctamente")
+                input("Presiona Enter para continuar...")
+        
+        elif option == "6":
+            self.catalog_service()
 
     def play_video(self, media):
-        #media.provider = IceFlix.StreamProviderPrx.checkedCast(media.provider)
         if not self._stream_provider_prx_:
             try:
                 self._stream_provider_prx_ = media.provider.getStream(media.mediaId, self._user_token_)
             except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
-                print(IceFlix.Unauthorized)
-
-        #sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #sock.bind(("", 9998))
-        try:
-            config_url = self._stream_provider_prx_.getSDP(self._user_token_, 9998)
-            print(config_url)
-            print("Exito en el controller")
-        except IceFlix.Unauthorized:
-            print("Usuario no autorizado")
-            return 1
-        else:
-            player = iceflixrtsp.RTSPPlayer()
-            player.play(config_url)
-            print("Introduce q para parar o presiona enter para seguir navegando")
-            key = input()
-            if key == "":
-                return 0
-            elif key == "q":
-                _stream_provider_prx_.stop()
-                player.stop()
-                #sock.close()
-                return 0
+                print(IceFlix.Unauthorized())
+                input()
+            else:
+                try:
+                    config_url = self._stream_provider_prx_.getSDP(self._user_token_, 9998)
+                    print(config_url)
+                    print("Exito en el controller")
+                except IceFlix.Unauthorized:
+                    print(IceFlix.Unauthorized())
+                    input()
+                else:
+                    player = iceflixrtsp.RTSPPlayer()
+                    player.play(config_url)
+                    print("Introduce q para parar o presiona enter para seguir navegando")
+                    key = input()
+                    if key == "":
+                        return 0
+                    elif key == "q":
+                        _stream_provider_prx_.stop()
+                        player.stop()
+                        return 0
 
     def add_tags(self, media_object):
         tags_list = self.ask_for_tags()
@@ -393,8 +398,15 @@ class Cliente(Ice.Application):
 
     def connect_stream_provider(self):
         stream_provider_proxy = input("Introduce el proxy del stream provider: ")
-        proxy = self.communicator().stringToProxy(stream_provider_proxy)
-        stream_provider_connection = IceFlix.StreamProviderPrx.checkedCast(proxy)
+        while stream_provider_proxy == "":
+            stream_provider_proxy = input("Introduce el proxy del stream provider: ")
+        try:
+            proxy = self.communicator().stringToProxy(stream_provider_proxy)
+            stream_provider_connection = IceFlix.StreamProviderPrx.checkedCast(proxy)
+        except:
+            print("La conexión no ha sido posible")
+            input()
+            return 0
         try:
             check = stream_provider_connection.ice_ping()
         except Ice.ConnectionRefusedException:
@@ -423,8 +435,10 @@ class Cliente(Ice.Application):
                 try:
                     self._auth_prx_.addUser(new_user, new_hash_password, self._admin_token_)
                 except IceFlix.Unauthorized:
-                    print(IceFlix.Unauthorized)
+                    print(IceFlix.Unauthorized())
                     input()
+                else:
+                    input("Usuario creado correctamente. Pulsa Enter para continuar...")
                 continue
             
             elif option == "2":
@@ -432,7 +446,13 @@ class Cliente(Ice.Application):
                 try:
                    self._auth_prx_.removeUser(delete_user, self._admin_token_)
                 except IceFlix.Unauthorized:
-                    print(IceFlix.Unauthorized)
+                    print(IceFlix.Unauthorized())
+                    input()
+                else:
+                    if delete_user == self._username_:
+                        self._username_ = None
+                        self._user_token_ = None
+                    input("Usuario borrado correctamente. Pulsa Enter para continuar...")
                 continue
             
             elif option == "3":
@@ -451,22 +471,32 @@ class Cliente(Ice.Application):
                 option = input("Inserta una opción válida: ")
 
             if option == "1":
-                self.connect_stream_provider()
-                filename = input("Escribe el nombre del video que quieres subir: ")
+                retorno = self.connect_stream_provider()
+                if retorno == 0:
+                    return 0
+                filename = input("Escribe el nombre del video que quieres subir ubicado en IceFlix/local: ")
+                while filename == "":
+                    filename = input("Escribe el nombre del video que quieres subir ubicado en IceFlix/local: ")
                 file = path.join(path.dirname(__file__), "local/" + filename)
+
                 uploader = MediaUploaderI(file)
+
                 adapter = self.communicator().createObjectAdapterWithEndpoints('MediaUploaderAdapter', 'tcp -p 9100')
                 uploader_proxy = adapter.add(uploader, self.communicator().stringToIdentity('MediaUploader'))
                 uploader_connection = IceFlix.MediaUploaderPrx.checkedCast(uploader_proxy)
+
                 adapter.activate()
+
                 uploader_connection.ice_ping()
                 try:
                     file_id = self._stream_provider_prx_.uploadMedia(file, uploader_connection, self._admin_token_)
+                except (IceFlix.Unauthorized, IceFlix.UploadError) as e:
+                    print(e)
+                    input()
+                finally:
                     uploader_connection.close()
                     adapter.destroy()
-                except (IceFlix.Unauthorized, IceFlix.UploadError) as e:
-                    raise e
-            
+
             elif option == "2":
                 return 0
 
@@ -487,7 +517,7 @@ class Cliente(Ice.Application):
                     
             while option.isdigit() == False or int(option) < 1 or int(option) > 7:
                 if option == "":
-                    option = input("IceFlix_MainService> ")
+                    option = input(self.create_prompt("MainService"))
                 else:
                     option = input("Inserta una opción válida: ")
 
@@ -505,7 +535,7 @@ class Cliente(Ice.Application):
                 self.stream_provider_service()
             elif option == "7":
                 print("Gracias por usar la aplicación uwu")
-                sys.exit(1)
+                return signal.SIGINT
     
     def run(self, args):
         self.format_prompt()
@@ -514,4 +544,3 @@ class Cliente(Ice.Application):
     
 if __name__ == "__main__":
     sys.exit(Cliente().main(sys.argv))
-        
