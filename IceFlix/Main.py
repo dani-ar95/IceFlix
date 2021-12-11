@@ -27,16 +27,10 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
             try:
                 is_auth = servant.ice_isA("::IceFlix::Authenticator")
             except Ice.ConnectionRefusedException:
-                break
+                self._servants_.remove(servant)
             else:
                 if is_auth:
-                    if servant.ice_isA("::IceFlix::Authenticator"):
-                        try:
-                            response = servant.ice_ping()
-                        except Ice.ConnectionRefusedException:
-                            self._servants_.remove(servant)
-                        if not response:
-                            return IceFlix.AuthenticatorPrx.checkedCast(servant)
+                    return IceFlix.AuthenticatorPrx.checkedCast(servant)
 
         raise IceFlix.TemporaryUnavailable
 
@@ -47,23 +41,23 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
             try:
                 is_catalog = servant.ice_isA("::IceFlix::MediaCatalog")
             except Ice.ConnectionRefusedException:
-                break
+                self._servants_.remove(servant)
             else:
                 if is_catalog:
-                    try:
-                        response = servant.ice_ping()
-                    except Ice.ConnectionRefusedException:
-                        self._servants_.remove(servant)
-                    if not response:
-                        return IceFlix.MediaCatalogPrx.checkedCast(servant)
+                    return IceFlix.MediaCatalogPrx.checkedCast(servant)
 
         raise IceFlix.TemporaryUnavailable
+
 
     def register(self, service, current=None): # pylint: disable=unused-argument
         ''' Permite registrarse a determinados servicios '''
 
+        possible_servants = set("MediaCatalog", "Authenticator")
+        print(Ice.ice_getIdentity(service))
+        # if Ice.ice_getIdentity(service).name in possible_servants:
         self._servants_.add(service)
-        # Throws UnkownService
+        # else:
+        # raise IceFlix.UnknownService
 
     def isAdmin(self, adminToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Verifica que un token es de administración '''
@@ -71,6 +65,7 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
 
 class MainServer(Ice.Application):
     """Servidor del servicio principal"""
+
     def run(self):
         ''' Implementación del servidor principal '''
         broker = self.communicator()
