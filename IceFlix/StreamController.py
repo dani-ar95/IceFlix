@@ -1,26 +1,31 @@
 #!/usr/bin/python3
+# pylint: disable=invalid-name
+''' Clase que se encarga del control del streaming, sus instancias cargan un video
+     y retornan la uri del streaming '''
 
 from os import path
 import sys
 import Ice
-import iceflixrtsp
+import iceflixrtsp # pylint: disable=import-error
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
-import IceFlix
+import IceFlix # pylint: disable=wrong-import-position
 
-class StreamControllerI(IceFlix.StreamController):
+class StreamControllerI(IceFlix.StreamController): # pylint: disable=inherit-non-class
+    ''' Instancia de StreamController '''
 
-    def __init__(self, file_path, current=None):
+    def __init__(self, file_path, current=None): # pylint: disable=invalid-name,unused-argument
+        self._emitter_ = None
         self._filename_ = file_path
         try:
-            self._fd_ = open(file_path, "rb")
+            self._fd_ = open(file_path, "rb") # pylint: disable=consider-using-with
         except FileNotFoundError:
             print("Archivo no encontrado: " + file_path)
 
-    def getSDP(self, userToken, port: int, current=None):
+    def getSDP(self, userToken, port: int, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna la configuracion del flujo SDP '''
-        # Aquí hay que hacer algo más, porque pone que el flujo es una url
+
         try:
             self.check_user(userToken)
         except IceFlix.Unauthorized as e:
@@ -30,11 +35,13 @@ class StreamControllerI(IceFlix.StreamController):
             self._emitter_.start()
             return self._emitter_.playback_uri
 
-    def stop(self, current=None):
+    def stop(self, current=None): # pylint: disable=invalid-name,unused-argument
+        ''' Detiene la emision del flujo SDP '''
+
         self._emitter_.stop()
 
     def check_user(self, user_token):
-        ''' Comprueba que la sesion del usuario es la actual '''
+        ''' Comprueba que la sesion del usuario está actualizada '''
 
         is_user = self._authenticator_prx_.isAuthorized(user_token)
         if not is_user:
@@ -42,18 +49,13 @@ class StreamControllerI(IceFlix.StreamController):
         return is_user
 
 
-class StreamControllerServer(Ice.Application):
-    def run(self, argv):
-        # sleep(1)
-        self.shutdownOnInterrupt()
-        main_service_proxy = self.communicator().stringToProxy(argv[1])
-        main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
-        if not main_connection:
-            raise RuntimeError("Invalid proxy")
+class StreamControllerServer(Ice.Application): # pylint: disable=invalid-name
+    ''' Servidor del controlador de Streaming '''
+
+    def run(self, args): # pylint: disable=unused-argument
+        ''' No hace mucho '''
 
         broker = self.communicator()
-        servant = StreamControllerI("default")
-
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
 

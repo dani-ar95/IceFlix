@@ -59,6 +59,7 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
 
     def isAdmin(self, adminToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Verifica que un token es de administración '''
+
         return adminToken == self._token_ # pylint: disable=invalid-name
 
 class MainServer(Ice.Application):

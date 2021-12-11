@@ -12,9 +12,9 @@ import Ice
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 
 Ice.loadSlice(SLICE_PATH)
-import IceFlix
+import IceFlix # pylint: disable=wrong-import-position
 
-from StreamController import StreamControllerI # pylint: disable=import-error
+from StreamController import StreamControllerI # pylint: disable=import-error, wrong-import-position
 
 class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-class
     ''' Instancia de Stream Provider '''
@@ -34,6 +34,7 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
             self.check_user(userToken)
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
+
         else:
             asked_media = None
             if self.isAvailable(mediaId):
@@ -135,7 +136,7 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
             return is_user
 
 class StreamProviderServer(Ice.Application):
-    ''' Servidor que envía '''
+    ''' Servidor que comparte con el catálogo sus medios disponibles  '''
 
     def run(self, argv):
         '''' Inicialización de la clase '''
@@ -164,15 +165,13 @@ class StreamProviderServer(Ice.Application):
         print(f"Sirviendo el directorio: {root_folder}")
         candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
 
-        # stringfield del proxy
         proxy = IceFlix.StreamProviderPrx.checkedCast(stream_provider_proxy)
 
-        # Completar lista de id
         for filename in candidates:
             with open("./"+str(filename), "rb") as f:
                 print("Sirviendo " + str(filename))
-                bytes = f.read()
-                id_hash = hashlib.sha256(bytes).hexdigest()
+                read_file = f.read()
+                id_hash = hashlib.sha256(read_file).hexdigest()
                 new_media = IceFlix.Media(id_hash, proxy, IceFlix.MediaInfo(filename, []))
                 servant._provider_media_.update({id_hash: new_media})
 
@@ -181,7 +180,6 @@ class StreamProviderServer(Ice.Application):
         adapter.activate()
 
         servant._proxy_ = proxy
-
         servant._catalog_prx_ = catalog_prx
         servant._authenticator_prx_ = authenticator_prx
         servant._main_prx_ = main_connection

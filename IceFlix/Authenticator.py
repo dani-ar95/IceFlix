@@ -9,12 +9,10 @@ import json
 import secrets
 import Ice
 
-SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 USERS_PATH = path.join(path.dirname(__file__), "users.json")
-
+SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
-import IceFlix
-
+import IceFlix # pylint: disable=wrong-import-position
 
 class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
     """Sirviente del servicio de autenticación"""
@@ -42,11 +40,12 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
     def whois(self, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Permite conocer el usuario asociado a un token'''
 
-        if userToken in self._active_users_.values():
-            info = self._active_users_.items()
-            for user in info:
-                if user[1] == userToken:
-                    return user[0]
+        if self.isAuthorized(userToken):
+            if userToken in self._active_users_.values():
+                info = self._active_users_.items()
+                for user in info:
+                    if user[1] == userToken:
+                        return user[0]
         else:
             raise IceFlix.Unauthorized
 
@@ -85,20 +84,23 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
         with open(USERS_PATH, 'w', encoding="utf8") as file:
             json.dump(obj, file, indent=2)
 
-        if user in self._active_users_.keys():
+        if user in self._active_users_:
             self._active_users_.pop(user)
+
 
     def check_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''
-   
+
         is_admin = self._main_prx_.isAdmin(admin_token)
         if not is_admin:
             raise IceFlix.Unauthorized
 
         return is_admin
 
+
     def __init__(self):
         self._active_users_ = {}
+        self._main_prx_ = None
 
 
 class AuthenticatorServer(Ice.Application):

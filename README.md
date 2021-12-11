@@ -20,3 +20,26 @@ following files and directories:
 - `setup.cfg` is a Python distribution configuration file for
   Setuptools. It needs to be modified in order to adeccuate to the
   package name and console handler functions.
+
+Información para probar la práctica:
+Token de administración: admin
+Username: user
+Contraseña: password
+Medios de ejemplo: Esponja.mp4, Peluquero.mp4
+
+Cómo reproducir un medio:
+1. Ejecutar "run_iceflix"
+2. Ejecutar "run_client"
+3. Introducir el proxy al servicio IceFlix::Main()
+4. Seleccionar <numero> e introducir usuario y contraseña
+5. Seleccionar <numero> e introducir <Nombre de medio>
+6. Introducir <n>
+7. Seleccionar <1> para reproducir
+
+
+Cómo editar el nombre de un medio:
+1. Ejecutar "run_iceflix"
+2. Ejecutar "run_client"
+3. Introducir el proxy al servicio IceFlix::Main()
+4. Seleccionar <numero> e introducir el token de administración
+5. Seleccionar <numero> e introducir <Nombre de medio>

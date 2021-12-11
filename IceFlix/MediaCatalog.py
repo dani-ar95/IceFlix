@@ -1,22 +1,29 @@
 #!/usr/bin/python3
+# pylint: disable=invalid-name
+''' Servicio de Catálogo, se encarga de listar los medios disponibles, persistentes
+    y los anunciados por los Providers '''
+
 import sqlite3
 import sys
 import json
-import Ice
 from time import sleep
 from os import path, rename
+import Ice
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 DB_PATH = path.join(path.dirname(__file__), "media.db")
 USERS_PATH = path.join(path.dirname(__file__), "users.json")
 Ice.loadSlice(SLICE_PATH)
-import IceFlix
+import IceFlix # pylint: disable=wrong-import-position
 
-class MediaCatalogI(IceFlix.MediaCatalog):
-    
+class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
+    ''' Instancia del servicio de Catálogo '''
+
     def __init__(self):
-        self._media_ = dict()
-        # Añadir medios de la bbdd 
+        self._media_ = {}
+        self._main_prx_ = None
+        self._auth_prx_ = None
+
         conn = sqlite3.connect(DB_PATH)
         ddbb_cursor = conn.cursor()
         ddbb_cursor.execute("SELECT * FROM media")
@@ -24,8 +31,9 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         conn.close()
         if query:
             for media in query:
-                self._media_.update({media[0]: IceFlix.Media(media[0], None, IceFlix.MediaInfo(media[1], []))})
-        
+                info = IceFlix.MediaInfo(media[1], [])
+                self._media_.update({media[0]: IceFlix.Media(media[0], None, info)})
+
 
     def getTile(self, mediaId: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna un objeto Media con la informacion del medio con el ID dado '''
@@ -43,12 +51,12 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                     return self._media_.get(mediaId)
             else:
                 raise IceFlix.TemporaryUnavailable
-    
+
         # Buscar ID en bbdd
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         print(mediaId)
-        c.execute("SELECT * FROM media WHERE id LIKE '{}'".format(mediaId)) # pylint: disable=invalid-name,unused-argument
+        c.execute(f"SELECT * FROM media WHERE id LIKE '{mediaId}'") # pylint: disable=invalid-name,unused-argument
 
         query = c.fetchall()
 
@@ -56,7 +64,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         if not query and mediaId not in self._media_.keys():
             raise IceFlix.WrongMediaId
 
-        
+
     def getTilesByName(self, name: str, exact: bool, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna una lista de IDs a partir del nombre dado'''
 
@@ -80,22 +88,22 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         try:
             username = self.check_user_name(userToken)
-        except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable) as e:
+        except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
         else:
 
             list_returned = []
             id_list = []
 
-            for media_id in self._media_.keys():
+            for media_id in self._media_:
                 list_returned.append(media_id)
 
-            with open(USERS_PATH, "r") as f:
+            with open(USERS_PATH, "r", encoding="utf8") as f:
                 obj = json.load(f)
                 for i in obj["users"]:
                     if i["user"] == username:
                         user_tags = i["tags"]
-            
+
             if includeAllTags:
                 valid = True
                 for media_id in list_returned:
@@ -128,16 +136,16 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
         try:
             user_name = self.check_user_name(userToken)
-        except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable) as e:
+        except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
 
         else:
-            if mediaId not in self._media_.keys():
+            if mediaId not in self._media_:
                 raise IceFlix.WrongMediaId
 
             # Cambiar tags persistentes
-            with open(USERS_PATH, "r") as f:
-                obj = json.load(f)
+            with open(USERS_PATH, "r", encoding="utf8") as file_descriptor:
+                obj = json.load(file_descriptor)
 
             for i in obj["users"]:
                 if i["user"] == user_name:
@@ -149,20 +157,21 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                     i["tags"].update({mediaId:actuales})
                     break
 
-            with open(USERS_PATH, 'w') as file:
+            with open(USERS_PATH, 'w', encoding="utf8") as file:
                 json.dump(obj, file, indent=2)
 
 
-    def removeTags(self, mediaId: str, tags: list,  userToken, current=None): # pylint: disable=invalid-name,unused-argument
+    def removeTags(self, mediaId: str, tags: list, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Elimina las tags dadas del medio con el ID dado '''
+
         try:
             user_name = self.check_user_name(userToken)
-        except (IceFlix.Unauthorized, IceFlix.TemporaryUnavailable) as e:
+        except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
         else:
 
             # Cambiar tags persistentes
-            with open(USERS_PATH, "r") as f:
+            with open(USERS_PATH, "r", encoding="utf8") as f:
                 obj = json.load(f)
 
             for i in obj["users"]:
@@ -174,7 +183,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                     i["tags"].update({mediaId:actuales})
                     break
 
-            with open(USERS_PATH, 'w') as file:
+            with open(USERS_PATH, 'w', encoding="utf8") as file:
                 json.dump(obj, file, indent=2)
 
 
@@ -190,17 +199,16 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             # Buscar id en medios estáticos
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
-            c.execute(
-                "SELECT * FROM media where id LIKE '{}'".format(mediaId))
+            c.execute(f"SELECT * FROM media where id LIKE '{mediaId}'")
             media = conn.commit()
             conn.close()
-            
+
             # Buscar id en medios dinamicos
-            if mediaId not in self._media_.keys() and not media:
+            if mediaId not in self._media_ and not media:
                 raise IceFlix.WrongMediaId
 
             # Cambiar media en medios dinamicos
-            if mediaId in self._media_.keys():
+            if mediaId in self._media_:
                 media = self._media_.get(mediaId)
                 old_name = media.info.name
                 media.info.name = name
@@ -220,7 +228,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                     conn = sqlite3.connect(DB_PATH)
                     c = conn.cursor()
                     c.execute(
-                        "UPDATE media SET name = '{}' WHERE id LIKE '{}'".format(name, mediaId))
+                        f"UPDATE media SET name = '{name}' WHERE id LIKE '{mediaId}'")
                     conn.commit()
                     conn.close()
 
@@ -264,6 +272,8 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             return user_name
 
 class MediaCatalogServer(Ice.Application):
+    ''' Servidor de Catálogo  '''
+
     def run(self, argv):
         sleep(2)
         main_service_proxy = self.communicator().stringToProxy(argv[1])
