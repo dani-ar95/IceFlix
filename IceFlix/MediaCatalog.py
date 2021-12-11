@@ -24,7 +24,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
         conn.close()
         if query:
             for media in query:
-                self._media_.append(IceFlix.Media(media[0], None, IceFlix.MediaInfo(media[1], [])))
+                self._media_.update({media[0]: IceFlix.Media(media[0], None, IceFlix.MediaInfo(media[1], []))})
         
 
     def getTile(self, mediaId: str, current=None): # pylint: disable=invalid-name,unused-argument
