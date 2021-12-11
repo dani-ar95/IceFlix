@@ -104,7 +104,6 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
         ''' Perimite al administrador borrar archivos conociendo su id '''
 
         try:
-            print("checkeando admin")
             self.check_admin(adminToken)
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
@@ -113,12 +112,10 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
             filename = self._provider_media_.get(mediaId).info.name
         else:
             try:
-                print("consiguiendo el media")
                 media_file = self._catalog_prx_.getTile(mediaId)
             except IceFlix.WrongMediaId:
                 raise IceFlix.WrongMediaId
             else:
-                print("media conseguido y borrando")
                 filename = media_file.info.name
         remove(filename)
 

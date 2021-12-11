@@ -426,10 +426,8 @@ class Admin(Ice.Application):
 
         elif option == "5":
             stream_provider_connection = self.connect_stream_provider()
-            print("conectado")
             try:
                 stream_provider_connection.deleteMedia(media_object.mediaId, admin_token)
-                print("deleteado")
             except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                 print(e)
                 input("Presiona Enter para continuar...")

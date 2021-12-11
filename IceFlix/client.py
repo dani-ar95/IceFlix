@@ -238,9 +238,10 @@ class Client(Ice.Application):
             raise e
         else:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.bind(("", 9999))
+            sock.bind(("", 9998))
             try:
-                config_url = stream_controller_proxy.getSDP(auth_token, 9999)
+                config_url = stream_controller_proxy.getSDP(auth_token, 9998)
+                print(config_url)
                 print("Exito en el controller")
             except IceFlix.Unauthorized:
                 print("Usuario no autorizado")
