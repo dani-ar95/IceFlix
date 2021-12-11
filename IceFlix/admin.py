@@ -248,10 +248,10 @@ class Admin(Ice.Application):
                 uploader_connection = IceFlix.MediaUploaderPrx.checkedCast(uploader_proxy)
                 adapter.activate()
                 uploader_connection.ice_ping()
-                print(uploader_connection)
                 try:
                     file_id = stream_provider_connection.uploadMedia(file, uploader_connection, admin_token)
-                    print(file_id)
+                    uploader_connection.close()
+                    adapter.destroy()
                 except (IceFlix.Unauthorized, IceFlix.UploadError) as e:
                     raise e
             
