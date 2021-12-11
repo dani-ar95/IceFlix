@@ -1,0 +1,16 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto
+
+# Declare files that will always have CRLF line endings on checkout.
+*.py text eol=crlf
+run_iceflix text eol=crlf
+run_client text eol=crlf
+run_admin text eol=crlf
+
+# Denote all files that are truly binary and should not be modified.
+*.mp4 binary
+*.json
+*.db
+*.ice
+*.config
+*.cfg
