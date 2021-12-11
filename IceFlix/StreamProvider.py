@@ -145,7 +145,7 @@ class StreamProviderServer(Ice.Application):
     def run(self, argv):
         '''' Inicialización de la clase '''
 
-        sleep(2)
+        sleep(3)
         main_service_proxy = self.communicator().stringToProxy(argv[1])
         main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
 

@@ -96,16 +96,18 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                     if i["user"] == username:
                         user_tags = i["tags"]
             
-            valid = True
             if includeAllTags:
+                valid = True
                 for media_id in list_returned:
                     all_user_tags = user_tags.get(media_id)
                     if all_user_tags:
-                        for user_tag in all_user_tags:
-                            if user_tag not in tags:
-                                valid = False
-                        if valid:
-                            id_list.append(media_id)
+                        if len(all_user_tags) == len(tags):
+                            for user_tag in all_user_tags:
+                                if user_tag not in tags:
+                                    valid = False
+                            if valid:
+                                id_list.append(media_id)
+                                valid = True
             else:
                 valid = False
                 for media_id in list_returned:
@@ -117,6 +119,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
                                 break
                         if valid:
                             id_list.append(media_id)
+                            valid = False
 
             return id_list
 
