@@ -197,5 +197,4 @@ class StreamProviderServer(Ice.Application):
 
 
 if __name__ == '__main__':
-    #MediaCatalogServer().run(sys.argv)
     sys.exit(StreamProviderServer().main(sys.argv))
