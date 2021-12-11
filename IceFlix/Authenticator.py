@@ -36,11 +36,8 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
     def isAuthorized(self, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Permite conocer si un token está actualizado en el sistema '''
 
-        authorized = bool(userToken in self._active_users_.values())
-        if authorized:
-            return authorized
-        else:
-            raise IceFlix.Unauthorized
+        return userToken in self._active_users_.values()
+
 
     def whois(self, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Permite conocer el usuario asociado a un token'''
@@ -93,16 +90,12 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
 
     def check_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''
-
-        try:
-            is_admin = self._main_prx_.isAdmin(admin_token)
-            if not is_admin:
-                raise IceFlix.Unauthorized
-        except IceFlix.Unauthorized:
-            print("Se ha perdido conexión con el servidor Main")
+   
+        is_admin = self._main_prx_.isAdmin(admin_token)
+        if not is_admin:
             raise IceFlix.Unauthorized
-        else:
-            return is_admin
+
+        return is_admin
 
     def __init__(self):
         self._active_users_ = {}

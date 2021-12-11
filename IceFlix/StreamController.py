@@ -22,7 +22,7 @@ class StreamControllerI(IceFlix.StreamController):
         ''' Retorna la configuracion del flujo SDP '''
         # Aquí hay que hacer algo más, porque pone que el flujo es una url
         try:
-            authenticated = self.check_user(userToken)
+            self.check_user(userToken)
         except IceFlix.Unauthorized as e:
             raise e
         else:
@@ -36,10 +36,9 @@ class StreamControllerI(IceFlix.StreamController):
     def check_user(self, user_token):
         ''' Comprueba que la sesion del usuario es la actual '''
 
-        try:
-            is_user = self._authenticator_prx_.isAuthorized(user_token)
-        except IceFlix.Unauthorized as e:
-            raise e
+        is_user = self._authenticator_prx_.isAuthorized(user_token)
+        if not is_user:
+            raise IceFlix.Unauthorized
         return is_user
 
 

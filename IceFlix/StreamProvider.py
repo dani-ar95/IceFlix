@@ -40,15 +40,13 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
                 provide_media = self._provider_media_.get(mediaId)
             else:
                 try:
-                    asked_media = self._catalog_prx_.getTile(mediaId) # Pedir medio al catalogo
+                    asked_media = self._catalog_prx_.getTile(mediaId)
                 except IceFlix.WrongMediaId:
                     raise IceFlix.WrongMediaId
 
-            print("consiguiendo titulo")
             if asked_media:
                 provide_media = asked_media
             else:
-                print("se procede a crear el stream")
                 name = provide_media.info.name
                 print(provide_media)
                 servant = StreamControllerI(name)
@@ -122,19 +120,16 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
     def check_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''
 
-        try:
-            user = self._main_prx_.isAdmin(admin_token)
-        except IceFlix.Unauthorized:
+        is_admin = self._main_prx_.isAdmin(admin_token)
+        if not is_admin:
             raise IceFlix.Unauthorized
-        else:
-            return user
+        return is_admin
 
     def check_user(self, user_token: str):
         ''' Comprueba que la sesion del usuario es la actual '''
 
-        try:
-            is_user = self._authenticator_prx_.isAuthorized(user_token)
-        except IceFlix.Unauthorized:
+        is_user = self._authenticator_prx_.isAuthorized(user_token)
+        if not is_user:
             raise IceFlix.Unauthorized
         else:
             return is_user
