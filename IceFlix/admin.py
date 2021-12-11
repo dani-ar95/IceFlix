@@ -85,7 +85,7 @@ class Admin(Ice.Application):
                 self.not_logged_prompt(main_connection)
 
             elif option == "5":
-                self.communicator.destroy()
+                sys.exit(0)
 
     def not_logged_prompt(self, main_connection):
         try:
@@ -133,6 +133,9 @@ class Admin(Ice.Application):
                     for media in media_list:
                         print(path.split(media.info.name)[1])
                 input("Pulsa enter para continuar...")
+
+            elif option == "2":
+                    return 0
 
     def authenticator_service(self, user, auth_token, auth_connection, admin_token):
         ''' Gestiona el comando "authenticator" '''
@@ -331,11 +334,16 @@ class Admin(Ice.Application):
             print("Usuario no autorizado.")
             return
 
-        for id in id_list:
-            try:
-                media_list.append(catalog_connection.getTile(id))
-            except(IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
-                print(e)
+        if len(id_list) > 0:
+            for id in id_list:
+                try:
+                    media_list.append(catalog_connection.getTile(id))
+                except(IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
+                    print(e)
+        else:
+            print("No se han encontrado videos con esas tags")
+            input("Pulse Enter para continuar...")
+            return None
 
         return media_list
 
@@ -362,7 +370,7 @@ class Admin(Ice.Application):
             try:
                 media_list.append(catalog_connection.getTile(id))
             except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
-                print(e)
+                pass
 
         return media_list
 
@@ -418,7 +426,7 @@ class Admin(Ice.Application):
         elif option == "4":
             try:
                 self.renameTile(media_object, catalog_connection, admin_token)
-            except (IceFlix.Unathorized, IceFlix.WrongMediaId) as e:
+            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                 print(e)
                 input("Presiona Enter para continuar...")
             print("Título renombrado correctamente")
@@ -435,9 +443,9 @@ class Admin(Ice.Application):
             input("Presiona Enter para continuar...")
 
 
-    def renameTile(media_object,catalog_connection,admin_token):
+    def renameTile(self, media_object, catalog_connection, admin_token):
         new_name = input("Nuevo nombre: ")
-        catalog_connection.renameTile(media_object.mediaId,new_name,admin_token)
+        catalog_connection.renameTile(media_object.mediaId, new_name, admin_token)
 
     def run(self, argv):
         broker = self.communicator()

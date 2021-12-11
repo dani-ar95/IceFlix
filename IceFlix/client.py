@@ -123,7 +123,7 @@ class Client(Ice.Application):
             print("2. Volver\n")
             
             option = input("CatalogService@Usuario_anonimo> ")
-            while option.isdigit() == False or int(option) < 1 or int(option) > 3:
+            while option.isdigit() == False or int(option) < 1 or int(option) > 2:
                 if option == "":
                     option = input("CatalogService@Usuario_anonimo> ")
                 else:
@@ -137,6 +137,9 @@ class Client(Ice.Application):
                     for media in media_list:
                         print(os.path.split(media.info.name)[1])
                 input("Pulsa enter para continuar...")
+
+            elif option == "2":
+                return 0
                 
     def catalog_service(self, catalog_connection, user, auth_token):
         ''' Gestiona el comando "catalog_service" '''
@@ -310,11 +313,14 @@ class Client(Ice.Application):
             print("Usuario no autorizado.")
             return
 
-        for id in id_list:
-            try:
-                media_list.append(catalog_connection.getTile(id))
-            except(IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
-                print(e)
+        if len(id_list) > 0:
+            for id in id_list:
+                try:
+                    media_list.append(catalog_connection.getTile(id))
+                except(IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
+                    print(e)
+        else:
+            return -1
                 
         return media_list
     
@@ -373,7 +379,7 @@ class Client(Ice.Application):
             try:
                 media_list.append(catalog_connection.getTile(id))
             except (IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e:
-                print(e)
+                pass
                         
         return media_list
 

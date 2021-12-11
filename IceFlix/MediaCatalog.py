@@ -4,7 +4,7 @@ import sys
 import json
 import Ice
 from time import sleep
-from os import path
+from os import path, rename
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 DB_PATH = path.join(path.dirname(__file__), "media.db")
@@ -57,17 +57,19 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             raise IceFlix.WrongMediaId
 
         
-    def getTilesByName(self, name, exact: bool, current=None): # pylint: disable=invalid-name,unused-argument
+    def getTilesByName(self, name: str, exact: bool, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna una lista de IDs a partir del nombre dado'''
 
         id_list = []
         if exact:
             for media in self._media_.values():
-                if name == media.info.name:
+                new_name = path.split(media.info.name)[1].lower()
+                if name.lower() == new_name:
                     id_list.append(media.mediaId)
         else:
             for media in self._media_.values():
-                if name in media.info.name:
+                new_name = path.split(media.info.name)[1].lower()
+                if name.lower() in new_name:
                     id_list.append(media.mediaId)
 
         return id_list
@@ -82,16 +84,9 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             raise IceFlix.Unauthorized
         else:
 
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
+            list_returned = []
             id_list = []
 
-            # Buscar IDs en persistente
-            c.execute("SELECT id FROM media ") # Revisar si funciona cambiando el orden de las tags en la busqueda
-
-            list_returned = c.fetchall() # Ejecuta la query
-            conn.close()
-            
             for media_id in self._media_.keys():
                 list_returned.append(media_id)
 
@@ -104,19 +99,19 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             valid = True
             if includeAllTags:
                 for media_id in list_returned:
-                    id_tags = user_tags.get(media_id)
-                    if id_tags:
-                        for tag in tags:
-                            if tag not in id_tags:
+                    all_user_tags = user_tags.get(media_id)
+                    if all_user_tags:
+                        for user_tag in all_user_tags:
+                            if user_tag not in tags:
                                 valid = False
-                        if valid: 
+                        if valid:
                             id_list.append(media_id)
             else:
                 valid = False
                 for media_id in list_returned:
-                    id_tags = user_tags.get(media_id)
-                    if id_tags:
-                        for x in id_tags:
+                    all_user_tags = user_tags.get(media_id)
+                    if all_user_tags:
+                        for x in all_user_tags:
                             if x in tags:
                                 valid = True
                                 break
@@ -144,6 +139,8 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             for i in obj["users"]:
                 if i["user"] == user_name:
                     actuales = i["tags"].get(mediaId)
+                    if not actuales:
+                        actuales = []
                     for tag in tags:
                         actuales.append(tag)
                     i["tags"].update({mediaId:actuales})
@@ -201,9 +198,13 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
             # Cambiar media en medios dinamicos
             if mediaId in self._media_.keys():
-                medio = self._media_.get(mediaId)
-                medio.info.name = name
-                self._media_.update({mediaId: medio})
+                media = self._media_.get(mediaId)
+                old_name = media.info.name
+                media.info.name = name
+                self._media_.update({mediaId: media})
+
+            # Cambiar en directorio
+            rename(old_name, "IceFlix/media_resources/" + name + ".mp4")
 
             # Buscar medio en bbdd
             try:
