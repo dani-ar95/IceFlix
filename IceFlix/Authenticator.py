@@ -12,11 +12,9 @@ import Ice
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 USERS_PATH = path.join(path.dirname(__file__), "users.json")
 
-try:
-    import IceFlix
-except ImportError:
-    Ice.loadSlice(SLICE_PATH)
-    import IceFlix
+Ice.loadSlice(SLICE_PATH)
+import IceFlix
+
 
 class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
     """Sirviente del servicio de autenticación"""

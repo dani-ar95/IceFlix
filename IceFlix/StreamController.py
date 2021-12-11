@@ -1,14 +1,12 @@
 #!/usr/bin/python3
 
 from os import path
-import IceFlix
 import sys
-
 import Ice
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
-
+import IceFlix
 
 class StreamControllerI(IceFlix.StreamController):
 
@@ -54,13 +52,6 @@ class StreamControllerServer(Ice.Application):
 
         broker = self.communicator()
         servant = StreamControllerI("default")
-
-        #adapter = broker.createObjectAdapterWithEndpoints('StreamControllerAdapter', 'tcp -p 9094')
-        #stream_controller_proxy = adapter.add(servant, broker.stringToIdentity('StreamController'))
-
-        #adapter.activate()
-
-        #main_connection.register(stream_controller_proxy)
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()

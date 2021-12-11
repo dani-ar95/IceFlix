@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 import sqlite3
-import IceFlix
 import sys
 import json
 import Ice
@@ -11,6 +10,7 @@ SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 DB_PATH = path.join(path.dirname(__file__), "media.db")
 USERS_PATH = path.join(path.dirname(__file__), "users.json")
 Ice.loadSlice(SLICE_PATH)
+import IceFlix
 
 class MediaCatalogI(IceFlix.MediaCatalog):
     

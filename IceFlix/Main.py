@@ -8,11 +8,9 @@ import Ice
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 
-try:
-    import IceFlix
-except ImportError:
-    Ice.loadSlice(SLICE_PATH)
-    import IceFlix
+Ice.loadSlice(SLICE_PATH)
+import IceFlix
+
 
 class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
     """Sirviente del servicio principal"""
@@ -52,12 +50,12 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
     def register(self, service, current=None): # pylint: disable=unused-argument
         ''' Permite registrarse a determinados servicios '''
 
-        possible_servants = set("MediaCatalog", "Authenticator")
-        print(Ice.ice_getIdentity(service))
-        # if Ice.ice_getIdentity(service).name in possible_servants:
-        self._servants_.add(service)
-        # else:
-        # raise IceFlix.UnknownService
+        possible_servants = set(["MediaCatalog", "Authenticator", "StreamProvider"])
+        print(service.ice_getIdentity())
+        if service.ice_getIdentity().name in possible_servants:
+            self._servants_.add(service)
+        else:
+            raise IceFlix.UnknownService
 
     def isAdmin(self, adminToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Verifica que un token es de administración '''
@@ -66,7 +64,7 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
 class MainServer(Ice.Application):
     """Servidor del servicio principal"""
 
-    def run(self):
+    def run(self, args):
         ''' Implementación del servidor principal '''
         broker = self.communicator()
         servant = MainI()

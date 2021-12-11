@@ -9,11 +9,10 @@ import sys
 from time import sleep
 import Ice
 
-try:
-    import IceFlix
-except ImportError:
-    Ice.loadSlice(path.join(path.dirname(__file__), "iceflix.ice"))
-    import IceFlix
+SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
+
+Ice.loadSlice(SLICE_PATH)
+import IceFlix
 
 from StreamController import StreamControllerI # pylint: disable=import-error
 
