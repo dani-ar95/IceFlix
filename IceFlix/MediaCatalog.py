@@ -182,7 +182,7 @@ class MediaCatalogI(IceFlix.MediaCatalog):
             self.check_admin(adminToken)
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
-        else:    
+        else:
 
             # Buscar id en medios estáticos
             conn = sqlite3.connect(DB_PATH)
@@ -246,15 +246,13 @@ class MediaCatalogI(IceFlix.MediaCatalog):
 
     def check_user(self, user_token: str):
         ''' Comprueba que la sesion del usuario es la actual '''
-        try:
-            user = self._auth_prx_.isAuthorized(user_token)
-        except IceFlix.Unauthorized as e:
-            raise e
-        else:
-            return user
+
+        return self._auth_prx_.isAuthorized(user_token)
+
 
     def check_user_name(self, user_token: str):
         ''' Comprueba que la sesion del usuario es la actual '''
+
         try:
             user_name = self._auth_prx_.whois(user_token)
         except IceFlix.Unauthorized as e:
