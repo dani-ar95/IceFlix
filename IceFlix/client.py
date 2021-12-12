@@ -547,7 +547,7 @@ class Cliente(Ice.Application):
                     input()
                 finally:
                     uploader_connection.close()
-                    adapter.remove('MediaUploader')
+                    adapter.remove(self.communicator().stringToIdentity('MediaUploader'))
 
             elif option == "2":
                 return 0

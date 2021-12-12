@@ -5,6 +5,8 @@ Información útil:
 Token de administración: admin  
 Username: user  
 Contraseña: password  
+Proxy servicio IceFlix::Main -> Main:tcp -p 9090
+Proxy servicio IceFlix::StreamProvider -> StreamProvider:tcp -p 9095
 Medios de ejemplo: Pelucas.mp4  
 La carpeta resources simula ser el servidor de archivos.  
 La carpeta local simula ser el equipo del administrador, por lo que los archivos que se quieran subir al servidor deben estar en esta carpeta.
