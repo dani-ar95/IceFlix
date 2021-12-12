@@ -51,7 +51,6 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
         ''' Permite registrarse a determinados servicios '''
 
         possible_servants = set(["MediaCatalog", "Authenticator", "StreamProvider"])
-        print(service.ice_getIdentity())
         if service.ice_getIdentity().name in possible_servants:
             self._servants_.add(service)
         else:

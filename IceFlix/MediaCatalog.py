@@ -55,7 +55,6 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         # Buscar ID en bbdd
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        print(mediaId)
         c.execute(f"SELECT * FROM media WHERE id LIKE '{mediaId}'") # pylint: disable=invalid-name,unused-argument
 
         query = c.fetchall()
@@ -243,8 +242,6 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         info = IceFlix.MediaInfo(initialName, [])
         nuevo = IceFlix.Media(mediaId, provider, info)
         self._media_.update({mediaId: nuevo})
-        print("Añadido medio:")
-        print({mediaId: nuevo})
 
     def check_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''
@@ -254,7 +251,6 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             if not is_admin:
                 raise IceFlix.Unauthorized
         except IceFlix.TemporaryUnavailable:
-            print("Se ha perdido conexión con el servidor Main")
             raise IceFlix.Unauthorized
         else:
             return is_admin

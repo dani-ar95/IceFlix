@@ -49,7 +49,6 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
                 provide_media = asked_media
             else:
                 name = provide_media.info.name
-                print(provide_media)
                 servant = StreamControllerI(name)
                 servant._authenticator_prx_ = self._authenticator_prx_
                 proxy = current.adapter.addWithUUID(servant)
@@ -180,14 +179,12 @@ class StreamProviderServer(Ice.Application):
         stream_provider_proxy = adapter.add(servant, broker.stringToIdentity('StreamProvider'))
 
         root_folder = path.join(path.dirname(__file__), "media_resources")
-        print(f"Sirviendo el directorio: {root_folder}")
         candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
 
         proxy = IceFlix.StreamProviderPrx.checkedCast(stream_provider_proxy)
 
         for filename in candidates:
             with open("./"+str(filename), "rb") as f:
-                print("Sirviendo " + str(filename))
                 read_file = f.read()
                 id_hash = hashlib.sha256(read_file).hexdigest()
                 new_media = IceFlix.Media(id_hash, proxy, IceFlix.MediaInfo(filename, []))
