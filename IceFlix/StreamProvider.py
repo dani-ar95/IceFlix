@@ -72,36 +72,37 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
             new_file = b""
             received = b""
 
-            while True:
-                received = uploader.receive(512)
-                if not received:
-                    break
-                new_file += received
-
-            if not new_file:
+            try:
+                while True:
+                    received = uploader.receive(512)
+                    if not received:
+                        break
+                    new_file += received
+            except:
                 raise IceFlix.UploadError
-            else:
-                id_hash = hashlib.sha256(new_file).hexdigest()
 
-                file = path.split(fileName)[1]
-                new_file_name = path.join(path.dirname(__file__), "media_resources/" + file)
+            id_hash = hashlib.sha256(new_file).hexdigest()
 
-                with open(new_file_name, "wb") as write_pointer:
-                    write_pointer.write(new_file)
+            file = path.split(fileName)[1]
+            new_file_name = path.join(path.dirname(__file__), "media_resources/" + file)
 
-                # Crear el media propio
-                info = IceFlix.MediaInfo(new_file_name, [])
-                new_media = IceFlix.Media(id_hash, self._proxy_, info)
-                self._provider_media_.update({id_hash:new_media})
+            with open(new_file_name, "wb") as write_pointer:
+                write_pointer.write(new_file)
 
-                # Enviar medio al catálogo
-                self._catalog_prx_.updateMedia(id_hash, fileName, self._proxy_)
+            # Crear el media propio
+            info = IceFlix.MediaInfo(new_file_name, [])
+            new_media = IceFlix.Media(id_hash, self._proxy_, info)
+            self._provider_media_.update({id_hash:new_media})
 
-                return id_hash
+            # Enviar medio al catálogo
+            self._catalog_prx_.updateMedia(id_hash, fileName, self._proxy_)
+
+            return id_hash
 
     def deleteMedia(self, mediaId: str, adminToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Perimite al administrador borrar archivos conociendo su id '''
 
+        self.update_directory()
         try:
             self.check_admin(adminToken)
         except IceFlix.Unauthorized:
@@ -117,6 +118,20 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
             else:
                 filename = media_file.info.name
         remove(filename)
+
+    def update_directory(self):
+        root_folder = path.join(path.dirname(__file__), "media_resources")
+        candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
+
+
+        for filename in candidates:
+            with open("./"+str(filename), "rb") as f:
+                read_file = f.read()
+                id_hash = hashlib.sha256(read_file).hexdigest()
+                new_media = IceFlix.Media(id_hash, self._proxy_, IceFlix.MediaInfo(filename, []))
+                self._provider_media_.update({id_hash: new_media})
+
+            self._catalog_prx_.updateMedia(id_hash, filename, self._proxy)
 
     def check_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''
