@@ -1,15 +1,15 @@
 #!/usr/bin/python3
 
 from MediaUploader import MediaUploaderI
-from os import system, terminal_size, path
+from os import system, path
 from time import sleep
-import Ice
 import sys
 import os
 import signal
 import hashlib
 import getpass
 import iceflixrtsp
+import Ice
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
@@ -25,6 +25,9 @@ class Cliente(Ice.Application):
         self._auth_prx_ = None
         self._catalog_prx_ = None
         self._stream_provider_prx_ = None
+        self._stream_controller_prx_ = None
+        self._playing_media_ = False       
+        self._media_player_ = iceflixrtsp.RTSPPlayer()
     
     def format_prompt(self):
         ''' Formatea la consola '''
@@ -110,10 +113,16 @@ class Cliente(Ice.Application):
 
     def create_prompt(self, servicio: str):
         if self._username_ and self._admin_token_:
-            return "Admin>>" + servicio + "@" + self._username_ + "> "
+            if self._playing_media_:
+                return "Admin_Playing>>" + servicio + "@" + self._username_ + "> "
+            else:
+                return "Admin>>" + servicio + "@" + self._username_ + "> "
         else:
             if self._username_:
-                return servicio + "@" + self._username_ + "> "
+                if self._playing_media_:
+                    return "Playing>>" + servicio + "@" + self._username_ + "> "
+                else:
+                    return servicio + "@" + self._username_ + "> "
             elif self._admin_token_:
                 return "Admin>>" + servicio + "@Anónimo> "
             else:
@@ -132,13 +141,17 @@ class Cliente(Ice.Application):
         while 1:
             system("clear")
             self.format_prompt()
+            max_option = 3
             print("Opciones disponibles:")
             print("1. Búsqueda por nombre")
             print("2. Búsqueda por etiquetas")
             print("3. Volver\n")
+            if self._playing_media_:
+                print("4. Detener reproducción")
+                max_option = 4
             
             option = input(self.create_prompt("CatalogService"))
-            while option.isdigit() == False or int(option) < 1 or int(option) > 3:
+            while option.isdigit() == False or int(option) < 1 or int(option) > max_option:
                 if option == "":
                     option = input(self.create_prompt("CatalogService"))
                 else:
@@ -185,6 +198,11 @@ class Cliente(Ice.Application):
                 
             elif option == "3":
                 return 0 
+            
+            elif option == "4":
+                self._media_player_.stop()
+                self._stream_controller_prx_.stop()
+                self._playing_media_ = False
 
     def name_searching(self):
         media_list = []
@@ -281,20 +299,24 @@ class Cliente(Ice.Application):
         return selected_media
 
     def ask_function(self, media_object):
+        max_option = 6
         print("1. Reproducir")
         print("2. Añadir etiquetas")
         print("3. Eliminar etiquetas")
         print("4. Renombra título")
         print("5. Eliminar video")
         print("6. Volver\n")
+        if self._playing_media_:
+            print("7. Detener reproducción")
+            max_option = 7
         
         option = input(self.create_prompt("CatalogService"))
-        while option.isdigit() == False or int(option) < 1 or int(option) > 6:
+        while option.isdigit() == False or int(option) < 1 or int(option) > max_option:
             option = input("Inserta una opción válida: ")
             
         if option == "1":
             try:
-                video = self.play_video(media_object)
+                self.play_video(media_object)
             except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
                 print(e)
                 input("Presiona Enter para continuar...")
@@ -339,33 +361,38 @@ class Cliente(Ice.Application):
         
         elif option == "6":
             self.catalog_service()
+            
+        elif option == "7":
+            self._media_player_.stop()
+            self._stream_controller_prx_.stop()
+            self._playing_media_ = False
 
     def play_video(self, media):
-        if not self._stream_provider_prx_:
+        try:
+            self._stream_controller_prx_ = media.provider.getStream(media.mediaId, self._user_token_)
+        except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
+            print(IceFlix.Unauthorized())
+            input()
+        else:
             try:
-                self._stream_provider_prx_ = media.provider.getStream(media.mediaId, self._user_token_)
-            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e:
+                config_url = self._stream_controller_prx_.getSDP(self._user_token_, 9998)
+                print(config_url)
+                print("Exito en el controller")
+            except IceFlix.Unauthorized:
                 print(IceFlix.Unauthorized())
                 input()
             else:
-                try:
-                    config_url = self._stream_provider_prx_.getSDP(self._user_token_, 9998)
-                    print(config_url)
-                    print("Exito en el controller")
-                except IceFlix.Unauthorized:
-                    print(IceFlix.Unauthorized())
-                    input()
-                else:
-                    player = iceflixrtsp.RTSPPlayer()
-                    player.play(config_url)
-                    print("Introduce q para parar o presiona enter para seguir navegando")
-                    key = input()
-                    if key == "":
-                        return 0
-                    elif key == "q":
-                        _stream_provider_prx_.stop()
-                        player.stop()
-                        return 0
+                self._media_player_.play(config_url)
+                self._playing_media_ = True
+                print("Introduce q para parar o presiona enter para seguir navegando")
+                key = input()
+                if key == "":
+                    return 0
+                elif key == "q":
+                    self._stream_controller_prx_.stop()
+                    self._media_player_.stop()
+                    self._playing_media_ = False
+                    return 0
 
     def add_tags(self, media_object):
         tags_list = self.ask_for_tags()
@@ -508,6 +535,7 @@ class Cliente(Ice.Application):
         while 1:
             system("clear")
             self.format_prompt()
+            max_option = 7
             print("Opciones disponibles: ")
             print("1. Introducir token de administración")
             print("2. Login")
@@ -516,10 +544,13 @@ class Cliente(Ice.Application):
             print("5. Servicio de Autenticación")
             print("6. Servicio de Streaming")
             print("7. Salir del cliente\n")
-
+            if self._playing_media_:
+                print("8. Detener reproducción")
+                max_option = 8
+                
             option = input(self.create_prompt("MainService"))
                     
-            while option.isdigit() == False or int(option) < 1 or int(option) > 7:
+            while option.isdigit() == False or int(option) < 1 or int(option) > max_option:
                 if option == "":
                     option = input(self.create_prompt("MainService"))
                 else:
@@ -538,8 +569,12 @@ class Cliente(Ice.Application):
             elif option == "6":
                 self.stream_provider_service()
             elif option == "7":
-                print("Gracias por usar la aplicación uwu")
+                print("Gracias por usar la aplicación IceFlix")
                 return signal.SIGINT
+            elif option == "8":
+                self._media_player_.stop()
+                self._stream_controller_prx_.stop()
+                self._playing_media_ = False
     
     def run(self, args):
         self.format_prompt()

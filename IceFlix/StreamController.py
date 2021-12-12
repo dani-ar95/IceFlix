@@ -19,7 +19,7 @@ class StreamControllerI(IceFlix.StreamController): # pylint: disable=inherit-non
         self._emitter_ = None
         self._filename_ = file_path
         try:
-            self._fd_ = open(file_path, "rb") # pylint: disable=consider-using-with
+            self._fd_ = open(file_path, "rb") # pylint: disable=bad-option-value
         except FileNotFoundError:
             print("Archivo no encontrado: " + file_path)
 

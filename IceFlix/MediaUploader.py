@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 
-import sys, Ice
+import sys
 from os import path
+import Ice
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
@@ -12,7 +13,7 @@ class MediaUploaderI(IceFlix.MediaUploader):
 
     def __init__(self, file_name):
         try:
-            self._fd_ = open(file_name, "rb") # pylint: disable=consider-using-with
+            self._fd_ = open(file_name, "rb") # pylint: disable=bad-option-value
         except FileNotFoundError:
             self._fd_ = None
             print("Archivo no encontrado: " + str(file_name))
@@ -37,14 +38,6 @@ class MediaUploaderServer(Ice.Application):
             raise RuntimeError("Invalid proxy")
 
         broker = self.communicator()
-        '''servant = MediaUploaderI()
-        
-        adapter = broker.createObjectAdapterWithEndpoints('MediaUploaderAdapter','tcp -p 9093')
-        authenticator_proxy = adapter.add(servant, broker.stringToIdentity('MediaUploader'))
-        
-        adapter.activate()
-        
-        main_connection.register(authenticator_proxy)'''
         
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
