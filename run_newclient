@@ -1,3 +1,0 @@
-python3 IceFlix/new_client.py
-trap "kill 0" SIGINT
-wait
