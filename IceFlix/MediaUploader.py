@@ -18,8 +18,9 @@ class MediaUploaderI(IceFlix.MediaUploader):
             print("Archivo no encontrado: " + str(file_name))
 
     def receive(self, size: int, current=None): # pylint: disable=unused-argument
-        chunk = self._fd_.read(size)
-        return chunk
+        if self._fd_:
+            chunk = self._fd_.read(size)
+            return chunk
 
     def close(self, current=None): # pylint: disable=unused-argument
         if self._fd_:

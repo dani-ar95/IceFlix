@@ -211,7 +211,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             if mediaId in self._media_:
                 media = self._media_.get(mediaId)
                 old_name = media.info.name
-                media.info.name = name
+                media.info.name = name + ".mp4"
                 self._media_.update({mediaId: media})
 
             # Cambiar en directorio
@@ -228,7 +228,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
                     conn = sqlite3.connect(DB_PATH)
                     c = conn.cursor()
                     c.execute(
-                        f"UPDATE media SET name = '{name}' WHERE id LIKE '{mediaId}'")
+                        f"UPDATE media SET name = '{name}.mp4' WHERE id LIKE '{mediaId}'")
                     conn.commit()
                     conn.close()
 

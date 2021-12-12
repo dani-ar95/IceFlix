@@ -22,7 +22,9 @@
       "user": "uwu",
       "password": "eeb36e726e3ffec16da7798415bb4e531bf8a57fbe276fcc3fc6ea986cb02e9a",
       "tags": {
-        "0be6efeb267ef1dc271a9a740ee2a82bfe0527ac22ba18b7aa419cfb961aea1e": []
+        "0be6efeb267ef1dc271a9a740ee2a82bfe0527ac22ba18b7aa419cfb961aea1e": [
+          "uwu"
+        ]
       }
     }
   ]

@@ -477,7 +477,7 @@ class Cliente(Ice.Application):
                 filename = input("Escribe el nombre del video que quieres subir ubicado en IceFlix/local: ")
                 while filename == "":
                     filename = input("Escribe el nombre del video que quieres subir ubicado en IceFlix/local: ")
-                file = path.join(path.dirname(__file__), "local/" + filename)
+                file = path.join(path.dirname(__file__), "local/" + filename + ".mp4")
 
                 uploader = MediaUploaderI(file)
 
