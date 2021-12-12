@@ -216,7 +216,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
 
             # Cambiar en directorio
             try:
-                rename(old_name, "IceFlix/media_resources/" + name + "." + suffix)
+                rename(old_name, "IceFlix/resources/" + name + "." + suffix)
             except FileNotFoundError:
                 raise IceFlix.WrongMediaId
 

@@ -1,4 +1,0 @@
-#!/bin/bash
-python3 IceFlix/admin.py "Main:tcp -p 9090" admin
-trap "kill 0" SIGINT
-wait

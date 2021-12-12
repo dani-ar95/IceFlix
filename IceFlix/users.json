@@ -4,29 +4,20 @@
       "user": "user",
       "password": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
       "tags": {
-        "dc27d25e3891e98bda06f6dd2d809e36cf19b48c62288ddfc5b1574e41e23082": [
-          "patricio",
-          "calamardo"
-        ],
         "0be6efeb267ef1dc271a9a740ee2a82bfe0527ac22ba18b7aa419cfb961aea1e": [
-          "maincra",
-          "mechero",
-          "pelo"
-        ],
-        "e76692002d16e09a779975fd53baf7592d26f25dde5b40a54b11f646810ded2f": [
-          "arbol"
+          "ver más tarde"
         ]
       }
     },
     {
       "user": "manolo",
       "password": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
-      "tags": {}
-    },
-    {
-      "user": "juan",
-      "password": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
-      "tags": {}
+      "tags": {
+        "0be6efeb267ef1dc271a9a740ee2a82bfe0527ac22ba18b7aa419cfb961aea1e": [
+          "meme",
+          "gracioso"
+        ]
+      }
     }
   ]
 }

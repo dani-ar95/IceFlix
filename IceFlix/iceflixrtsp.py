@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
     # Stream test signal (filename is None)
     #emitter = RTSPEmitter(<video file>, '127.0.0.1', 5000)
-    emitter = RTSPEmitter("./media_resources/LaEsponja.mp4", '127.0.0.1', 10000)
+    emitter = RTSPEmitter("./resources/LaEsponja.mp4", '127.0.0.1', 10000)
     emitter.start()
 
     # PLay SDP file with VLC

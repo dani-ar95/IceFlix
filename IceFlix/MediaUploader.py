@@ -6,10 +6,10 @@
 import sys
 from os import path
 import Ice
-import IceFlix
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
+import IceFlix # pylint: disable=wrong-import-position
 
 
 class MediaUploaderI(IceFlix.MediaUploader): # pylint: disable=inherit-non-class

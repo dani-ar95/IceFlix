@@ -86,7 +86,7 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
                 id_hash = hashlib.sha256(new_file).hexdigest()
 
                 file = path.split(fileName)[1]
-                new_file_name = path.join(path.dirname(__file__), "media_resources/" + file)
+                new_file_name = path.join(path.dirname(__file__), "resources/" + file)
 
                 with open(new_file_name, "wb") as write_pointer:
                     write_pointer.write(new_file)
@@ -122,7 +122,7 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
         remove(filename)
 
     def update_directory(self):
-        root_folder = path.join(path.dirname(__file__), "media_resources")
+        root_folder = path.join(path.dirname(__file__), "resources")
         candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
 
 
@@ -178,7 +178,7 @@ class StreamProviderServer(Ice.Application):
         adapter = broker.createObjectAdapterWithEndpoints('StreamProviderAdapter', 'tcp -p 9095')
         stream_provider_proxy = adapter.add(servant, broker.stringToIdentity('StreamProvider'))
 
-        root_folder = path.join(path.dirname(__file__), "media_resources")
+        root_folder = path.join(path.dirname(__file__), "resources")
         candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
 
         proxy = IceFlix.StreamProviderPrx.checkedCast(stream_provider_proxy)
