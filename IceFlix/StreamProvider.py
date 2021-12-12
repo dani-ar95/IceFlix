@@ -81,23 +81,26 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
             except:
                 raise IceFlix.UploadError
 
-            id_hash = hashlib.sha256(new_file).hexdigest()
+            if not new_file:
+                raise IceFlix.UploadError
+            else:
+                id_hash = hashlib.sha256(new_file).hexdigest()
 
-            file = path.split(fileName)[1]
-            new_file_name = path.join(path.dirname(__file__), "media_resources/" + file)
+                file = path.split(fileName)[1]
+                new_file_name = path.join(path.dirname(__file__), "media_resources/" + file)
 
-            with open(new_file_name, "wb") as write_pointer:
-                write_pointer.write(new_file)
+                with open(new_file_name, "wb") as write_pointer:
+                    write_pointer.write(new_file)
 
-            # Crear el media propio
-            info = IceFlix.MediaInfo(new_file_name, [])
-            new_media = IceFlix.Media(id_hash, self._proxy_, info)
-            self._provider_media_.update({id_hash:new_media})
+                # Crear el media propio
+                info = IceFlix.MediaInfo(new_file_name, [])
+                new_media = IceFlix.Media(id_hash, self._proxy_, info)
+                self._provider_media_.update({id_hash:new_media})
 
-            # Enviar medio al catálogo
-            self._catalog_prx_.updateMedia(id_hash, fileName, self._proxy_)
+                # Enviar medio al catálogo
+                self._catalog_prx_.updateMedia(id_hash, fileName, self._proxy_)
 
-            return id_hash
+                return id_hash
 
     def deleteMedia(self, mediaId: str, adminToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Perimite al administrador borrar archivos conociendo su id '''
@@ -131,7 +134,7 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
                 new_media = IceFlix.Media(id_hash, self._proxy_, IceFlix.MediaInfo(filename, []))
                 self._provider_media_.update({id_hash: new_media})
 
-            self._catalog_prx_.updateMedia(id_hash, filename, self._proxy)
+            self._catalog_prx_.updateMedia(id_hash, filename, self._proxy_)
 
     def check_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''

@@ -394,7 +394,10 @@ class Cliente(Ice.Application):
 
     def rename_title(self, media_object):
         new_name = input("Nuevo nombre: ")
-        self._catalog_prx_.renameTile(media_object.mediaId, new_name, self._admin_token_)
+        try:
+            self._catalog_prx_.renameTile(media_object.mediaId, new_name, self._admin_token_)
+        except IceFlix.WrongMediaId:
+            raise IceFlix.WrongMediaId
 
     def connect_stream_provider(self):
         stream_provider_proxy = input("Introduce el proxy del stream provider: ")
@@ -471,13 +474,14 @@ class Cliente(Ice.Application):
                 option = input("Inserta una opción válida: ")
 
             if option == "1":
-                retorno = self.connect_stream_provider()
-                if retorno == 0:
-                    return 0
+                if not self._stream_provider_prx_:
+                    retorno = self.connect_stream_provider()
+                    if retorno == 0:
+                        return 0
                 filename = input("Escribe el nombre del video que quieres subir ubicado en IceFlix/local: ")
                 while filename == "":
                     filename = input("Escribe el nombre del video que quieres subir ubicado en IceFlix/local: ")
-                file = path.join(path.dirname(__file__), "local/" + filename + ".mp4")
+                file = path.join(path.dirname(__file__), "local/" + filename)
 
                 uploader = MediaUploaderI(file)
 

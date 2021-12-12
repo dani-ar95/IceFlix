@@ -211,11 +211,15 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             if mediaId in self._media_:
                 media = self._media_.get(mediaId)
                 old_name = media.info.name
-                media.info.name = name + ".mp4"
+                suffix = media.info.name.split(".")[1]
+                media.info.name = name + "." + suffix
                 self._media_.update({mediaId: media})
 
             # Cambiar en directorio
-            rename(old_name, "IceFlix/media_resources/" + name + ".mp4")
+            try:
+                rename(old_name, "IceFlix/media_resources/" + name + "." + suffix)
+            except FileNotFoundError:
+                raise IceFlix.WrongMediaId
 
             # Buscar medio en bbdd
             try:
