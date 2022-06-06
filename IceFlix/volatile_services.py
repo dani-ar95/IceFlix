@@ -9,4 +9,10 @@ class VolatileServices(IceFlix.VolatileServices):
     def __init__(self, auth_services, catalog_services):
         '''Inicializa el objeto.'''
         self.authenticators = auth_services
-        self.mediaCatalogs = catalog_services # pylint: disable=invalid-name 
+        self.catalogs = catalog_services # pylint: disable=invalid-name 
+        
+    def get_authenticators(self):
+        return self.authenticators
+    
+    def get_catalogs(self):
+        return self.catalogs
