@@ -101,6 +101,14 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
         """Share the current database with an incoming service."""
         service.updateDB(None, self.service_id)
 
+    def updateDB(
+        self, values, service_id, current
+    ):  # pylint: disable=invalid-name,unused-argument
+        """Receives the current main service database from a peer."""
+        print(
+            "Receiving remote data base from %s to %s", service_id, self.service_id
+        )
+
     def __init__(self):
         self._active_users_ = {}
         self._main_prx_ = None

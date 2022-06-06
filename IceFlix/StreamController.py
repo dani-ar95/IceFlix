@@ -48,17 +48,59 @@ class StreamControllerI(IceFlix.StreamController): # pylint: disable=inherit-non
             raise IceFlix.Unauthorized
         return is_user
 
+    def share_data_with(self, service):
+        """Share the current database with an incoming service."""
+        service.updateDB(None, self.service_id)
+
+    def updateDB(
+        self, values, service_id, current
+    ):  # pylint: disable=invalid-name,unused-argument
+        """Receives the current main service database from a peer."""
+        print(
+            "Receiving remote data base from %s to %s", service_id, self.service_id
+        )
 
 class StreamControllerServer(Ice.Application): # pylint: disable=invalid-name
     ''' Servidor del controlador de Streaming '''
+
+    def setup_announcements(self):
+        """Configure the announcements sender and listener."""
+
+        communicator = self.communicator()
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+            communicator.propertyToProxy("IceStorm.TopicManager")
+        )
+
+        try:
+            topic = topic_manager.create("ServiceAnnouncements")
+        except IceStorm.TopicExists:
+            topic = topic_manager.retrieve("ServiceAnnouncements")
+
+        self.announcer = ServiceAnnouncementsSender(
+            topic,
+            self.servant.service_id,
+            self.proxy,
+        )
+
+        self.subscriber = ServiceAnnouncementsListener(
+            self.servant, self.servant.service_id, IceFlix.StreamControllerPrx
+        )
+
+        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        topic.subscribeAndGetPublisher({}, subscriber_prx)
 
     def run(self, args): # pylint: disable=unused-argument
         ''' No hace mucho '''
 
         broker = self.communicator()
+
+        self.setup_announcements()
+        self.announcer.start_service()
+
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
 
+        self.announcer.stop()
 
 if __name__ == '__main__':
     sys.exit(StreamControllerServer().main(sys.argv))

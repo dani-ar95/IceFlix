@@ -35,9 +35,46 @@ class MediaUploaderI(IceFlix.MediaUploader): # pylint: disable=inherit-non-class
         if self._fd_:
             self._fd_.close()
 
+    def share_data_with(self, service):
+        """Share the current database with an incoming service."""
+        service.updateDB(None, self.service_id)
+
+    def updateDB(
+        self, values, service_id, current
+    ):  # pylint: disable=invalid-name,unused-argument
+        """Receives the current main service database from a peer."""
+        print(
+            "Receiving remote data base from %s to %s", service_id, self.service_id
+        )
 
 class MediaUploaderServer(Ice.Application):
     ''' Servidor de Media Uploader '''
+
+    def setup_announcements(self):
+        """Configure the announcements sender and listener."""
+
+        communicator = self.communicator()
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+            communicator.propertyToProxy("IceStorm.TopicManager")
+        )
+
+        try:
+            topic = topic_manager.create("ServiceAnnouncements")
+        except IceStorm.TopicExists:
+            topic = topic_manager.retrieve("ServiceAnnouncements")
+
+        self.announcer = ServiceAnnouncementsSender(
+            topic,
+            self.servant.service_id,
+            self.proxy,
+        )
+
+        self.subscriber = ServiceAnnouncementsListener(
+            self.servant, self.servant.service_id, IceFlix.StreamControllerPrx
+        )
+
+        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        topic.subscribeAndGetPublisher({}, subscriber_prx)
 
     def run(self, args):
         #sleep(1)
@@ -49,8 +86,13 @@ class MediaUploaderServer(Ice.Application):
 
         broker = self.communicator()
 
+        self.setup_announcements()
+        self.announcer.start_service()
+
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
+
+        self.announcer.stop()
 
 if __name__ == "__main__":
     sys.exit(MediaUploaderServer().main(sys.argv))
