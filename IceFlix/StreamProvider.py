@@ -152,8 +152,38 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
         else:
             return is_user
 
+    def share_data_with(self, service):
+        """Share the current database with an incoming service."""
+        service.updateDB(None, self.service_id)
+
 class StreamProviderServer(Ice.Application):
     ''' Servidor que comparte con el catálogo sus medios disponibles  '''
+
+    def setup_announcements(self):
+        """Configure the announcements sender and listener."""
+
+        communicator = self.communicator()
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+            communicator.propertyToProxy("IceStorm.TopicManager")
+        )
+
+        try:
+            topic = topic_manager.create("ServiceAnnouncements")
+        except IceStorm.TopicExists:
+            topic = topic_manager.retrieve("ServiceAnnouncements")
+
+        self.announcer = ServiceAnnouncementsSender(
+            topic,
+            self.servant.service_id,
+            self.proxy,
+        )
+
+        self.subscriber = ServiceAnnouncementsListener(
+            self.servant, self.servant.service_id, IceFlix.StreamProviderPrx
+        )
+
+        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        topic.subscribeAndGetPublisher({}, subscriber_prx)
 
     def run(self, argv):
         '''' Inicialización de la clase '''
@@ -194,6 +224,9 @@ class StreamProviderServer(Ice.Application):
 
         adapter.activate()
 
+        self.setup_announcements()
+        self.announcer.start_service()
+
         servant._proxy_ = proxy
         servant._catalog_prx_ = catalog_prx
         servant._authenticator_prx_ = authenticator_prx
@@ -204,6 +237,7 @@ class StreamProviderServer(Ice.Application):
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
 
+        self.announcer.stop()
 
 if __name__ == '__main__':
     sys.exit(StreamProviderServer().main(sys.argv))
