@@ -61,6 +61,10 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
 
         print("\n[MAIN] No hay servicios de autenticación disponibles")
         raise IceFlix.TemporaryUnavailable
+    
+    def addAuthenticator(self, auth_prx, current=None):
+        self.auth_services.append(auth_prx)
+        
 
     # def getCatalog(self, current=None): # pylint: disable=invalid-name,unused-argument
         # ''' Devuelve el proxy a un Servicio de Catálogo válido registrado '''
@@ -89,6 +93,9 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
 
         print("\n[MAIN] No hay servicios de autenticación disponibles")
         raise IceFlix.TemporaryUnavailable
+    
+    def addCatalog(self, catalog_prx, current=None):
+        self.catalog_services.append(catalog_prx)
                 
 
     def register(self, service, current=None): # pylint: disable=unused-argument
@@ -195,5 +202,32 @@ class MainServer(Ice.Application):
 
         return 0
 
+
+class RegisterServices(IceFlix.ServiceAnnouncements):
+    """Registra los servicios de autenticación y catálogo"""
+
+    def __init__(self, own_servant, own_service_id, own_type):
+        self.servant = own_servant
+        self.service_id = own_service_id
+        self.own_type = own_type
+
+        self.known_ids = set()
+        
+    def newService(self, service_type, service_id, current=None):
+        if service_id == self.service_id or service_id in self.known_ids:
+            return
+   
+        if service_type.ice_isA("::IceFlix::Authenticator"):
+            self.servant.auth_services.append(service_id)
+            print("[MAIN] Se ha registrado el servicio de autenticación: ", service_id)
+
+        if service_type.ice_isA("::IceFlix::MediaCatalog"):
+            self.servant.catalog_services.append(service_id)
+            print("[MAIN] Se ha registrado el servicio de catálogo: ", service_id)
+    
+    def announce(self, service_type, service_id, current = None):
+        pass
+
+    
 if __name__ == "__main__":
     sys.exit(MainServer().main(sys.argv))
