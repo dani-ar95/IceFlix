@@ -7,9 +7,10 @@
 import sys
 import time
 import logging
+import os
 
 import Ice
-Ice.loadSlice('iceflix_full.ice')
+Ice.loadSlice(os.path.join(os.path.dirname(__file__), "iceflix.ice"))
 import IceFlix
 
 from iceevents import IceEvents

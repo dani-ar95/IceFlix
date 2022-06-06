@@ -23,6 +23,7 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
 
     def __init__(self):
         self._servants_ = set()
+        self.service_id = str(uuid.uuid4())
 
     def getAuthenticator(self, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Devuelve el proxy a un Servicio de Autenticación válido registrado '''
