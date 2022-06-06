@@ -8,6 +8,8 @@ import sys
 import json
 import secrets
 import Ice
+import IceStorm
+from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 
 USERS_PATH = path.join(path.dirname(__file__), "users.json")
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
@@ -16,6 +18,10 @@ import IceFlix # pylint: disable=wrong-import-position
 
 class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
     """Sirviente del servicio de autenticación"""
+
+    def __init__(self):
+        self._active_users_ = {}
+        self._main_prx_ = None
 
     def refreshAuthorization(self, user: str, passwordHash: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Actualiza el token de un usuario registrado '''
@@ -101,17 +107,17 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
         """Share the current database with an incoming service."""
         service.updateDB(None, self.service_id)
 
-    def updateDB(
-        self, values, service_id, current
-    ):  # pylint: disable=invalid-name,unused-argument
-        """Receives the current main service database from a peer."""
-        print(
-            "Receiving remote data base from %s to %s", service_id, self.service_id
-        )
+    def share_data_with(self, service):
+        """Share the current database with an incoming service."""
+        # Crear objeto para enviar usuarios
+        service.updateDB(None, self.service_id)
 
-    def __init__(self):
-        self._active_users_ = {}
-        self._main_prx_ = None
+    def updateDB(
+        self, values, service_id, current):  # pylint: disable=invalid-name,unused-argument
+        """Receives the current main service database from a peer."""
+        # Leer objeto de usuarios
+        print(
+            "Receiving remote data base from %s to %s", service_id, self.service_id)
 
 
 class AuthenticatorServer(Ice.Application):
