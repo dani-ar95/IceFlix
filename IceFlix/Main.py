@@ -7,7 +7,6 @@ import sys
 import Ice
 import uuid
 import IceStorm
-from iceevents import IceEvents
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
