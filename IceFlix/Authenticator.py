@@ -9,19 +9,37 @@ import json
 import secrets
 import Ice
 import IceStorm
+import uuid
+from IceFlix.volatile_services import UsersDB
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 
-USERS_PATH = path.join(path.dirname(__file__), "users.json")
+auth_id = str(uuid.uuid4())
+
+USERS_PATH = path.join("persistence", path.join(path.dirname(__file__), (auth_id + "_users.json")))
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
 import IceFlix # pylint: disable=wrong-import-position
 
 class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
-    """Sirviente del servicio de autenticación"""
+    """Sirviente del servicio de autenticación """
 
     def __init__(self):
         self._active_users_ = {}
         self._main_prx_ = None
+        self.service_id = auth_id
+
+
+    def get_usersDB(self):
+        ''' Devuelve estructura UsersDB '''
+        users_passwords = {}
+        with open(USERS_PATH, "r", encoding="utf8") as f:
+            obj = json.load(f)
+
+        for i in obj["users"]:
+            users_passwords.update({i["users"], i["password"]})
+
+        return UsersDB(users_passwords, self._active_users_)
+
 
     def refreshAuthorization(self, user: str, passwordHash: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Actualiza el token de un usuario registrado '''
@@ -63,13 +81,7 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
 
-        with open(USERS_PATH, "r", encoding="utf8") as f:
-            obj = json.load(f)
-
-        obj["users"].append({"user": user, "password": passwordHash, "tags": {}})
-
-        with open(USERS_PATH, 'w', encoding="utf8") as file:
-            json.dump(obj, file, indent=2)
+        self.add_user({user, passwordHash})
 
     def removeUser(self, user, adminToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Permite al administrador elminar usuarios del sistema '''
@@ -103,21 +115,47 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
 
         return is_admin
 
-    def share_data_with(self, service):
-        """Share the current database with an incoming service."""
-        service.updateDB(None, self.service_id)
+
+    def add_user(self, user_password):
+        ''' Adds user and password to the persistent file '''
+        user, password = user_password
+
+        with open(USERS_PATH, "r", encoding="utf8") as f:
+            obj = json.load(f)
+
+        obj["users"].append({"user": user, "password": password, "tags": {}})
+
+        with open(USERS_PATH, 'w', encoding="utf8") as file:
+            json.dump(obj, file, indent=2)
+
+    def add_token(self, user, token):
+        ''' Adds or updates user token '''
+        self._active_users_.update({user, token})
+
+
+    def update_users(self, users_passwords):
+        ''' Updates users and passwords '''
+        for user_info in users_passwords.items():
+            self.add_user(user_info)
+
 
     def share_data_with(self, service):
         """Share the current database with an incoming service."""
-        # Crear objeto para enviar usuarios
-        service.updateDB(None, self.service_id)
+        service.updateDB(self.get_usersDB(), self.service_id)
+
 
     def updateDB(
         self, values, service_id, current):  # pylint: disable=invalid-name,unused-argument
         """Receives the current main service database from a peer."""
-        # Leer objeto de usuarios
+
         print(
             "Receiving remote data base from %s to %s", service_id, self.service_id)
+
+        user_passwords = values.get_users_passwords()
+        user_tokens = values.get_users_tokens()
+
+        self.servant._active_users_ = user_tokens # Update user tokens
+        self.update_users(user_passwords) # Update users and passwords
 
 
 class AuthenticatorServer(Ice.Application):

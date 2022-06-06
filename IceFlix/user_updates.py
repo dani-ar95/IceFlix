@@ -27,8 +27,13 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
         self.mains = {}
         self.known_ids = set()
 
-    def newUser(self, user, passwordHash, srvId, current):
-        self.servant
+    def newUser(self, user, passwordHash, srvId, current=None):
+        if srvId is not self.service_id:
+            self.servant.add_user(user, passwordHash)
+
+    def newToken(self, user, userToken, srvId, current=None):
+        if srvId is not self.service_id:
+            self.servant.add_token(user, userToken)  
 
 class UserUpdatesSender:
     """ Permite enviar eventos al canal de manejar usuarios """

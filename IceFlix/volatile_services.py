@@ -16,3 +16,15 @@ class VolatileServices(IceFlix.VolatileServices):
     
     def get_catalogs(self):
         return self.catalogs
+
+
+class UsersDB(IceFlix.UsersDB):
+    def __init__(self, userPasswords, userTokens):
+        self.user_passwords = userPasswords
+        self.user_tokens = userTokens
+
+    def get_users_passwords(self):
+        return self.user_passwords
+
+    def get_users_tokens(self):
+        return self.user_tokens
