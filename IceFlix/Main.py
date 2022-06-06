@@ -7,6 +7,9 @@ import sys
 import Ice
 import uuid
 import IceStorm
+import random
+from volatile_services import VolatileServices
+from iceevents import IceEvents
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
@@ -23,35 +26,70 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
     def __init__(self):
         self._servants_ = set()
         self.service_id = str(uuid.uuid4())
+        self.auth_services = []
+        self.catalog_services = []
+        self.actualizado = False
 
-    def getAuthenticator(self, current=None): # pylint: disable=invalid-name,unused-argument
-        ''' Devuelve el proxy a un Servicio de Autenticación válido registrado '''
+    @property
+    def get_volatile_services(self):
+        return VolatileServices(self.auth_services, self.catalog_services)
 
-        for servant in self._servants_:
+    # def getAuthenticator(self, current=None): # pylint: disable=invalid-name,unused-argument
+        # ''' Devuelve el proxy a un Servicio de Autenticación válido registrado '''
+
+        # for servant in self._servants_:
+            # try:
+                # is_auth = servant.ice_isA("::IceFlix::Authenticator")
+            # except Ice.ConnectionRefusedException:
+                # self._servants_.remove(servant)
+            # else:
+                # if is_auth:
+                    # return IceFlix.AuthenticatorPrx.checkedCast(servant)
+
+        # raise IceFlix.TemporaryUnavailable
+
+    def getAuthenticator(self, current=None):
+        while self.auth_services:
             try:
-                is_auth = servant.ice_isA("::IceFlix::Authenticator")
+                auth_prx = random.choice(list(self.auth_services))
+                auth_prx.ice_ping()
+                print('\n[MAIN] Se ha encontrado el proxy de autenticador: ', auth_prx)
+                return IceFlix.AuthenticatorPrx.uncheckedCast(auth_prx)
+            
             except Ice.ConnectionRefusedException:
-                self._servants_.remove(servant)
-            else:
-                if is_auth:
-                    return IceFlix.AuthenticatorPrx.checkedCast(servant)
+                self.auth_services.remove(auth_prx)
 
+        print("\n[MAIN] No hay servicios de autenticación disponibles")
         raise IceFlix.TemporaryUnavailable
 
-    def getCatalog(self, current=None): # pylint: disable=invalid-name,unused-argument
-        ''' Devuelve el proxy a un Servicio de Catálogo válido registrado '''
+    # def getCatalog(self, current=None): # pylint: disable=invalid-name,unused-argument
+        # ''' Devuelve el proxy a un Servicio de Catálogo válido registrado '''
 
-        for servant in self._servants_:
+        # for servant in self._servants_:
+            # try:
+                # is_catalog = servant.ice_isA("::IceFlix::MediaCatalog")
+            # except Ice.ConnectionRefusedException:
+                # self._servants_.remove(servant)
+            # else:
+                # if is_catalog:
+                    # return IceFlix.MediaCatalogPrx.checkedCast(servant)
+
+        # raise IceFlix.TemporaryUnavailable
+
+    def getCatalog(self, current=None):
+        while self.catalog_services:
             try:
-                is_catalog = servant.ice_isA("::IceFlix::MediaCatalog")
+                catalog_prx = random.choice(list(self.catalog_services))
+                catalog_prx.ice_ping()
+                print('\n[MAIN] Se ha encontrado el proxy de catálogo: ', catalog_prx)
+                return IceFlix.MediaCatalogPrx.uncheckedCast(catalog_prx)
+            
             except Ice.ConnectionRefusedException:
-                self._servants_.remove(servant)
-            else:
-                if is_catalog:
-                    return IceFlix.MediaCatalogPrx.checkedCast(servant)
+                self.catalog_services.remove(catalog_prx)
 
+        print("\n[MAIN] No hay servicios de autenticación disponibles")
         raise IceFlix.TemporaryUnavailable
-
+                
 
     def register(self, service, current=None): # pylint: disable=unused-argument
         ''' Permite registrarse a determinados servicios '''
@@ -69,18 +107,33 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
 
     def share_data_with(self, service):
         """Share the current database with an incoming service."""
-        service.updateDB(None, self.service_id)
+        service.updateDB(self.get_volatile_services(), self.service_id)
+        
 
     def updateDB(
-        self, values, service_id, current
+        self, values, service_id, current=None
     ):  # pylint: disable=invalid-name,unused-argument
         """Receives the current main service database from a peer."""
         print(
             "Receiving remote data base from %s to %s", service_id, self.service_id
         )
         
-        
+        if service_id == self.service_id:
+            print("[MAIN] No se puede actualizar la base de datos con la misma instancia")
+            return 
 
+        # TODO: COMPROBAR QUE ES TIPO MAIN(?)
+        
+        if not self.auth_services or not self.catalog_services:
+            raise IceFlix.UnknownService
+        
+        if not self.actualizado:
+            self.auth_services = values.get_authenticators()
+            self.catalog_services = values.get_catalogs()
+            print("[MAIN] Se han actualizado los servicios de autenticación y catálogo")
+            self.actualizado = True
+        
+        
 
 class MainServer(Ice.Application):
     """Servidor del servicio principal"""

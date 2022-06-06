@@ -271,8 +271,46 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         else:
             return user_name
 
+    def share_data_with(self, service):
+        """Share the current database with an incoming service."""
+        service.updateDB(None, self.service_id)
+
+    def updateDB(
+        self, values, service_id, current
+    ):  # pylint: disable=invalid-name,unused-argument
+        """Receives the current main service database from a peer."""
+        print(
+            "Receiving remote data base from %s to %s", service_id, self.service_id
+        )
+
 class MediaCatalogServer(Ice.Application):
     ''' Servidor de Catálogo  '''
+
+    def setup_announcements(self):
+        """Configure the announcements sender and listener."""
+
+        communicator = self.communicator()
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+            communicator.propertyToProxy("IceStorm.TopicManager")
+        )
+
+        try:
+            topic = topic_manager.create("ServiceAnnouncements")
+        except IceStorm.TopicExists:
+            topic = topic_manager.retrieve("ServiceAnnouncements")
+
+        self.announcer = ServiceAnnouncementsSender(
+            topic,
+            self.servant.service_id,
+            self.proxy,
+        )
+
+        self.subscriber = ServiceAnnouncementsListener(
+            self.servant, self.servant.service_id, IceFlix.MediaCatalogPrx
+        )
+
+        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        topic.subscribeAndGetPublisher({}, subscriber_prx)
 
     def run(self, argv):
         sleep(2)
@@ -291,6 +329,9 @@ class MediaCatalogServer(Ice.Application):
 
         adapter.activate()
 
+        self.setup_announcements()
+        self.announcer.start_service()
+
         main_connection.register(media_catalog_proxy)
 
         servant._main_prx_ = main_connection
@@ -302,6 +343,7 @@ class MediaCatalogServer(Ice.Application):
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
 
+        self.announcer.stop()
 
 if __name__ == '__main__':
     # MediaCatalogServer().run(sys.argv)
