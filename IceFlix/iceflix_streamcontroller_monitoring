@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+
+'''
+    IceFlix event monitoring
+'''
+
+import sys
+import time
+import logging
+
+import Ice
+Ice.loadSlice('iceflix_full.ice')
+import IceFlix
+
+from iceevents import IceEvents
+from constants import AUTH_SYNC_TOPIC, ANNOUNCEMENT_TOPIC, CATALOG_SYNC_TOPIC, REVOCATIONS_TOPIC, STREAM_ANNOUNCES_TOPIC
+
+
+EXIT_OK = 0
+EXIT_BAD_CLI = 1
+EXIT_BAD_PROXY = 2
+
+
+class StreamSync(IceFlix.StreamSync):
+    def __init__(self, logger):
+        self._log_ = logger
+
+    def requestAuthentication(self, current=None):
+        self._log_.addEvent(f'requestAuthentication()')
+
+
+class EventLogger:
+    def __init__(self):
+        self.start_time = time.time()
+        self._events_ = []
+
+    def addEvent(self, event):
+        time_stamp = time.time()
+        logging.info(event)
+        self._events_.append((time_stamp, event))
+
+    @property
+    def dump(self):
+        dump = 'Event log created at {}\n\n'.format(time.ctime(self.start_time))
+        for timestamp, event in self._events_:
+            dump += '{}: {}\n'.format(time.ctime(timestamp), event)
+        return dump
+
+
+class Monitor(Ice.Application):
+    def run(self, argv):
+        events = IceEvents(self.communicator())
+        event_logger = EventLogger()
+
+        try:
+            stream_controller_proxy = self.communicator().stringToProxy(argv[1])
+        except IndexError:
+            logging.error('No proxy specified. Cannot continue.')
+            return EXIT_BAD_CLI
+        stream_controller = IceFlix.StreamControllerPrx.checkedCast(stream_controller_proxy)
+        if not stream_controller:
+            logging.error('Proxy is not for a ::IceFlix::StreamController() object')
+            return EXIT_BAD_PROXY
+
+        adapter = self.communicator().createObjectAdapterWithEndpoints('scmonitor', 'tcp')
+        adapter.activate()
+
+        sync_topic_name = stream_controller.getSyncTopic()
+        logging.info(f'StreamController topic: {sync_topic_name}')
+        
+        try:
+            output_filename = argv[2]
+        except IndexError:
+            logging.warning('No output file specified. Event log not created')
+            output_filename = None
+
+        stream_sync = StreamSync(event_logger)
+
+        stream_sync_prx = adapter.addWithUUID(stream_sync)
+        events.subscribe(sync_topic_name, stream_sync_prx)
+
+        event_logger.addEvent('Monitoring started...')
+        self.shutdownOnInterrupt()
+        self.communicator().waitForShutdown()
+        
+        event_logger.addEvent('Stopping monitoring...')
+
+        events.unsubscribe(sync_topic_name, stream_sync_prx)
+        
+        if output_filename:
+            with open(output_filename, 'w') as contents:
+                contents.write(event_logger.dump)
+
+        return EXIT_OK
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
+    sys.exit(Monitor().main(sys.argv))

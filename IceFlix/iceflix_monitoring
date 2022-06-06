@@ -1,0 +1,155 @@
+#!/usr/bin/env python3
+
+'''
+    IceFlix event monitoring
+'''
+
+import sys
+import time
+import logging
+
+import Ice
+Ice.loadSlice('iceflix_full.ice')
+import IceFlix
+
+from iceevents import IceEvents
+from constants import AUTH_SYNC_TOPIC, ANNOUNCEMENT_TOPIC, CATALOG_SYNC_TOPIC, REVOCATIONS_TOPIC, STREAM_ANNOUNCES_TOPIC
+
+
+EXIT_OK = 0
+EXIT_BAD_CLI = 1
+EXIT_BAD_PROXY = 2
+
+
+class StreamAnnouncements(IceFlix.StreamAnnouncements):
+    def __init__(self, logger):
+        self._log_ = logger
+
+    def newMedia(self, mediaId, initialName, srvId, current=None):
+        self._log_.addEvent(f'newMedia({mediaId}, {initialName}, {srvId})')
+
+    def removedMedia(self, mediaId, srvId, current=None):
+        self._log_.addEvent(f'removedMedia({mediaId}, {srvId})')
+
+
+class CatalogUpdates(IceFlix.CatalogUpdates):
+    def __init__(self, logger):
+        self._log_ = logger
+
+    def renameTile(self, mediaId, name, srvId, current=None):
+        self._log_.addEvent(f'renameTile({mediaId}, {name}, {srvId})')
+    
+    def addTags(self, mediaId, tags, user, srvId, current=None):
+        tags = ', '.join(tags)
+        self._log_.addEvent(f'addTags({mediaId}, [{tags}], {user}, {srvId})')
+
+    def removeTags(self, mediaId, tags, user, srvId, current=None):
+        tags = ', '.join(tags)
+        self._log_.addEvent(f'removeTags({mediaId}, [{tags}], {user}, {srvId})')
+
+
+class UserUpdates(IceFlix.UserUpdates):
+    def __init__(self, logger):
+        self._log_ = logger
+
+    def newUser(self, user, passwordHash, srvId, current=None):
+        self._log_.addEvent(f'newUser({user}, {passwordHash}, {srvId})')
+
+    def newToken(self, user, userToken, srvId, current=None):
+        self._log_.addEvent(f'newToken({user}, {userToken}, {srvId})')
+
+
+class Revocations(IceFlix.Revocations):
+    def __init__(self, logger):
+        self._log_ = logger
+
+    def revokeToken(self, userToken, srvId, current=None):
+        self._log_.addEvent(f'revokeToken({userToken}, {srvId})')
+
+    def revokeUser(self, user, srvId, current=None):
+        self._log_.addEvent(f'revokeUser({user}, {srvId})')
+
+
+class ServiceAnnouncements(IceFlix.ServiceAnnouncements):
+    def __init__(self, logger):
+        self._log_ = logger
+
+    def newService(self, service, srvId, current=None):
+        self._log_.addEvent(f'newService({service}, {srvId})')
+
+    def announce(self, service, srvId, current=None):
+        self._log_.addEvent(f'announce({service}, {srvId})')
+
+
+class EventLogger:
+    def __init__(self):
+        self.start_time = time.time()
+        self._events_ = []
+
+    def addEvent(self, event):
+        time_stamp = time.time()
+        logging.info(event)
+        self._events_.append((time_stamp, event))
+
+    @property
+    def dump(self):
+        dump = 'Event log created at {}\n\n'.format(time.ctime(self.start_time))
+        for timestamp, event in self._events_:
+            dump += '{}: {}\n'.format(time.ctime(timestamp), event)
+        return dump
+
+
+class Monitor(Ice.Application):
+    def run(self, argv):
+        events = IceEvents(self.communicator())
+        event_logger = EventLogger()
+        
+        adapter = self.communicator().createObjectAdapterWithEndpoints('monitor', 'tcp')
+        adapter.activate()
+
+        stream_announcements = StreamAnnouncements(event_logger)
+        catalog_updates = CatalogUpdates(event_logger)
+        user_updates = UserUpdates(event_logger)
+        revocations = Revocations(event_logger)
+        service_announcements = ServiceAnnouncements(event_logger)
+
+        stream_announcements_prx = adapter.addWithUUID(stream_announcements)
+        catalog_updates_prx = adapter.addWithUUID(catalog_updates)
+        user_updates_prx = adapter.addWithUUID(user_updates)
+        revocations_prx = adapter.addWithUUID(revocations)
+        service_announcements_prx = adapter.addWithUUID(service_announcements)
+
+        events.subscribe(ANNOUNCEMENT_TOPIC, service_announcements_prx)
+        events.subscribe(REVOCATIONS_TOPIC, revocations_prx)
+        events.subscribe(AUTH_SYNC_TOPIC, user_updates_prx)
+        events.subscribe(CATALOG_SYNC_TOPIC, catalog_updates_prx)
+        events.subscribe(STREAM_ANNOUNCES_TOPIC, stream_announcements_prx)
+
+        event_logger.addEvent('Monitoring started...')
+        self.shutdownOnInterrupt()
+        self.communicator().waitForShutdown()
+        
+        event_logger.addEvent('Stopping monitoring...')
+
+        events.unsubscribe(ANNOUNCEMENT_TOPIC, service_announcements_prx)
+        events.unsubscribe(REVOCATIONS_TOPIC, revocations_prx)
+        events.unsubscribe(AUTH_SYNC_TOPIC, user_updates_prx)
+        events.unsubscribe(CATALOG_SYNC_TOPIC, catalog_updates_prx)
+        events.unsubscribe(STREAM_ANNOUNCES_TOPIC, stream_announcements_prx)
+
+        try:
+            output_filename = argv[1]
+        except IndexError:
+            logging.warning('No output file specified. Event log not created')
+            output_filename = None
+        
+        if output_filename:
+            with open(output_filename, 'w') as contents:
+                contents.write(event_logger.dump)
+
+        return EXIT_OK
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
+    sys.exit(Monitor().main(sys.argv))
