@@ -8,13 +8,18 @@ import sys
 import json
 from time import sleep
 from os import path, rename
+import IceStorm
+import uuid
+from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 import Ice
-
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 DB_PATH = path.join(path.dirname(__file__), "media.db")
 USERS_PATH = path.join(path.dirname(__file__), "users.json")
 Ice.loadSlice(SLICE_PATH)
 import IceFlix # pylint: disable=wrong-import-position
+
+
+from constants import ANNOUNCEMENT_TOPIC, ICESTORM_PROXY_PROPERTY
 
 class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
     ''' Instancia del servicio de Catálogo '''
@@ -23,7 +28,10 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         self._media_ = {}
         self._main_prx_ = None
         self._auth_prx_ = None
-
+        self.service_id = str(uuid.uuid4())
+        self.actualizado = False
+        
+        
         conn = sqlite3.connect(DB_PATH)
         ddbb_cursor = conn.cursor()
         ddbb_cursor.execute("SELECT * FROM media")
@@ -295,9 +303,9 @@ class MediaCatalogServer(Ice.Application):
         )
 
         try:
-            topic = topic_manager.create("ServiceAnnouncements")
+            topic = topic_manager.create(ANNOUNCEMENT_TOPIC)
         except IceStorm.TopicExists:
-            topic = topic_manager.retrieve("ServiceAnnouncements")
+            topic = topic_manager.retrieve(ANNOUNCEMENT_TOPIC)
 
         self.announcer = ServiceAnnouncementsSender(
             topic,

@@ -9,7 +9,6 @@ import uuid
 import IceStorm
 import random
 from volatile_services import VolatileServices
-from iceevents import IceEvents
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
@@ -162,9 +161,9 @@ class MainServer(Ice.Application):
         )
 
         try:
-            topic = topic_manager.create("ServiceAnnouncements")
+            topic = topic_manager.create(ANNOUNCEMENT_TOPIC)
         except IceStorm.TopicExists:
-            topic = topic_manager.retrieve("ServiceAnnouncements")
+            topic = topic_manager.retrieve(ANNOUNCEMENT_TOPIC)
 
         self.announcer = ServiceAnnouncementsSender(
             topic,
