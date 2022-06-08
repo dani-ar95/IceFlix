@@ -182,16 +182,16 @@ class MainServer(Ice.Application):
     def run(self, argv):
         ''' Implementación del servidor principal '''
         broker = self.communicator()
-        servant = MainI()
+        #servant = MainI()
         properties = broker.getProperties()
-        servant._token_ = properties.getProperty("AdminToken")
-
-        self.adapter = broker.createObjectAdapter(self.subscriber)
-        self.adapter.add(servant, broker.stringToIdentity("Main"))
+        self.servant._token_ = properties.getProperty("AdminToken")
+        self.adapter = broker.createObjectAdapterWithEndpoints('MainAdapter', 'tcp')
+        self.setup_announcements()
+        servant_proxy = self.adapter.addWithUUID(self.servant)
 
         self.adapter.activate()
-
-        self.setup_announcements()
+        self.proxy = servant_proxy
+        
         self.announcer.start_service()
 
         self.shutdownOnInterrupt()
