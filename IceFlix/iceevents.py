@@ -30,6 +30,7 @@ class IceEvents:
         '''Reference to IceStorm::TopicManager'''
         if not self._topic_manager_:
             proxy = self._communicator_.propertyToProxy(self._property_name_)
+            print(proxy)
             if proxy is None:
                 logging.error('Property "{}" results in a null proxy'.format(self._property_name_))
                 raise IceEventsError('Missing property: {}'.format(self._property_name_))
