@@ -31,6 +31,7 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
 
     def get_usersDB(self):
         ''' Devuelve estructura UsersDB '''
+
         users_passwords = {}
         with open(USERS_PATH, "r", encoding="utf8") as f:
             obj = json.load(f)
@@ -117,7 +118,8 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
 
 
     def add_user(self, user_password):
-        ''' Adds user and password to the persistent file '''
+        ''' Permite añadir usuario a partir de una tupla {usuario, password} '''
+
         user, password = user_password
 
         with open(USERS_PATH, "r", encoding="utf8") as f:
@@ -129,24 +131,27 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
             json.dump(obj, file, indent=2)
 
     def add_token(self, user, token):
-        ''' Adds or updates user token '''
+        ''' Añade o actualiza un token de usuario '''
+
         self._active_users_.update({user, token})
 
 
     def update_users(self, users_passwords):
-        ''' Updates users and passwords '''
+        ''' Añade o actualiza usuarios y contraseñas '''
+
         for user_info in users_passwords.items():
             self.add_user(user_info)
 
 
     def share_data_with(self, service):
-        """Share the current database with an incoming service."""
+        """ Envía una estructura usersDB al servicio indicado """
+
         service.updateDB(self.get_usersDB(), self.service_id)
 
 
     def updateDB(
         self, values, service_id, current):  # pylint: disable=invalid-name,unused-argument
-        """Receives the current main service database from a peer."""
+        """ Actualiza datos locales a partir de una estructura usersDB """
 
         print(
             "Receiving remote data base from %s to %s", service_id, self.service_id)
@@ -191,7 +196,7 @@ class AuthenticatorServer(Ice.Application):
         ''' Implementación del servidor de autenticación '''
         sleep(1)
         main_service_proxy = self.communicator().stringToProxy(argv[1])
-        main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
+        #main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
 
         broker = self.communicator()
         servant = AuthenticatorI()
@@ -204,8 +209,8 @@ class AuthenticatorServer(Ice.Application):
         self.setup_announcements()
         self.announcer.start_service()
 
-        main_connection.register(authenticator_proxy)
-        servant._main_prx_ = main_connection
+        #main_connection.register(authenticator_proxy)
+        #servant._main_prx_ = main_connection
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()

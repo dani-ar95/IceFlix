@@ -1,9 +1,8 @@
-""" Modulo para manejar información de usuarios """
+""" Modulo para manejar la comunicación entre instancias Authenticator """
 
 import logging
 import os
 import threading
-
 import Ice
 
 try:
@@ -13,10 +12,10 @@ except ImportError:
     import IceFlix
 
 class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
-    """Listener for the ServiceAnnouncements topic."""
+    """ Listener del topic User updates """
 
     def __init__(self, own_servant, own_service_id, own_type):
-        """ Initialize a ServiceAnnouncements topic listener """
+        """ Inicialización del listener """
 
         self.servant = own_servant
         self.service_id = own_service_id
@@ -28,17 +27,22 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
         self.known_ids = set()
 
     def newUser(self, user, passwordHash, srvId, current=None):
+        """ Comportamiento al recibir un mensaje newUser """
+
         if srvId is not self.service_id:
             self.servant.add_user(user, passwordHash)
 
     def newToken(self, user, userToken, srvId, current=None):
+        """ Comportamiento al recibir un mensaje newToken """
+
         if srvId is not self.service_id:
             self.servant.add_token(user, userToken)  
 
 class UserUpdatesSender:
-    """ Permite enviar eventos al canal de manejar usuarios """
+    """ Sender del topic User updates """
 
     def __init__(self, topic, service_id, servant_proxy):
+        """ Inicialización del sender """
 
         self.publisher = IceFlix.UserUpdatesPrx.uncheckedCast(
             topic.getPublisher()
