@@ -78,15 +78,17 @@ class MediaUploaderServer(Ice.Application):
 
     def run(self, args):
         #sleep(1)
-        self.shutdownOnInterrupt()
-        main_service_proxy = self.communicator().stringToProxy(args[1])
-        main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
-        if not main_connection:
-            raise RuntimeError("Invalid proxy")
 
         broker = self.communicator()
+        self.servant = MediaUploaderI()
 
+        self.adapter = broker.createObjectAdapterWithEndpoints('MediaUploaderAdapter', 'tcp')
+        media_uploader_proxy = self.adapter.addWithUUID(self.servant)
+
+        self.proxy = media_uploader_proxy
+        self.adapter.activate()
         self.setup_announcements()
+        
         self.announcer.start_service()
 
         self.shutdownOnInterrupt()
