@@ -11,7 +11,7 @@ except ImportError:
     Ice.loadSlice(os.path.join(os.path.dirname(__file__), "iceflix.ice"))
     import IceFlix
 
-class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
+class UserUpdatesListener(IceFlix.UserUpdates):
     """ Listener del topic User updates """
 
     def __init__(self, own_servant, own_service_id, own_type):

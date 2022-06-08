@@ -150,8 +150,7 @@ class MainServer(Ice.Application):
         self.proxy = None
         self.adapter = None
         self.announcer = None
-        self.subscriber = None
-
+        self.subscriber = NonesrvId
     def setup_announcements(self):
         """Configure the announcements sender and listener."""
 

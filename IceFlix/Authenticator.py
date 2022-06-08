@@ -10,8 +10,10 @@ import secrets
 import Ice
 import IceStorm
 import uuid
-from IceFlix.volatile_services import UsersDB
+from volatile_services import UsersDB
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
+from user_updates import UserUpdatesSender, UserUpdatesListener
+from constants import ANNOUNCEMENT_TOPIC, REVOCATIONS_TOPIC, AUTH_SYNC_TOPIC
 
 auth_id = str(uuid.uuid4())
 
@@ -25,7 +27,7 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
 
     def __init__(self):
         self._active_users_ = {}
-        self._main_prx_ = None
+        self._update_users = None
         self.service_id = auth_id
 
 
@@ -56,6 +58,7 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
 
         raise IceFlix.Unauthorized
 
+
     def isAuthorized(self, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Permite conocer si un token está actualizado en el sistema '''
 
@@ -74,6 +77,7 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
         else:
             raise IceFlix.Unauthorized
 
+
     def addUser(self, user, passwordHash, adminToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Perimte al administrador añadir usuarios al sistema '''
 
@@ -83,6 +87,8 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
             raise IceFlix.Unauthorized
 
         self.add_user({user, passwordHash})
+        self._update_users.newUser(user, passwordHash, self.service_id) # No testeado
+
 
     def removeUser(self, user, adminToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Permite al administrador elminar usuarios del sistema '''
@@ -92,19 +98,7 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
 
-        with open(USERS_PATH, "r", encoding="utf8") as reading_descriptor:
-            obj = json.load(reading_descriptor)
-
-        for i in obj["users"]:
-            if i["user"] == user:
-                obj["users"].remove(i)
-                break
-
-        with open(USERS_PATH, 'w', encoding="utf8") as file:
-            json.dump(obj, file, indent=2)
-
-        if user in self._active_users_:
-            self._active_users_.pop(user)
+        self.remove_user(user)
 
 
     def check_admin(self, admin_token: str):
@@ -129,6 +123,35 @@ class AuthenticatorI(IceFlix.Authenticator): # pylint: disable=inherit-non-class
 
         with open(USERS_PATH, 'w', encoding="utf8") as file:
             json.dump(obj, file, indent=2)
+
+
+    def remove_user(self, user):
+        """ Elimina un usuario del archivo persistente """
+
+        with open(USERS_PATH, "r", encoding="utf8") as reading_descriptor:
+            obj = json.load(reading_descriptor)
+
+        for i in obj["users"]:
+            if i["user"] == user:
+                obj["users"].remove(i)
+                break
+
+        with open(USERS_PATH, 'w', encoding="utf8") as file:
+            json.dump(obj, file, indent=2)
+
+        if user in self._active_users_:
+            self._active_users_.pop(user)
+
+
+    def remove_token(self, userToken):
+        """ Elimina el token de un usuario """
+
+        usuarios = self._active_users_.items()
+
+        for tuple in usuarios:
+            if userToken in tuple:
+                self._active_users_.pop(tuple)
+
 
     def add_token(self, user, token):
         ''' Añade o actualiza un token de usuario '''
@@ -192,21 +215,51 @@ class AuthenticatorServer(Ice.Application):
         subscriber_prx = self.adapter.addWithUUID(self.subscriber)
         topic.subscribeAndGetPublisher({}, subscriber_prx)
 
+
+    def setup_user_updates(self):
+        """ Configurar sender y listener del topic User Updates """
+
+        communicator = self.communicator()
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+            communicator.propertyToProxy("IceStorm.TopicManager")
+        )
+
+        try:
+            topic = topic_manager.create(AUTH_SYNC_TOPIC)
+        except IceStorm.TopicExists:
+            topic = topic_manager.retrieve(AUTH_SYNC_TOPIC)
+
+        self.updates_announcer = UserUpdatesSender(
+            topic,
+            self.servant.service_id,
+            self.proxy,
+        )
+
+        self.updates_subscriber = UserUpdatesListener(
+            self.servant, self.servant.service_id, IceFlix.AuthenticatorPrx
+        )
+
+        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        topic.subscribeAndGetPublisher({}, subscriber_prx)
+
+
     def run(self, argv):
         ''' Implementación del servidor de autenticación '''
         sleep(1)
-        main_service_proxy = self.communicator().stringToProxy(argv[1])
-        #main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
 
         broker = self.communicator()
         self.servant = AuthenticatorI()
 
-        self.adapter = broker.createObjectAdapterWithEndpoints('AuthenticatorAdapter', 'tcp -p 9091')
-        authenticator_proxy = adapter.addWithUUID(self.servant)
+        self.adapter = broker.createObjectAdapterWithEndpoints('AuthenticatorAdapter', 'tcp')
+        authenticator_proxy = self.adapter.addWithUUID(self.servant)
 
         self.proxy = authenticator_proxy
         self.adapter.activate()
+
         self.setup_announcements()
+        self.setup_user_updates()
+
+        self.servant._update_users = self.updates_announcer
 
         self.announcer.start_service()
 
