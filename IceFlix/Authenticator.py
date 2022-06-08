@@ -199,18 +199,16 @@ class AuthenticatorServer(Ice.Application):
         #main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
 
         broker = self.communicator()
-        servant = AuthenticatorI()
+        self.servant = AuthenticatorI()
 
-        adapter = broker.createObjectAdapterWithEndpoints('AuthenticatorAdapter', 'tcp -p 9091')
-        authenticator_proxy = adapter.add(servant, broker.stringToIdentity('Authenticator'))
+        self.adapter = broker.createObjectAdapterWithEndpoints('AuthenticatorAdapter', 'tcp -p 9091')
+        authenticator_proxy = adapter.addWithUUID(self.servant)
 
-        adapter.activate()
-
+        self.proxy = authenticator_proxy
+        self.adapter.activate()
         self.setup_announcements()
-        self.announcer.start_service()
 
-        #main_connection.register(authenticator_proxy)
-        #servant._main_prx_ = main_connection
+        self.announcer.start_service()
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()

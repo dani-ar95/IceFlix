@@ -183,8 +183,6 @@ class MainServer(Ice.Application):
         ''' Implementación del servidor principal '''
         broker = self.communicator()
 
-        self.servant = MainI()
-
         properties = broker.getProperties()
         self.servant._token_ = properties.getProperty("AdminToken")
         self.adapter = broker.createObjectAdapterWithEndpoints('MainAdapter', 'tcp')
