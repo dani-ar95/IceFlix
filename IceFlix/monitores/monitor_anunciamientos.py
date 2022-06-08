@@ -1,10 +1,14 @@
 """ Modulo para debugear el topic ServiceAnnoucements """
 
-import logging
+from time import sleep
 import os
-import threading
-
+import sys
+import json
+import secrets
 import Ice
+import IceStorm
+import uuid
+from Main import MainI
 
 try:
     import IceFlix
@@ -12,6 +16,7 @@ except ImportError:
     Ice.loadSlice(os.path.join(os.path.dirname(__file__), "iceflix.ice"))
     import IceFlix
 
+""" Clases para debuguear """
 
 class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
     """Listener del topic ServiceAnnoucements"""
@@ -29,62 +34,79 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
     def announce(self, service, service_id, current):  # pylint: disable=unused-argument
         """Receive an announcement."""
 
-        if service_id == self.service_id or service_id in self.known_ids:
-            logging.debug("Received own announcement or already known. Ignoring")
-            return
-
-        if service.ice_isA("::IceFlix::Main"):
-            self.mains[service_id] = IceFlix.MainPrx.uncheckedCast(service)
-
-        elif service.ice_isA("::IceFlix::Authenticator"):
-            self.authenticators[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(
-                service
-            )
-
-        elif service.ice_isA("::IceFlix::MediaCatalog"):
-            self.catalogs[service_id] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
-
-        else:
-            logging.info(
-                "Received annoucement from unknown service %s: %s",
-                service_id,
-                service.ice_ids(),
-            )
+        print(f"[ServiceAnnoucements] Announce: Servicio: {service}, ID: {service_id}")
 
 
 class ServiceAnnouncementsSender:
     """The instances send the announcement events periodically to the topic."""
 
     def __init__(self, topic, service_id, servant_proxy):
-        """Initialize a ServiceAnnoucentsSender.
-
-        The `topic` argument should be a IceStorm.TopicPrx object.
-        The `service_id` should be the unique identifier of the announced proxy
-        The `servant_proxy` should be a object proxy to the servant.
-        """
-        self.publisher = IceFlix.ServiceAnnouncementsPrx.uncheckedCast(
-            topic.getPublisher(),
-        )
-        self.service_id = service_id
-        self.proxy = servant_proxy
-        self.timer = None
+        """Initialize a ServiceAnnoucentsSender """
+        pass
 
     def start_service(self):
         """Start sending the initial announcement."""
-        self.publisher.newService(self.proxy, self.service_id)
-        self.timer = threading.Timer(3.0, self.announce)
-        self.timer.start()
-
+        pass
     def announce(self):
         """Start sending the announcements."""
-        self.timer = None
-
-        self.publisher.announce(self.proxy, self.service_id)
-        self.timer = threading.Timer(10.0, self.announce)
-        self.timer.start()
+        pass
 
     def stop(self):
         """Stop sending the announcements."""
-        if self.timer:
-            self.timer.cancel()
-            self.timer = None
+        pass
+
+
+""" Ejecutable """
+
+
+class DebugAuthenticator(Ice.Application):
+    def setup_announcements(self):
+        """Configure the announcements sender and listener."""
+
+        communicator = self.communicator()
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+            communicator.propertyToProxy("IceStorm.TopicManager")
+        )
+
+        try:
+            topic = topic_manager.create("ServiceAnnouncements")
+        except IceStorm.TopicExists:
+            topic = topic_manager.retrieve("ServiceAnnouncements")
+
+        self.announcer = ServiceAnnouncementsSender(topic, self.servant.service_id,
+            self.proxy,
+        )
+
+        self.subscriber = ServiceAnnouncementsListener(self.servant, self.servant.service_id,
+            IceFlix.AuthenticatorPrx
+        )
+
+        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        topic.subscribeAndGetPublisher({}, subscriber_prx)
+
+
+    def run(self, argv):
+        ''' Implementación del debug de ServiceAnnouncements '''
+
+        broker = self.communicator()
+        servant = MainI()
+        properties = broker.getProperties()
+        servant._token_ = properties.getProperty("AdminToken")
+
+        self.adapter = broker.createObjectAdapter(self.subscriber)
+        self.adapter.add(servant, broker.stringToIdentity("Main"))
+
+        self.adapter.activate()
+
+        self.setup_announcements()
+        self.announcer.start_service()
+
+        self.shutdownOnInterrupt()
+        broker.waitForShutdown()
+
+        self.announcer.stop()
+
+        return 0
+
+if __name__ == '__main__':
+    sys.exit(DebugAuthenticator().main(sys.argv))
