@@ -322,31 +322,18 @@ class MediaCatalogServer(Ice.Application):
 
     def run(self, argv):
         sleep(2)
-        main_service_proxy = self.communicator().stringToProxy(argv[1])
-        main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
-        if not main_connection:
-            raise RuntimeError("Invalid proxy")
 
         broker = self.communicator()
-        servant = MediaCatalogI()
+        self.servant = MediaCatalogI()
 
-        adapter = broker.createObjectAdapterWithEndpoints(
-            'MediaCatalogAdapter', 'tcp -p 9092')
-        media_catalog_proxy = adapter.add(
-            servant, broker.stringToIdentity('MediaCatalog'))
+        self.adapter = broker.createObjectAdapterWithEndpoints('MediaCatalogAdapter', 'tcp')
+        media_catalog_proxy = adapter.addWithUUID(self.servant)
 
-        adapter.activate()
-
+        self.proxy = media_catalog_proxy
+        self.adapter.activate()
         self.setup_announcements()
+        
         self.announcer.start_service()
-
-        main_connection.register(media_catalog_proxy)
-
-        servant._main_prx_ = main_connection
-        try:
-            servant._auth_prx_ = main_connection.getAuthenticator()
-        except IceFlix.TemporaryUnavailable as e:
-            print(e)
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
