@@ -14,9 +14,9 @@ class CatalogUpdates(IceFlix.CatalogUpdates):
         pass
     
     def renameTiles(self, media_id, name, srv_id):
-        if srv_id == self.catalog_service.id:
+        if srv_id == self.catalog_service.id or not self.catalog_service.catalog.is_in_catalog(media_id):
             return
-        #TODO: comprobar que el media_id existe en el catalogo(?)
+            
         self.catalog_service.renameTiles(media_id, name)
         pass
     
