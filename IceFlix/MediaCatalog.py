@@ -327,7 +327,7 @@ class MediaCatalogServer(Ice.Application):
         self.servant = MediaCatalogI()
 
         self.adapter = broker.createObjectAdapterWithEndpoints('MediaCatalogAdapter', 'tcp')
-        media_catalog_proxy = adapter.addWithUUID(self.servant)
+        media_catalog_proxy = self.adapter.addWithUUID(self.servant)
 
         self.proxy = media_catalog_proxy
         self.adapter.activate()
