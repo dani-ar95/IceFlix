@@ -19,6 +19,7 @@ except ImportError:
 from volatile_services import UsersDB
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from user_updates import UserUpdatesSender, UserUpdatesListener
+from user_revocations import RevocationsListener, RevocationsSender
 from constants import ANNOUNCEMENT_TOPIC, REVOCATIONS_TOPIC, AUTH_SYNC_TOPIC
 
 auth_id = str(uuid.uuid4())
@@ -36,7 +37,9 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         self._active_users_ = {}
         self._update_users = None
         self.service_id = auth_id
+        self._revocations_sender = None
 
+    @property
     def get_usersDB(self):
         ''' Devuelve estructura UsersDB '''
 
@@ -45,7 +48,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
             obj = json.load(f)
 
         for i in obj["users"]:
-            users_passwords.update({i["users"], i["password"]})
+            users_passwords.update({i["user"]: i["password"]})
 
         return UsersDB(users_passwords, self._active_users_)
 
@@ -114,7 +117,13 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
     def add_user(self, user_password):
         ''' Permite añadir usuario a partir de una tupla {usuario, password} '''
 
-        user, password = user_password
+        password, user = user_password
+
+        print(user_password)
+        #print(f"User:{user}")
+        #print(f"Password:{password}")
+        #print(f"User: {user}, password: {password}")
+        #print(f"User2: {password}, password: {user}")
 
         with open(USERS_PATH, "r", encoding="utf8") as f:
             try:
@@ -122,7 +131,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                 obj["users"].append(
                     {"user": user, "password": password, "tags": {}})
             except:  # Primer usuario del sistema -> Construir el formato del json
-                objeto = {
+                obj = {
                     "users": [
                         {
                             "user": user,
@@ -131,7 +140,6 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                         }
                     ]
                 }
-                obj = json.dumps(objeto)
 
         with open(USERS_PATH, 'w', encoding="utf8") as file:
             json.dump(obj, file, indent=2)
@@ -174,26 +182,25 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
             self.add_user(user_info)
 
     def create_db(self):
-        open(USERS_PATH, "w")
+        open(USERS_PATH, "x")
         self.add_user(
             {"user", "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"})
 
     def share_data_with(self, service):
         """ Envía una estructura usersDB al servicio indicado """
 
-        service.updateDB(self.get_usersDB(), self.service_id)
+        service.updateDB(self.get_usersDB, self.service_id)
 
     def updateDB(
             self, values, service_id, current):  # pylint: disable=invalid-name,unused-argument
         """ Actualiza datos locales a partir de una estructura usersDB """
 
-        print(
-            "Receiving remote data base from %s to %s", service_id, self.service_id)
+        print(f"Receiving remote data base from {service_id} to {self.service_id}")
 
-        user_passwords = values.get_users_passwords()
-        user_tokens = values.get_users_tokens()
+        user_passwords = values.userPasswords
+        user_tokens = values.usersToken
 
-        self.servant._active_users_ = user_tokens  # Update user tokens
+        self._active_users_ = user_tokens  # Update user tokens
         self.update_users(user_passwords)  # Update users and passwords
 
 
@@ -252,6 +259,34 @@ class AuthenticatorServer(Ice.Application):
         subscriber_prx = self.adapter.addWithUUID(self.subscriber)
         topic.subscribeAndGetPublisher({}, subscriber_prx)
 
+
+    def setup_revocations(self):
+        """ Configurar sender y listener del topic Revocations """
+
+        communicator = self.communicator()
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+            communicator.propertyToProxy("IceStorm.TopicManager")
+        )
+
+        try:
+            topic = topic_manager.create(REVOCATIONS_TOPIC)
+        except IceStorm.TopicExists:
+            topic = topic_manager.retrieve(REVOCATIONS_TOPIC)
+
+        self.revocations_announcer = RevocationsSender(
+            topic,
+            self.servant.service_id,
+            self.proxy,
+        )
+
+        self.revocations_subscriber = RevocationsListener(
+            self.servant, self.servant.service_id, IceFlix.AuthenticatorPrx
+        )
+
+        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        topic.subscribeAndGetPublisher({}, subscriber_prx)
+
+
     def run(self, argv):
         ''' Implementación del servidor de autenticación '''
         sleep(1)
@@ -269,8 +304,10 @@ class AuthenticatorServer(Ice.Application):
 
         self.setup_announcements()
         self.setup_user_updates()
+        self.setup_revocations()
 
         self.servant._update_users = self.updates_announcer
+        self.servant._revocations_sender = self.revocations_announcer
 
         self.announcer.start_service()
 

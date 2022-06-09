@@ -19,12 +19,12 @@ class VolatileServices(IceFlix.VolatileServices):
 
 
 class UsersDB(IceFlix.UsersDB):
-    def __init__(self, userPasswords, userTokens):
-        self.user_passwords = userPasswords
-        self.user_tokens = userTokens
+    def __init__(self, user_passwords, user_tokens, current=None):
+        self.userPasswords = user_passwords
+        self.usersToken = user_tokens
 
     def get_users_passwords(self):
-        return self.user_passwords
+        return self.userPasswords
 
     def get_users_tokens(self):
-        return self.user_tokens
+        return self.usersToken
