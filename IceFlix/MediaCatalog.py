@@ -38,10 +38,14 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         query = ddbb_cursor.fetchall()
         conn.close()
         if query:
+            print(query)
             for media in query:
-                info = IceFlix.MediaInfo(media[1], [])
+                info = IceFlix.MediaInfo(media[2], self.get_users_tags(media))
                 self._media_.update({media[0]: IceFlix.Media(media[0], None, info)})
 
+    def get_users_tags(self, media):
+        # TODO: llamar a algun authenticator activo y acceder a su base de datos para conseguir las tags del media
+        pass
 
     def getTile(self, mediaId: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna un objeto Media con la informacion del medio con el ID dado '''
@@ -291,12 +295,18 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             media_info = mediaO.info
             media_name = media_info.name
             media_tags = media_info.tags
+            print(f"Media info: {media_info}")
+            print(f"Media ID: {media_id}")
+            print(f"Media name: {media_name}")
+            print(f"Media tags: {media_tags}")
             mediaDBList.append(MediaDB(media_id, media_name, media_tags))
 
         return mediaDBList
 
     def share_data_with(self, service):
         """Share the current database with an incoming service."""
+        # media_id = self.get_mediaDB[0].media_id
+        # print(f"Media ID: {media_id}")
         service.updateDB(self.get_mediaDB, self.service_id)
 
 
