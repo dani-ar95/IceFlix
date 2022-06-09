@@ -2,6 +2,7 @@
 *~
 .vscode
 IceStorm/*
+persistence/*
 
 build/
 dist/

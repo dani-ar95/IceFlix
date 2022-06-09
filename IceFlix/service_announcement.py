@@ -67,14 +67,21 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
 
         if service.ice_isA("::IceFlix::Main"):
             self.mains[service_id] = IceFlix.MainPrx.uncheckedCast(service)
+            self.known_ids.add(service_id)
+            print("[MAIN] Registrado Main")
+
 
         elif service.ice_isA("::IceFlix::Authenticator"):
             self.authenticators[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(
                 service
             )
+            self.known_ids.add(service_id)
+            print("[MAIN] Registrado Authenticator")
 
         elif service.ice_isA("::IceFlix::MediaCatalog"):
             self.catalogs[service_id] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
+            self.known_ids.add(service_id)
+            print("[MAIN] Registrado Catalogo")
 
         else:
             logging.info(
@@ -82,6 +89,7 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
                 service_id,
                 service.ice_ids(),
             )
+
 
 
 class ServiceAnnouncementsSender:
