@@ -24,7 +24,7 @@ class RevocationsListener(IceFlix.Revocations):
         self.mains = {}
         self.known_ids = set()
 
-    def revokeToken(self, userToken, srvId current=None):
+    def revokeToken(self, userToken, srvId, current=None):
         """ Comportamiento al recibir un mensaje revokeToken """
 
         if srvId is not self.service_id:
@@ -41,7 +41,7 @@ class RevocationsListener(IceFlix.Revocations):
 class RevocationsSender:
     """ Sender del topic Revocations """
 
-    def __init__(self, topic, service_id, servant_proxy):
+    def __init__(self, topic, service_id, servant_proxy, current=None):
         """ Inicialización del sender """
 
         self.publisher = IceFlix.RevocationsPrx.uncheckedCast(
@@ -51,8 +51,8 @@ class RevocationsSender:
         self.proxy = servant_proxy
         self.timer = None
 
-    def revokeUser(self, user, srvId, current=None):
-        self.publisher.revokeUser(user, srvId)
+    def revokeUser(self, user, current=None):
+        self.publisher.revokeUser(user, self.service_id)
 
-    def revokeToken(self, userToken, srvId current=None):
-        self.publisher.revokeToken(userToken, userToken, srvId)
+    def revokeToken(self, userToken, current=None):
+        self.publisher.revokeToken(userToken, userToken, self.service_id)

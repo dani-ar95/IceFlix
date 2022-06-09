@@ -18,7 +18,7 @@ USERS_PATH = path.join(path.dirname(__file__), "users.json")
 Ice.loadSlice(SLICE_PATH)
 import IceFlix # pylint: disable=wrong-import-position
 
-
+from media import MediaDB
 from constants import ANNOUNCEMENT_TOPIC, ICESTORM_PROXY_PROPERTY
 
 class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
@@ -278,18 +278,36 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             raise e
         else:
             return user_name
+    
+    @property
+    def get_mediaDB(self):
+        
+        medias = self._media_.items()
+
+        mediaDBList = []
+
+        for media in medias:
+            media_id, mediaO = media
+            media_info = mediaO.info
+            media_name = media_info.name
+            media_tags = media_info.tags
+            mediaDBList.append(MediaDB(media_id, media_name, media_tags))
+
+        return mediaDBList
 
     def share_data_with(self, service):
         """Share the current database with an incoming service."""
-        service.updateDB(None, self.service_id)
+        service.updateDB(self.get_mediaDB, self.service_id)
 
-    def updateDB(
-        self, values, service_id, current
-    ):  # pylint: disable=invalid-name,unused-argument
+
+    def updateDB(self, values, service_id, current):  # pylint: disable=invalid-name,unused-argument
         """Receives the current main service database from a peer."""
-        print(
-            "Receiving remote data base from %s to %s", service_id, self.service_id
-        )
+        print(f"Receiving remote data base from {service_id} to {self.service_id}")
+        
+        for media in values:
+            info = IceFlix.MediaInfo(media.media_name, media.media_tags)
+            self._media_.update({media.media_id: IceFlix.Media(media.media_id, None, info)})
+
 
 class MediaCatalogServer(Ice.Application):
     ''' Servidor de Catálogo  '''
@@ -327,7 +345,7 @@ class MediaCatalogServer(Ice.Application):
         self.servant = MediaCatalogI()
 
         self.adapter = broker.createObjectAdapterWithEndpoints('MediaCatalogAdapter', 'tcp')
-        media_catalog_proxy = adapter.addWithUUID(self.servant)
+        media_catalog_proxy = self.adapter.addWithUUID(self.servant)
 
         self.proxy = media_catalog_proxy
         self.adapter.activate()
