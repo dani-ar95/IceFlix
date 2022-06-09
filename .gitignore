@@ -1,7 +1,7 @@
 *pyc
 *~
 .vscode
-
+IceStorm/*
 
 build/
 dist/

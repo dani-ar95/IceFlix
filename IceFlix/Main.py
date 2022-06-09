@@ -10,6 +10,7 @@ import IceStorm
 import random
 from volatile_services import VolatileServices
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
+from register_services import RegisterServices
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 
@@ -113,16 +114,14 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
 
     def share_data_with(self, service):
         """Share the current database with an incoming service."""
-        service.updateDB(self.get_volatile_services(), self.service_id)
+        service.updateDB(self.get_volatile_services, self.service_id)
         
 
     def updateDB(
         self, values, service_id, current=None
     ):  # pylint: disable=invalid-name,unused-argument
         """Receives the current main service database from a peer."""
-        print(
-            "Receiving remote data base from %s to %s", service_id, self.service_id
-        )
+        print(f"Receiving remote data base from {service_id} to {self.service_id}")
         
         if service_id == self.service_id:
             print("[MAIN] No se puede actualizar la base de datos con la misma instancia")
@@ -150,7 +149,9 @@ class MainServer(Ice.Application):
         self.proxy = None
         self.adapter = None
         self.announcer = None
-        self.subscriber = NonesrvId
+        self.subscriber = None
+        self.register_subscriber = None
+
     def setup_announcements(self):
         """Configure the announcements sender and listener."""
 
@@ -178,8 +179,29 @@ class MainServer(Ice.Application):
         topic.subscribeAndGetPublisher({}, subscriber_prx)
 
 
+    def setup_register(self):
+        """ Configura un listener para registrar servicios """
+
+        communicator = self.communicator()
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+            communicator.propertyToProxy("IceStorm.TopicManager")
+        )
+        
+        try:
+            topic = topic_manager.create(ANNOUNCEMENT_TOPIC)
+        except IceStorm.TopicExists:
+            topic = topic_manager.retrieve(ANNOUNCEMENT_TOPIC)
+
+        self.register_subscriber = RegisterServices(
+            self.servant, self.servant.service_id, IceFlix.MainPrx
+        )
+
+        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        topic.subscribeAndGetPublisher({}, subscriber_prx)
+
     def run(self, argv):
         ''' Implementación del servidor principal '''
+
         broker = self.communicator()
 
         properties = broker.getProperties()
@@ -189,7 +211,9 @@ class MainServer(Ice.Application):
 
         self.proxy = servant_proxy
         self.adapter.activate()
+
         self.setup_announcements()
+        #self.setup_register()
         
         self.announcer.start_service()
 
@@ -201,31 +225,5 @@ class MainServer(Ice.Application):
         return 0
 
 
-class RegisterServices(IceFlix.ServiceAnnouncements):
-    """Registra los servicios de autenticación y catálogo"""
-
-    def __init__(self, own_servant, own_service_id, own_type):
-        self.servant = own_servant
-        self.service_id = own_service_id
-        self.own_type = own_type
-
-        self.known_ids = set()
-        
-    def newService(self, service_type, service_id, current=None):
-        if service_id == self.service_id or service_id in self.known_ids:
-            return
-   
-        if service_type.ice_isA("::IceFlix::Authenticator"):
-            self.servant.auth_services.append(service_id)
-            print("[MAIN] Se ha registrado el servicio de autenticación: ", service_id)
-
-        if service_type.ice_isA("::IceFlix::MediaCatalog"):
-            self.servant.catalog_services.append(service_id)
-            print("[MAIN] Se ha registrado el servicio de catálogo: ", service_id)
-    
-    def announce(self, service_type, service_id, current = None):
-        pass
-
-    
 if __name__ == "__main__":
     sys.exit(MainServer().main(sys.argv))
