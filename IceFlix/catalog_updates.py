@@ -14,7 +14,7 @@ class CatalogUpdatesListener(IceFlix.CatalogUpdates):
 
     
     def renameTiles(self, mediaId, name, srvId, current=None):
-        if srvId == self.catalog_service.id or not self.catalog_service.catalog.is_in_catalog(mediaId):
+        if srvId == self.catalog_service.id or not self.catalog_service.is_in_catalog(mediaId):
             return
             
         self.catalog_service.renameTiles(mediaId, name)

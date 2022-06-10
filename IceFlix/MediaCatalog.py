@@ -260,6 +260,17 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
 
         return mediaDBList
 
+    def is_in_catalog(self, mediaId):
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute(f"SELECT * FROM media WHERE id LIKE '{mediaId}'") # pylint: disable=invalid-name,unused-argument
+
+        query = c.fetchall()
+
+        # Buscar el ID en bbdd y temporal
+        if not query and mediaId not in self._media_.keys():
+            return False
+        return True
 
     def update_user_path(self):
         ''' Actualiza la ruta del json de usuarios usando el id de un authenticator disponible '''
