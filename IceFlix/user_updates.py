@@ -49,10 +49,9 @@ class UserUpdatesSender:
         )
         self.service_id = service_id
         self.proxy = servant_proxy
-        self.timer = None
 
-    def newUser(self, user, passwordHash, srvId, current=None):
-        self.publisher.newUser(user, passwordHash, srvId)
+    def newUser(self, user, passwordHash, current=None):
+        self.publisher.newUser(user, passwordHash, self.service_id)
 
-    def newToken(self, user, userToken, srvId, current=None):
-        self.publisher.newToken(user, userToken, srvId)
+    def newToken(self, user, userToken, current=None):
+        self.publisher.newToken(user, userToken, self.service_id)
