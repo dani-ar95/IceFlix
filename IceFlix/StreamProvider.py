@@ -251,6 +251,14 @@ class StreamProviderServer(Ice.Application):
 
         proxy = IceFlix.StreamProviderPrx.checkedCast(stream_provider_proxy)
 
+        self.adapter.activate()
+
+        self.setup_announcements()
+        self.setup_stream_announcements()
+        self.announcer.start_service()
+
+        self.servant._proxy_ = proxy
+        
         for filename in candidates:
             with open("./"+str(filename), "rb") as f:
                 read_file = f.read()
@@ -258,14 +266,8 @@ class StreamProviderServer(Ice.Application):
                 new_media = IceFlix.Media(id_hash, proxy, IceFlix.MediaInfo(filename, []))
                 self.servant._provider_media_.update({id_hash: new_media})
 
-            catalog_prx.updateMedia(id_hash, filename, proxy)
+            self.stream_announcements_announcer.newMedia(id_hash, filename)
 
-        self.adapter.activate()
-
-        self.setup_announcements()
-        self.announcer.start_service()
-
-        self.servant._proxy_ = proxy
         # self.servant._catalog_prx_ = catalog_prx
         # self.servant._authenticator_prx_ = authenticator_prx
         # self.servant._main_prx_ = main_connection

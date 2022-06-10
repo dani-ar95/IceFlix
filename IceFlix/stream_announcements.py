@@ -11,18 +11,19 @@ class StreamAnnouncementsListener(IceFlix.StreamAnnouncements):
         self.servant = own_servant
         self.service_id = own_service_id
         
-        self.known_ids = set()
         
     def newMedia(self, media_id, initial_name, srv_id, current=None):
-        if srv_id not in self.servant.subscriber.known_ids:
+        if srv_id not in self.servant._anunciamientos_listener.known_ids:
             return
-        # TODO: Comprobar que si media_id no esta en el catalogo, lo añada
-        pass
+        print("Recibido: ", media_id, initial_name, srv_id)
+        self.servant.add_media(media_id, initial_name, srv_id)
+    
     
     def removedMedia(self, media_id, srv_id, current=None):
-        if srv_id not in self.servant.subscriber.known_ids:
+        if srv_id not in self.servant._anunciamientos_listener.known_ids:
             return
-         # TODO: Comprobar que si media_id no esta en el catalogo, lo quite 
+        self.servant.remove_media(media_id)
+
 
 class StreamAnnouncementsSender():
     
@@ -33,8 +34,10 @@ class StreamAnnouncementsSender():
         self.service_id = service_id
         self.proxy = servant_proxy
         
+        
     def newMedia(self, media_id, name):
         self.publisher.newMedia(media_id, name, self.service_id)
+    
     
     def removedMedia(self, media_id):
         self.publisher.removedMedia(media_id, self.service_id)

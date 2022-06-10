@@ -10,6 +10,7 @@ from time import sleep
 from os import path, rename
 import IceStorm
 import uuid
+from stream_announcements import StreamAnnouncementsListener
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from catalog_updates import CatalogUpdatesListener, CatalogUpdatesSender
 import Ice
@@ -20,7 +21,7 @@ Ice.loadSlice(SLICE_PATH)
 import IceFlix # pylint: disable=wrong-import-position
 
 from media import MediaDB
-from constants import ANNOUNCEMENT_TOPIC, ICESTORM_PROXY_PROPERTY, CATALOG_SYNC_TOPIC
+from constants import ANNOUNCEMENT_TOPIC, ICESTORM_PROXY_PROPERTY, CATALOG_SYNC_TOPIC, STREAM_ANNOUNCES_TOPIC
 
 class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
     ''' Instancia del servicio de Catálogo '''
@@ -34,6 +35,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         self._anunciamientos_sender = None
         self._anunciamientos_listener = None
         self._updates_sender = None
+        self._stream_listener= None
         
     
     def read_media(self):
@@ -49,6 +51,22 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
                 print(f"Al generar las tags, de la query sale : {media[1].split()}")
                 self._media_.update({media[0]: IceFlix.Media(media[0], None, info)})
 
+    def add_media(self, media_id, initial_name, srv_id):
+        if self.is_in_catalog(media_id):
+            return
+        info = IceFlix.MediaInfo(initial_name, [])
+        provider_proxy = self.find_provider(srv_id)
+        self._media_.update({media_id: IceFlix.Media(media_id, provider_proxy, info)})
+
+
+    def remove_media(self, media_id):
+        if self.is_in_catalog(media_id):
+            return
+        self._media_.pop(media_id)
+
+
+    def find_provider(self, srv_id):
+        return self._anunciamientos_listener.providers[srv_id]
 
     def get_users_tags(self, media):
         # TODO: llamar a algun authenticator activo y acceder a su base de datos para conseguir las tags del media
@@ -454,6 +472,23 @@ class MediaCatalogServer(Ice.Application):
         topic.subscribeAndGetPublisher({}, subscriber_prx)
 
 
+    def setup_stream_announcements(self):
+        communicator = self.communicator()
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+            communicator.propertyToProxy("IceStorm.TopicManager")
+        )
+        try:
+            topic = topic_manager.create(STREAM_ANNOUNCES_TOPIC)
+        except IceStorm.TopicExists:
+            topic = topic_manager.retrieve(STREAM_ANNOUNCES_TOPIC)
+            
+        self._stream_listener = StreamAnnouncementsListener(
+            self.servant, self.servant.service_id)
+        
+        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        topic.subscribeAndGetPublisher({}, subscriber_prx)
+
+
     def run(self, argv):
         sleep(1)
 
@@ -467,10 +502,12 @@ class MediaCatalogServer(Ice.Application):
         self.adapter.activate()
         self.setup_announcements()
         self.setup_catalog_updates()
+        self.setup_stream_announcements()
 
         self.servant._anunciamientos_sender = self.announcer
         self.servant._anunciamientos_listener = self.subscriber
         self.servant._updates_sender = self._updates_sender
+        self.servant._stream_listener = self._stream_listener
 
         sleep(6)
         self.servant.read_media()
