@@ -7,6 +7,7 @@ import hashlib
 import glob
 import sys
 from time import sleep
+import threading
 import uuid
 import Ice
 import IceStorm
@@ -212,9 +213,9 @@ class StreamProviderServer(Ice.Application):
         )
 
         try:
-            topic = topic_manager.create(ANNOUNCEMENT_TOPIC)
+            topic = topic_manager.create(STREAM_ANNOUNCES_TOPIC)
         except IceStorm.TopicExists:
-            topic = topic_manager.retrieve(ANNOUNCEMENT_TOPIC)
+            topic = topic_manager.retrieve(STREAM_ANNOUNCES_TOPIC)
 
         self.stream_announcements_announcer = StreamAnnouncementsSender(
             topic,
@@ -226,7 +227,6 @@ class StreamProviderServer(Ice.Application):
     def run(self, argv):
         '''' Inicialización de la clase '''
 
-        sleep(3)
         # main_service_proxy = self.communicator().stringToProxy(argv[1])
         # main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
 
@@ -241,29 +241,30 @@ class StreamProviderServer(Ice.Application):
         # except IceFlix.TemporaryUnavailable:
         #     raise IceFlix.TemporaryUnavailable
 
-        # self.servant = StreamProviderI()
-
+        self.servant = StreamProviderI()
         self.adapter = broker.createObjectAdapterWithEndpoints('StreamProviderAdapter', 'tcp')
         stream_provider_proxy = self.adapter.addWithUUID(self.servant)
 
-        root_folder = path.join(path.dirname(__file__), "resources")
-        candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
-
-        proxy = IceFlix.StreamProviderPrx.checkedCast(stream_provider_proxy)
-
+        self.servant._proxy_ = stream_provider_proxy
         self.adapter.activate()
 
-        self.setup_announcements()
-        self.setup_stream_announcements()
-        self.announcer.start_service()
+        #proxy = IceFlix.StreamProviderPrx.checkedCast(stream_provider_proxy)
 
-        self.servant._proxy_ = proxy
+        self.setup_announcements()
+        self.announcer.start_service()
+        
+        self.setup_stream_announcements()
+
+        root_folder = path.join(path.dirname(__file__), "resources")
+        candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
+    
+        sleep(10)
         
         for filename in candidates:
             with open("./"+str(filename), "rb") as f:
                 read_file = f.read()
                 id_hash = hashlib.sha256(read_file).hexdigest()
-                new_media = IceFlix.Media(id_hash, proxy, IceFlix.MediaInfo(filename, []))
+                new_media = IceFlix.Media(id_hash, stream_provider_proxy, IceFlix.MediaInfo(filename, []))
                 self.servant._provider_media_.update({id_hash: new_media})
 
             self.stream_announcements_announcer.newMedia(id_hash, filename)
