@@ -12,7 +12,7 @@ import uuid
 import Ice
 import IceStorm
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
-from stream_announcements import StreamAnnouncementsSender
+from stream_announcements import StreamAnnouncementsSender, StreamAnnouncementsListener
 from constants import ANNOUNCEMENT_TOPIC, STREAM_ANNOUNCES_TOPIC
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
@@ -27,11 +27,8 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
 
     def __init__(self):
         self._provider_media_ = {}
-
         self._proxy_ = None
-        self._catalog_prx_ = None
-        self._authenticator_prx_ = None
-        self._main_prx_ = None
+        self._stream_announcements_sender = None
         self.service_id = str(uuid.uuid4())
 
     def getStream(self, mediaId: str, userToken: str, current=None): # pylint: disable=invalid-name,unused-argument
@@ -142,7 +139,7 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
 
             self._catalog_prx_.updateMedia(id_hash, filename, self._proxy_)
 
-    def check_admin(self, admin_token: str):
+    def check_admin(self, admin_token: str): # Actualizar funcion
         ''' Comprueba si un token es Administrador '''
 
         is_admin = self._main_prx_.isAdmin(admin_token)
@@ -223,23 +220,17 @@ class StreamProviderServer(Ice.Application):
             self.servant._proxy_,
         )
 
+        self.stream_announcements_listener = StreamAnnouncementsListener(
+            self.servant, self.servant.service_id, IceFlix.StreamProviderPrx
+        )
+
+        subscriber_prx = self.adapter.addWithUUID(self.stream_announcements_listener)
+        subscriber_prx = topic.getPublisher()
     
     def run(self, argv):
         '''' Inicialización de la clase '''
 
-        # main_service_proxy = self.communicator().stringToProxy(argv[1])
-        # main_connection = IceFlix.MainPrx.checkedCast(main_service_proxy)
-
         broker = self.communicator()
-        # try:
-        #     catalog_prx = main_connection.getCatalog()
-        # except IceFlix.TemporaryUnavailable:
-        #     raise IceFlix.TemporaryUnavailable
-
-        # try:
-        #     authenticator_prx = main_connection.getAuthenticator()
-        # except IceFlix.TemporaryUnavailable:
-        #     raise IceFlix.TemporaryUnavailable
 
         self.servant = StreamProviderI()
         self.adapter = broker.createObjectAdapterWithEndpoints('StreamProviderAdapter', 'tcp')
@@ -248,17 +239,17 @@ class StreamProviderServer(Ice.Application):
         self.servant._proxy_ = stream_provider_proxy
         self.adapter.activate()
 
-        #proxy = IceFlix.StreamProviderPrx.checkedCast(stream_provider_proxy)
-
         self.setup_announcements()
-        self.announcer.start_service()
-        
         self.setup_stream_announcements()
+
+        self.servant._stream_announcements_sender = self.stream_announcements_announcer
+
+        self.announcer.start_service()        
 
         root_folder = path.join(path.dirname(__file__), "resources")
         candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
     
-        sleep(10)
+        sleep(5)
         
         for filename in candidates:
             with open("./"+str(filename), "rb") as f:
@@ -269,11 +260,7 @@ class StreamProviderServer(Ice.Application):
 
             self.stream_announcements_announcer.newMedia(id_hash, filename)
 
-        # self.servant._catalog_prx_ = catalog_prx
-        # self.servant._authenticator_prx_ = authenticator_prx
-        # self.servant._main_prx_ = main_connection
-
-        # main_connection.register(stream_provider_proxy)
+        #self.servant._stream_announcements_sender.newMedia("IDENTIFICADOR", "NOMBRE")
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()

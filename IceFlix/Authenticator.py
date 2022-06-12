@@ -256,7 +256,7 @@ class AuthenticatorServer(Ice.Application):
             self.servant, self.servant.service_id, IceFlix.AuthenticatorPrx
         )
 
-        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        subscriber_prx = self.adapter.addWithUUID(self.updates_subscriber)
         topic.subscribeAndGetPublisher({}, subscriber_prx)
 
 

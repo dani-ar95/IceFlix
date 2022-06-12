@@ -468,11 +468,13 @@ class MediaCatalogServer(Ice.Application):
             self.servant, self.servant.service_id, IceFlix.MediaCatalogPrx
         )
 
-        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        subscriber_prx = self.adapter.addWithUUID(self._updates_listener)
         topic.subscribeAndGetPublisher({}, subscriber_prx)
 
 
     def setup_stream_announcements(self):
+        '''  Configurar listener del topic StreamAnnouncements '''
+
         communicator = self.communicator()
         topic_manager = IceStorm.TopicManagerPrx.checkedCast(
             communicator.propertyToProxy("IceStorm.TopicManager")
@@ -483,9 +485,9 @@ class MediaCatalogServer(Ice.Application):
             topic = topic_manager.retrieve(STREAM_ANNOUNCES_TOPIC)
             
         self._stream_listener = StreamAnnouncementsListener(
-            self.servant, self.servant.service_id)
+            self.servant, self.servant.service_id, IceFlix.MediaCatalogPrx)
         
-        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        subscriber_prx = self.adapter.addWithUUID(self._stream_listener)
         topic.subscribeAndGetPublisher({}, subscriber_prx)
 
 
@@ -500,6 +502,7 @@ class MediaCatalogServer(Ice.Application):
 
         self.proxy = media_catalog_proxy
         self.adapter.activate()
+
         self.setup_announcements()
         self.setup_catalog_updates()
         self.setup_stream_announcements()

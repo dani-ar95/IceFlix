@@ -6,6 +6,7 @@
 from os import path
 import sys
 import Ice
+import IceStorm
 import iceflixrtsp # pylint: disable=import-error
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
