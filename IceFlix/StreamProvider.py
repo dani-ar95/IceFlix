@@ -244,7 +244,7 @@ class StreamProviderServer(Ice.Application):
 
         self.servant._stream_announcements_sender = self.stream_announcements_announcer
 
-        self.announcer.start_service()        
+        self.announcer.start_service()
 
         root_folder = path.join(path.dirname(__file__), "resources")
         candidates = glob.glob(path.join(root_folder, '*'), recursive=True)

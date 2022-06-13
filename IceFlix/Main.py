@@ -213,9 +213,10 @@ class MainServer(Ice.Application):
         self.adapter.activate()
 
         self.setup_announcements()
-        #self.setup_register()
         
         self.announcer.start_service()
+
+        print(f"[PROXY MAIN] {self.proxy}")
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
