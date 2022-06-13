@@ -29,6 +29,7 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
         self._provider_media_ = {}
         self._proxy_ = None
         self._stream_announcements_sender = None
+        self._service_announcer_listener = None
         self.service_id = str(uuid.uuid4())
 
     def getStream(self, mediaId: str, userToken: str, current=None): # pylint: disable=invalid-name,unused-argument
@@ -100,35 +101,46 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
                 new_media = IceFlix.Media(id_hash, self._proxy_, info)
                 self._provider_media_.update({id_hash:new_media})
 
-                # Enviar medio al catálogo
-                self._catalog_prx_.updateMedia(id_hash, fileName, self._proxy_)
+                # Anunciar medio
+                self._stream_announcements_sender.newMedia(id_hash, fileName, self.service_id)
 
                 return id_hash
 
     def deleteMedia(self, mediaId: str, adminToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Perimite al administrador borrar archivos conociendo su id '''
 
-        self.update_directory()
+        self.update_directory() #?
         try:
             self.check_admin(adminToken)
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
 
+        # Los catalogos tienen los medios que tengan los providers?
         if mediaId in self._provider_media_:
             filename = self._provider_media_.get(mediaId).info.name
+            remove(filename)
+            self._stream_announcements_sender.removedMedia(mediaId, self.service_id)
         else:
-            try:
-                media_file = self._catalog_prx_.getTile(mediaId)
-            except IceFlix.WrongMediaId:
+            # try:
+            #     media_file = self._catalog_prx_.getTile(mediaId)
+            # except IceFlix.WrongMediaId:
                 raise IceFlix.WrongMediaId
-            else:
-                filename = media_file.info.name
-        remove(filename)
+            #else:
+                #filename = media_file.info.name
+
+    def reannounceMedia(self, srvId, current=None):
+        if srvId not in self._service_announcer_listener.known_ids:
+            raise IceFlix.UnknownService
+
+        for entry in self._provider_media_:
+            media = self._pSrovider_media_.get(entry)
+            print("[PROVIDER] Reanunciando ", media[0], media[2][1])
+            self._stream_announcements_sender.newMedia(media[0], media[2][1], srvId) #TODO: Revisar
+    
 
     def update_directory(self):
         root_folder = path.join(path.dirname(__file__), "resources")
         candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
-
 
         for filename in candidates:
             with open("./"+str(filename), "rb") as f:
@@ -155,10 +167,7 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
             raise IceFlix.Unauthorized
         else:
             return is_user
-
-    def share_data_with(self, service):
-        """Share the current database with an incoming service."""
-        service.updateDB(None, self.service_id)
+        
 
 class StreamProviderServer(Ice.Application):
     ''' Servidor que comparte con el catálogo sus medios disponibles  '''
@@ -242,14 +251,13 @@ class StreamProviderServer(Ice.Application):
         self.setup_announcements()
         self.setup_stream_announcements()
 
+        self.servant._service_announcer_listener = self.subscriber
         self.servant._stream_announcements_sender = self.stream_announcements_announcer
 
         self.announcer.start_service()
 
         root_folder = path.join(path.dirname(__file__), "resources")
         candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
-    
-        sleep(5)
         
         for filename in candidates:
             with open("./"+str(filename), "rb") as f:
@@ -260,6 +268,8 @@ class StreamProviderServer(Ice.Application):
 
             self.stream_announcements_announcer.newMedia(id_hash, filename)
 
+        #sleep(15)
+        #self.servant.reannounceMedia(self.servant.service_id)
         #self.servant._stream_announcements_sender.newMedia("IDENTIFICADOR", "NOMBRE")
 
         self.shutdownOnInterrupt()

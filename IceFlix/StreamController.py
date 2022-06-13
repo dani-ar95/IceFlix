@@ -36,6 +36,16 @@ class StreamControllerI(IceFlix.StreamController): # pylint: disable=inherit-non
             self._emitter_.start()
             return self._emitter_.playback_uri
 
+    def getSyncTopic(self, current=None):
+        #TODO: devolver el nombre del canal de eventos, se puede usar el service_id como topic
+        pass
+
+    def refreshAuthentication(self, user_token, current=None):
+        #TODO: coger un servicio de autenticacion
+        #if not auth.isAuthorized(user_token):
+        #   raise IceFlix.Unauthorized
+        pass
+
     def stop(self, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Detiene la emision del flujo SDP '''
 
