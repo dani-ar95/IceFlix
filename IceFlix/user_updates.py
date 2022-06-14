@@ -30,7 +30,8 @@ class UserUpdatesListener(IceFlix.UserUpdates):
         """ Comportamiento al recibir un mensaje newUser """
 
         if srvId is not self.service_id:
-            self.servant.add_user(user, passwordHash)
+            a = (user, passwordHash)
+            self.servant.add_user(a)
 
     def newToken(self, user, userToken, srvId, current=None):
         """ Comportamiento al recibir un mensaje newToken """

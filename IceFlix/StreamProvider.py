@@ -133,9 +133,9 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
             raise IceFlix.UnknownService
 
         for entry in self._provider_media_:
-            media = self._pSrovider_media_.get(entry)
+            media = self._provider_media_.get(entry)
             print("[PROVIDER] Reanunciando ", media[0], media[2][1])
-            self._stream_announcements_sender.newMedia(media[0], media[2][1], srvId) #TODO: Revisar
+            self._stream_announcements_sender.newMedia(media.mediaId, media.info.name, srvId) #TODO: Revisar
     
 
     def update_directory(self):

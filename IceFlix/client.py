@@ -83,7 +83,12 @@ class Cliente(Ice.Application):
                     sleep(10)  # cambiar a 10 segundoss
 
             self._main_prx_ = main_connection
-            self.update_proxies()
+            try:
+                self.update_proxies()
+            except IceFlix.TemporaryUnavailable as e:
+                print(e)
+                print("No hay servicios disponibles suficientes para ejecutar")
+                
 
 
     def update_proxies(self):
@@ -497,7 +502,8 @@ class Cliente(Ice.Application):
                 new_password = getpass.getpass("Nueva Password: ")
                 new_hash_password = hashlib.sha256(new_password.encode()).hexdigest()
                 try:
-                    self._auth_prx_.addUser(new_user, new_hash_password, self._admin_token_)
+                    auth = self._main_prx_.getAuthenticator()
+                    auth.addUser(new_user, new_hash_password, self._admin_token_)
                 except IceFlix.Unauthorized:
                     print(IceFlix.Unauthorized())
                     input()

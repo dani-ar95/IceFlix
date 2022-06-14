@@ -62,6 +62,8 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
     def announce(self, service, service_id, current):  # pylint: disable=unused-argument
         """Receive an announcement."""
 
+        print(f"[Anuncios] Evaluando proxy: {service}")
+
         if service_id == self.service_id or service_id in self.known_ids:
             logging.debug("Received own announcement or already known. Ignoring")
             return
@@ -77,11 +79,15 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
                 service
             )
             self.known_ids.add(service_id)
+            if self.servant.ice_isA("::IceFlix::Main"): 
+                self.servant.auth_services.append(self.authenticators[service_id])
             print("[Anuncios] Registrado Authenticator")
 
         elif service.ice_isA("::IceFlix::MediaCatalog"):
             self.catalogs[service_id] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
             self.known_ids.add(service_id)
+            if self.servant.ice_isA("::IceFlix::Main"): 
+                self.servant.catalog_services.append(self.catalogs[service_id])
             print("[Anuncios] Registrado Catalogo")
             
         elif service.ice_isA("::IceFlix::StreamProvider"):

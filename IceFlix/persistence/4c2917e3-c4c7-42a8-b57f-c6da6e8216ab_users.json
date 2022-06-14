@@ -1,0 +1,19 @@
+{
+  "users": [
+    {
+      "user": "user",
+      "password": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+      "tags": {}
+    },
+    {
+      "user": "sergio",
+      "password": "36033babfb48ec64e197c97fb40d65e6c79f81e04c61aeccef3009e01645ab8d",
+      "tags": {}
+    },
+    {
+      "user": "pepe",
+      "password": "7c9e7c1494b2684ab7c19d6aff737e460fa9e98d5a234da1310c97ddf5691834",
+      "tags": {}
+    }
+  ]
+}
