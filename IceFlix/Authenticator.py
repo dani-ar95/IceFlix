@@ -311,6 +311,8 @@ class AuthenticatorServer(Ice.Application):
 
         self.announcer.start_service()
 
+        print(f"[AUTH PROXY] {self.proxy}")
+
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
 

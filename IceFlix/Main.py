@@ -174,30 +174,10 @@ class MainServer(Ice.Application):
         self.subscriber = ServiceAnnouncementsListener(
             self.servant, self.servant.service_id, IceFlix.MainPrx
         )
-
         subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        print(f"[Setup announcements] Creado subscriber {subscriber_prx}") 
         topic.subscribeAndGetPublisher({}, subscriber_prx)
 
-
-    def setup_register(self):
-        """ Configura un listener para registrar servicios """
-
-        communicator = self.communicator()
-        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
-            communicator.propertyToProxy("IceStorm.TopicManager")
-        )
-        
-        try:
-            topic = topic_manager.create(ANNOUNCEMENT_TOPIC)
-        except IceStorm.TopicExists:
-            topic = topic_manager.retrieve(ANNOUNCEMENT_TOPIC)
-
-        self.register_subscriber = RegisterServices(
-            self.servant, self.servant.service_id, IceFlix.MainPrx
-        )
-
-        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
-        topic.subscribeAndGetPublisher({}, subscriber_prx)
 
     def run(self, argv):
         ''' Implementación del servidor principal '''
@@ -208,7 +188,7 @@ class MainServer(Ice.Application):
         self.servant._token_ = properties.getProperty("AdminToken")
 
         try: # Primer Main
-            self.adapter = broker.createObjectAdapter("MainAdapter")
+            self.adapter = broker.createObjectAdapterWithEndpoints('MainAdapter', 'tcp -p 9090')
             self.adapter.add(self.servant, broker.stringToIdentity("Main"))
             servant_proxy = self.adapter.add(self.servant, Ice.stringToIdentity("MainPrincipal"))
             

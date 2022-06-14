@@ -83,15 +83,31 @@ class Cliente(Ice.Application):
                     sleep(10)  # cambiar a 10 segundoss
 
             self._main_prx_ = main_connection
+            self.update_proxies()
 
-            try:
-                self._auth_prx_ = self._main_prx_.getAuthenticator()
-            except IceFlix.TemporaryUnavailable:
-                pass
-            try:
-                self._catalog_prx_ = self._main_prx_.getCatalog()
-            except IceFlix.TemporaryUnavailable:
-                pass
+
+    def update_proxies(self):
+        # Comprobar Main funcionando
+        try:
+            self._main_prx_.ice_ping()
+        except Ice.ConnectionRefusedException:
+            raise IceFlix.TemporaryUnavailable
+
+        # Volver a pedir authenticator
+        try:
+            self._auth_prx_ = self._main_prx_.getAuthenticator()
+            self._auth_prx_.ice_ping()
+        except IceFlix.TemporaryUnavailable or AttributeError: # Authenticator caido o no existe
+            raise IceFlix.TemporaryUnavailable
+
+        # Volver a pedir Catalog
+        try:
+            self._catalog_prx_ = self._main_prx_.getCatalog()
+            self._catalog_prx_.ice_ping()
+        except IceFlix.TemporaryUnavailable or AttributeError: # Catalog caido o no existe
+            raise IceFlix.TemporaryUnavailable
+        
+
 
     def login(self):
         ''' Implementa la función de iniciar sesión '''
