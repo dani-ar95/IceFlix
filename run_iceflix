@@ -1,4 +1,5 @@
 #!/bin/bash
+mkdir -p /tmp/db/registry
 icebox --Ice.Config=./configs/icebox.config
 icegridregistry --Ice.Config=configs/icegrid.config
 python3 IceFlix/Main.py --Ice.Config=configs/main.config admin &
