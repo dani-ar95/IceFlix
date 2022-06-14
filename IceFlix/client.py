@@ -514,7 +514,8 @@ class Cliente(Ice.Application):
             elif option == "2":
                 delete_user = input("Introduce un usuario válido para eliminarlo: ")
                 try:
-                    self._auth_prx_.removeUser(delete_user, self._admin_token_)
+                    auth = self._main_prx_.getAuthenticator()
+                    auth.removeUser(delete_user, self._admin_token_)
                 except IceFlix.Unauthorized:
                     print(IceFlix.Unauthorized())
                     input()
