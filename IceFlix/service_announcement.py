@@ -62,8 +62,6 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
     def announce(self, service, service_id, current):  # pylint: disable=unused-argument
         """Receive an announcement."""
 
-        print(f"[Anuncios] Evaluando proxy: {service}")
-
         if service_id == self.service_id or service_id in self.known_ids:
             logging.debug("Received own announcement or already known. Ignoring")
             return

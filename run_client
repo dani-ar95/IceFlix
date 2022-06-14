@@ -1,4 +1,4 @@
 #!/bin/bash
-python3 IceFlix/client.py
+python3 IceFlix/client.py --Ice.Config=configs/client.config
 trap "kill 0" SIGINT
 wait

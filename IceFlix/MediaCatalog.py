@@ -45,10 +45,8 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         query = ddbb_cursor.fetchall()
         conn.close()
         if query:
-            print(query)
             for media in query:
                 info = IceFlix.MediaInfo(media[2], media[1].split())
-                print(f"Al generar las tags, de la query sale : {media[1].split()}")
                 self._media_.update({media[0]: IceFlix.Media(media[0], None, info)})
 
     def add_media(self, media_id, initial_name, srv_id):
@@ -71,11 +69,9 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
     def get_users_tags(self, media):
         # TODO: llamar a algun authenticator activo y acceder a su base de datos para conseguir las tags del media
         USERS_PATH = self.update_user_path()
-        # Objetivo: Diccionario {user: [tags]}
 
         user_tags = {}
 
-        print(f"Se va a utilizar el path: {USERS_PATH}")
         with open(USERS_PATH, "r", encoding="utf8") as file_descriptor:
             obj = json.load(file_descriptor)
 
@@ -84,8 +80,6 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
                 if media.name in j.keys():
                     user_tags.update({i["user"]: i["tags"]})
 
-        print("El diccionario es: ")
-        print(user_tags)
         return user_tags
 
 
@@ -270,10 +264,6 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             media_info = mediaO.info
             media_name = media_info.name
             media_tags = self.get_users_tags(media)
-            print(f"Media info: {media_info}")
-            print(f"Media ID: {media_id}")
-            print(f"Media name: {media_name}")
-            print(f"Media tags: {media_tags}")
             mediaDBList.append(MediaDB(media_id, media_name, media_tags))
 
         return mediaDBList
@@ -516,7 +506,7 @@ class MediaCatalogServer(Ice.Application):
         self.servant.read_media()
         self.announcer.start_service()
 
-        print(self.servant._media_)
+        #print(self.servant._media_)
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
 

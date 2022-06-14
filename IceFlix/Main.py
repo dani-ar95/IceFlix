@@ -34,22 +34,10 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
     def get_volatile_services(self):
         return VolatileServices(self.auth_services, self.catalog_services)
 
-    # def getAuthenticator(self, current=None): # pylint: disable=invalid-name,unused-argument
-        # ''' Devuelve el proxy a un Servicio de Autenticación válido registrado '''
-
-        # for servant in self._servants_:
-            # try:
-                # is_auth = servant.ice_isA("::IceFlix::Authenticator")
-            # except Ice.ConnectionRefusedException:
-                # self._servants_.remove(servant)
-            # else:
-                # if is_auth:
-                    # return IceFlix.AuthenticatorPrx.checkedCast(servant)
-
-        # raise IceFlix.TemporaryUnavailable
 
     def getAuthenticator(self, current=None):
         while self.auth_services:
+            print("Iterando en authenticators")
             try:
                 auth_prx = random.choice(list(self.auth_services))
                 auth_prx.ice_ping()
@@ -64,21 +52,7 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
     
     def addAuthenticator(self, auth_prx, current=None):
         self.auth_services.append(auth_prx)
-        
 
-    # def getCatalog(self, current=None): # pylint: disable=invalid-name,unused-argument
-        # ''' Devuelve el proxy a un Servicio de Catálogo válido registrado '''
-
-        # for servant in self._servants_:
-            # try:
-                # is_catalog = servant.ice_isA("::IceFlix::MediaCatalog")
-            # except Ice.ConnectionRefusedException:
-                # self._servants_.remove(servant)
-            # else:
-                # if is_catalog:
-                    # return IceFlix.MediaCatalogPrx.checkedCast(servant)
-
-        # raise IceFlix.TemporaryUnavailable
 
     def getCatalog(self, current=None):
         while self.catalog_services:
@@ -175,7 +149,7 @@ class MainServer(Ice.Application):
             self.servant, self.servant.service_id, IceFlix.MainPrx
         )
         subscriber_prx = self.adapter.addWithUUID(self.subscriber)
-        print(f"[Setup announcements] Creado subscriber {subscriber_prx}") 
+
         topic.subscribeAndGetPublisher({}, subscriber_prx)
 
 
@@ -192,13 +166,10 @@ class MainServer(Ice.Application):
             self.adapter.add(self.servant, broker.stringToIdentity("Main"))
             servant_proxy = self.adapter.add(self.servant, Ice.stringToIdentity("MainPrincipal"))
             
-            print("Primer Main")
         except Ice.SocketException: # Más de un Main
             self.adapter = broker.createObjectAdapterWithEndpoints('MainAdapter', 'tcp')
             self.adapter.add(self.servant, broker.stringToIdentity("Main"))
             servant_proxy = self.adapter.addWithUUID(self.servant)
-
-            print("Segundo Main")
 
         self.proxy = servant_proxy
         self.adapter.activate()

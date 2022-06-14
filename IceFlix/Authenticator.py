@@ -108,6 +108,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
             raise IceFlix.Unauthorized
 
         self.remove_user(user)
+        self._revocations_sender.revokeUser(user, self.service_id)
 
     def check_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''
@@ -124,17 +125,11 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         user, password = user_password
 
         print(user_password)
-        #print(f"User:{user}")
-        #print(f"Password:{password}")
-        #print(f"User: {user}, password: {password}")
-        #print(f"User2: {password}, password: {user}")
 
         with open(USERS_PATH, "r", encoding="utf8") as f:
             try:
                 obj = json.load(f)
             except Exception as e:  # Primer usuario del sistema -> Construir el formato del json
-                print(e)
-                print("dentro de except")
                 obj = {
                     "users": [
                         {
@@ -145,10 +140,8 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                     ]
                 }
             else:
-                lista = []
-                for i in obj["users"]:   
-                    lista.append(i["user"])
-                if (user not in lista):
+                current_users = [i["user"] for i in obj["users"]]
+                if (user not in current_users):
                     obj["users"].append(
                         {"user": user, "password": password, "tags": {}})
 
@@ -294,7 +287,7 @@ class AuthenticatorServer(Ice.Application):
             self.servant, self.servant.service_id, IceFlix.AuthenticatorPrx
         )
 
-        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        subscriber_prx = self.adapter.addWithUUID(self.revocations_subscriber)
         topic.subscribeAndGetPublisher({}, subscriber_prx)
 
 
@@ -323,7 +316,7 @@ class AuthenticatorServer(Ice.Application):
 
         self.announcer.start_service()
 
-        print(f"[AUTH PROXY] {self.proxy}")
+        #print(f"[AUTH PROXY] {self.proxy}")
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
