@@ -97,6 +97,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
 
         a = (user, passwordHash)
         self.add_user(a, LOCAL_DB_PATH)
+        self.add_user(a, USERS_PATH)
         self._update_users.newUser(
             user, passwordHash, self.service_id)  # No testeado
 
@@ -109,6 +110,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
             raise IceFlix.Unauthorized
 
         self.remove_user(user, LOCAL_DB_PATH)
+        self.remove_user(user, USERS_PATH)
         self._revocations_sender.revokeUser(user, self.service_id)
 
     def check_admin(self, admin_token: str):
@@ -122,6 +124,9 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
 
     def add_user(self, user_password, path):
         ''' Permite añadir usuario a partir de una tupla {usuario, password} '''
+
+        if path == None:
+            path = LOCAL_DB_PATH
 
         user, password = user_password
 
