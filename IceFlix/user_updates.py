@@ -1,5 +1,7 @@
 """ Modulo para manejar la comunicación entre instancias Authenticator """
 
+from os import path
+import uuid
 import logging
 import os
 import threading
@@ -10,6 +12,11 @@ try:
 except ImportError:
     Ice.loadSlice(os.path.join(os.path.dirname(__file__), "iceflix.ice"))
     import IceFlix
+
+auth_id = str(uuid.uuid4())
+
+LOCAL_DB_PATH = path.join(path.join(path.dirname(__file__),
+                       "persistence"), (auth_id + "_users.json"))
 
 class UserUpdatesListener(IceFlix.UserUpdates):
     """ Listener del topic User updates """
@@ -31,7 +38,7 @@ class UserUpdatesListener(IceFlix.UserUpdates):
 
         if srvId is not self.service_id:
             a = (user, passwordHash)
-            self.servant.add_user(a)
+            self.servant.add_user(a, LOCAL_DB_PATH)
 
     def newToken(self, user, userToken, srvId, current=None):
         """ Comportamiento al recibir un mensaje newToken """

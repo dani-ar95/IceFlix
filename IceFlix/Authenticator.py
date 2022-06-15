@@ -26,7 +26,8 @@ from constants import ANNOUNCEMENT_TOPIC, REVOCATIONS_TOPIC, AUTH_SYNC_TOPIC
 
 auth_id = str(uuid.uuid4())
 
-USERS_PATH = path.join(path.join(path.dirname(__file__),
+USERS_PATH = "./users.json"
+LOCAL_DB_PATH = path.join(path.join(path.dirname(__file__),
                        "persistence"), (auth_id + "_users.json"))
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
@@ -47,7 +48,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         ''' Devuelve estructura UsersDB '''
 
         users_passwords = {}
-        with open(USERS_PATH, "r", encoding="utf8") as f:
+        with open(LOCAL_DB_PATH, "r", encoding="utf8") as f:
             obj = json.load(f)
 
         for i in obj["users"]:
@@ -58,7 +59,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
     def refreshAuthorization(self, user: str, passwordHash: str, current=None):  # pylint: disable=invalid-name,unused-argument
         ''' Actualiza el token de un usuario registrado '''
 
-        with open(USERS_PATH, "r", encoding="utf8") as f:
+        with open(LOCAL_DB_PATH, "r", encoding="utf8") as f:
             obj = json.load(f)
         
         for i in obj["users"]:
@@ -95,7 +96,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
             raise IceFlix.Unauthorized
 
         a = (user, passwordHash)
-        self.add_user(a)
+        self.add_user(a, LOCAL_DB_PATH)
         self._update_users.newUser(
             user, passwordHash, self.service_id)  # No testeado
 
@@ -107,7 +108,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
 
-        self.remove_user(user)
+        self.remove_user(user, LOCAL_DB_PATH)
         self._revocations_sender.revokeUser(user, self.service_id)
 
     def check_admin(self, admin_token: str):
@@ -119,14 +120,14 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
 
         return is_admin
 
-    def add_user(self, user_password):
+    def add_user(self, user_password, path):
         ''' Permite añadir usuario a partir de una tupla {usuario, password} '''
 
         user, password = user_password
 
         print(user_password)
 
-        with open(USERS_PATH, "r", encoding="utf8") as f:
+        with open(path, "r", encoding="utf8") as f:
             try:
                 obj = json.load(f)
             except Exception as e:  # Primer usuario del sistema -> Construir el formato del json
@@ -145,13 +146,13 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                     obj["users"].append(
                         {"user": user, "password": password, "tags": {}})
 
-        with open(USERS_PATH, 'w', encoding="utf8") as file:
+        with open(path, 'w', encoding="utf8") as file:
             json.dump(obj, file, indent=2)
 
-    def remove_user(self, user):
+    def remove_user(self, user, path):
         """ Elimina un usuario del archivo persistente """
 
-        with open(USERS_PATH, "r", encoding="utf8") as reading_descriptor:
+        with open(path, "r", encoding="utf8") as reading_descriptor:
             obj = json.load(reading_descriptor)
 
         for i in obj["users"]:
@@ -159,7 +160,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                 obj["users"].remove(i)
                 break
 
-        with open(USERS_PATH, 'w', encoding="utf8") as file:
+        with open(path, 'w', encoding="utf8") as file:
             json.dump(obj, file, indent=2)
 
         if user in self._active_users_:
@@ -183,12 +184,16 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         ''' Añade o actualiza usuarios y contraseñas '''
 
         for user_info in users_passwords.items():
-            self.add_user(user_info)
+            self.add_user(user_info, LOCAL_DB_PATH)
 
     def create_db(self):
-        open(USERS_PATH, "x")
-        self.add_user(
-            ("user", "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"))
+        open(LOCAL_DB_PATH, "x")
+        with open(USERS_PATH, "r", encoding="utf8") as reading_descriptor:
+            obj = json.load(reading_descriptor)
+
+        for i in obj["users"]:
+            self.add_user(
+                (i["user"], i["password"]), LOCAL_DB_PATH)
 
     def share_data_with(self, service):
         """ Envía una estructura usersDB al servicio indicado """
