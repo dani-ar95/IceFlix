@@ -1,6 +1,7 @@
 """ Modulo para manejar la comunicación al eliminar usuarios o tokens """
 
 import os
+import threading
 import Ice
 
 try:
@@ -29,8 +30,9 @@ class RevocationsListener(IceFlix.Revocations):
 
         if srvId is not self.service_id:
             self.servant.remove_token(userToken)
-
-
+            if self.servant.ice_isA("::IceFlix::StreamController"):
+                self.servant.stream_sync_announcer.requestAuthentication()
+                
     def revokeUser(self, user, srvId, current=None):
         """ Comportamiento al recibir un mensaje revokeUser """
 
