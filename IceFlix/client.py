@@ -11,6 +11,9 @@ import getpass
 import Ice
 import iceflixrtsp
 from MediaUploader import MediaUploaderI
+import IceStorm
+from user_revocations import RevocationsListener
+from constants import REVOCATIONS_TOPIC
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
@@ -21,6 +24,7 @@ class Cliente(Ice.Application):
 
     def __init__(self):
         self._username_ = None
+        self._password_hash_ = None
         self._admin_token_ = None
         self._user_token_ = None
         self._main_prx_ = None
@@ -30,6 +34,9 @@ class Cliente(Ice.Application):
         self._stream_controller_prx_ = None
         self._playing_media_ = False
         self._media_player_ = iceflixrtsp.RTSPPlayer()
+        self.refreshed_token = False
+        self.revoke_topic = None
+        self.revocations_subscriber = None
 
     def format_prompt(self):
         ''' Formatea la consola '''
@@ -119,6 +126,7 @@ class Cliente(Ice.Application):
         user = input("Nombre de usuario: ")
         password = getpass.getpass("Contraseña: ")
         hash_password = hashlib.sha256(password.encode()).hexdigest()
+        self._password_hash_ = hash_password
         if not self._auth_prx_:
             try:
                 self._auth_prx_ = self._main_prx_.getAuthenticator()
@@ -127,6 +135,17 @@ class Cliente(Ice.Application):
                 input()
         try:
             self._user_token_ = self._auth_prx_.refreshAuthorization(user, hash_password)
+            self.refreshed_token = True
+            
+            communicator = self.communicator()
+            topic_manager = IceStorm.TopicManagerPrx.checkedCast(communicator.propertyToProxy("IceStorm.TopicManager"))
+            try:
+                topic = topic_manager.create(REVOCATIONS_TOPIC)
+            except IceStorm.TopicExists:
+                topic = topic_manager.retrieve(REVOCATIONS_TOPIC)
+            self.revocations_subscriber = RevocationsListener(self)
+            self.revocations_subscriber_prx = self.adapter.addWithUUID(self.revocations_subscriber)
+            self.revoke_topic = topic.subscribeAndGetPublisher({}, self.revocations_subscriber_prx)
         except IceFlix.Unauthorized:
             print(IceFlix.Unauthorized())
             input()
@@ -138,6 +157,8 @@ class Cliente(Ice.Application):
         ''' Implementa la función de cerrar sesión '''
         self._username_ = None
         self._user_token_ = None
+        self._password_hash_ = None
+        self.revoke_topic.unsubscribe(self.revocations_subscriber_prx)
 
     def create_prompt(self, servicio: str):
         ''' Informa al usuario del estado del cliente en todo momento '''

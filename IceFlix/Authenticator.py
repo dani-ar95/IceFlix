@@ -5,6 +5,7 @@
     
 from cmath import e
 import random
+import threading
 from time import sleep
 from os import path
 import sys
@@ -66,6 +67,9 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
             if i["user"] == user and i["password"] == passwordHash:
                 new_token = secrets.token_urlsafe(40)
                 self._active_users_.update({user: new_token})
+                self._update_users.newToken(user, new_token)
+                revoke_timer = threading.Timer(120.0, self._revocations_sender.revokeToken, [new_token])
+                revoke_timer.start()
                 return new_token
 
         raise IceFlix.Unauthorized

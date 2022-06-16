@@ -13,7 +13,7 @@ except ImportError:
 class RevocationsListener(IceFlix.Revocations):
     """ Listener del topic Revocations"""
 
-    def __init__(self, own_servant, own_service_id, own_type):
+    def __init__(self, own_servant, own_service_id=None, own_type=None):
         """ Inicialización del listener """
 
         self.servant = own_servant
@@ -33,6 +33,20 @@ class RevocationsListener(IceFlix.Revocations):
             if self.servant.ice_isA("::IceFlix::StreamController"):
                 self.servant.authentication_timer = threading.Timer(5.0, self.servant.stop)
                 self.servant.authentication_timer.start()
+            #Listener para el cliente
+            elif self.servant._username_:
+                self.servant.refreshed_token = False
+                try:
+                    auth = self.servant._main_prx_.getAuthenticator()
+                    new_token = auth.refreshAuthorization(self.servant._username_, self.servant._password_hash_)
+                    self.servant._user_token_ = new_token
+                    self.servant.refreshed_token = True
+                except IceFlix.TemporaryUnavailable:
+                    print("No se ha encontrado ningún servicio de Autenticación")
+                    self.servant.logout()
+                except IceFlix.Unauthorized:
+                    print("Crendeciales no válidas")
+                    self.servant.logout()
                 
     def revokeUser(self, user, srvId, current=None):
         """ Comportamiento al recibir un mensaje revokeUser """
@@ -58,4 +72,4 @@ class RevocationsSender:
         self.publisher.revokeUser(user, self.service_id)
 
     def revokeToken(self, userToken, current=None):
-        self.publisher.revokeToken(userToken, userToken, self.service_id)
+        self.publisher.revokeToken(userToken, self.service_id)
