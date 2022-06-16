@@ -4,7 +4,7 @@
      y retornan la uri del streaming '''
 
 from os import path
-from random import random
+import random
 import sys
 import uuid
 import Ice

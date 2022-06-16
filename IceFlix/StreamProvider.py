@@ -35,7 +35,7 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
 
     def getStream(self, mediaId: str, userToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Factoría de objetos StreamController '''
-        main_prx = random.choice(list(self._service_announcer_listener.mains.valus()))
+        main_prx = random.choice(list(self._service_announcer_listener.mains.values()))
         try:
             auth = main_prx.getAuthenticator()
         except IceFlix.TemporaryUnavailable:
@@ -49,7 +49,8 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
             asked_media = self._provider_media_.get(mediaId)
             name = asked_media.info.name
             controller = StreamControllerServer(self._service_announcer_listener, name)
-            controller_proxy = current.adapter.addWithUUID(controller)
+            controller_servant = controller.servant
+            controller_proxy = current.adapter.addWithUUID(controller_servant)
             return IceFlix.StreamControllerPrx.checkedCast(controller_proxy)
         else:
             raise IceFlix.WrongMediaId(mediaId)
@@ -243,10 +244,6 @@ class StreamProviderServer(Ice.Application):
                 self.servant_provider._provider_media_.update({id_hash: new_media})
 
             self.stream_announcements_announcer.newMedia(id_hash, filename)
-
-        #sleep(15)
-        #self.servant.reannounceMedia(self.servant.service_id)
-        #self.servant._stream_announcements_sender.newMedia("IDENTIFICADOR", "NOMBRE")
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
