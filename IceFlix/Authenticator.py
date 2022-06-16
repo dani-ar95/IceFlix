@@ -26,7 +26,7 @@ from constants import ANNOUNCEMENT_TOPIC, REVOCATIONS_TOPIC, AUTH_SYNC_TOPIC
 
 auth_id = str(uuid.uuid4())
 
-USERS_PATH = "./users.json"
+USERS_PATH = "IceFlix/users.json"
 LOCAL_DB_PATH = path.join(path.join(path.dirname(__file__),
                        "persistence"), (auth_id + "_users.json"))
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
@@ -96,8 +96,9 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
             raise IceFlix.Unauthorized
 
         a = (user, passwordHash)
-        self.add_user(a, LOCAL_DB_PATH)
-        self.add_user(a, USERS_PATH)
+        tags = {}
+        self.add_user(a, tags, LOCAL_DB_PATH)
+        self.add_user(a, tags, USERS_PATH)
         self._update_users.newUser(
             user, passwordHash, self.service_id)  # No testeado
 
@@ -122,7 +123,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
 
         return is_admin
 
-    def add_user(self, user_password, path):
+    def add_user(self, user_password, tags, path):
         ''' Permite añadir usuario a partir de una tupla {usuario, password} '''
 
         if path == None:
@@ -141,7 +142,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                         {
                             "user": user,
                             "password": password,
-                            "tags": {}
+                            "tags": tags
                         }
                     ]
                 }
@@ -149,10 +150,14 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                 current_users = [i["user"] for i in obj["users"]]
                 if (user not in current_users):
                     obj["users"].append(
-                        {"user": user, "password": password, "tags": {}})
+                        {"user": user, "password": password, "tags": tags})
 
         with open(path, 'w', encoding="utf8") as file:
             json.dump(obj, file, indent=2)
+
+
+    def add_local_user(self, user_password, tags):
+        self.add_user(user_password, {}, LOCAL_DB_PATH)
 
     def remove_user(self, user, path):
         """ Elimina un usuario del archivo persistente """
@@ -170,6 +175,9 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
 
         if user in self._active_users_:
             self._active_users_.pop(user)
+
+    def remove_local_user(self, user):
+        self.remove_user(user, LOCAL_DB_PATH)
 
     def remove_token(self, userToken):
         """ Elimina el token de un usuario """
@@ -189,7 +197,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         ''' Añade o actualiza usuarios y contraseñas '''
 
         for user_info in users_passwords.items():
-            self.add_user(user_info, LOCAL_DB_PATH)
+            self.add_user(user_info, {}, LOCAL_DB_PATH)
 
     def create_db(self):
         open(LOCAL_DB_PATH, "x")
@@ -198,7 +206,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
 
         for i in obj["users"]:
             self.add_user(
-                (i["user"], i["password"]), LOCAL_DB_PATH)
+                (i["user"], i["password"]), i["tags"], LOCAL_DB_PATH)
 
     def share_data_with(self, service):
         """ Envía una estructura usersDB al servicio indicado """

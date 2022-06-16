@@ -37,7 +37,7 @@ class RevocationsListener(IceFlix.Revocations):
         """ Comportamiento al recibir un mensaje revokeUser """
 
         if srvId is not self.service_id:
-            self.servant.remove_user(user)
+            self.servant.remove_local_user(user)
 
 
 class RevocationsSender:
