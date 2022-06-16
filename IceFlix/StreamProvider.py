@@ -21,7 +21,7 @@ SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
 import IceFlix # pylint: disable=wrong-import-position
 
-from StreamController import StreamControllerI # pylint: disable=import-error, wrong-import-position
+from StreamController import StreamControllerServer # pylint: disable=import-error, wrong-import-position
 
 class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-class
     ''' Instancia de Stream Provider '''
@@ -48,8 +48,8 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
         if self.isAvailable(mediaId):
             asked_media = self._provider_media_.get(mediaId)
             name = asked_media.info.name
-            servant_controller = StreamControllerI(self._service_announcer_listener, name)
-            controller_proxy = current.adapter.addWithUUID(servant_controller)
+            controller = StreamControllerServer(self._service_announcer_listener, name)
+            controller_proxy = current.adapter.addWithUUID(controller)
             return IceFlix.StreamControllerPrx.checkedCast(controller_proxy)
         else:
             raise IceFlix.WrongMediaId(mediaId)

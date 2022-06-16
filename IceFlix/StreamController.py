@@ -22,17 +22,17 @@ import IceFlix # pylint: disable=wrong-import-position
 class StreamControllerI(IceFlix.StreamController): # pylint: disable=inherit-non-class
     ''' Instancia de StreamController '''
 
-    def __init__(self, announcements_listener, file_path, current=None): # pylint: disable=invalid-name,unused-argument
+    def __init__(self, announcements_listener, filename, current=None): # pylint: disable=invalid-name,unused-argument
         self._emitter_ = None
-        self._filename_ = file_path
+        self._filename_ = filename
         self.service_id = str(uuid.uuid4)
         self.announcements_listener = announcements_listener
         self.authentication_timer = None
         
         try:
-            self._fd_ = open(file_path, "rb") # pylint: disable=bad-option-value
+            self._fd_ = open(filename, "rb") # pylint: disable=bad-option-value
         except FileNotFoundError:
-            print("Archivo no encontrado: " + file_path)
+            print("Archivo no encontrado: " + filename)
 
     def getSDP(self, userToken, port: int, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna la configuracion del flujo SDP '''
@@ -90,6 +90,9 @@ class StreamControllerI(IceFlix.StreamController): # pylint: disable=inherit-non
 
 class StreamControllerServer(Ice.Application): # pylint: disable=invalid-name
     ''' Servidor del controlador de Streaming '''
+
+    def __init__(self, announcements_listener, filename):
+        self.servant = StreamControllerI(announcements_listener, filename)
 
     # def setup_announcements(self):
     #     """Configure the announcements sender and listener."""
