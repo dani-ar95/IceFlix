@@ -143,7 +143,7 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
                 new_media = IceFlix.Media(id_hash, self._proxy_, IceFlix.MediaInfo(filename, []))
                 self._provider_media_.update({id_hash: new_media})
 
-            self._catalog_prx_.updateMedia(id_hash, filename, self._proxy_)
+            #self._catalog_prx_.updateMedia(id_hash, filename, self._proxy_)
 
 
 class StreamProviderServer(Ice.Application):

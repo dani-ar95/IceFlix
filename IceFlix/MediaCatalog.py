@@ -83,10 +83,15 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         return user_tags
 
 
-    def getTile(self, mediaId: str, current=None): # pylint: disable=invalid-name,unused-argument
+    def getTile(self, mediaId: str, userToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna un objeto Media con la informacion del medio con el ID dado '''
 
-        # Buscar en medios tmeporales
+        # Actualizar proxy a auth
+        self.update_auth()
+        # Comprobar usuario
+        self.check_user(userToken) # Raise Unauthorized
+
+        # Buscar en medios temporales
         media = self._media_.get(mediaId)
         if media:
             provider = self._media_.get(mediaId).provider #  Preguntar esto
@@ -405,6 +410,34 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             info = IceFlix.MediaInfo(media.name, media.tagsPerUser.values())
             self._media_.update({media.mediaId: IceFlix.Media(media.mediaId, None, info)})
 
+    def update_auth(self):
+        # Update main
+        self.update_main_prx()
+        # Comprobar Main funcionando
+        try:
+            self._main_prx_.ice_ping()
+        except Ice.ConnectionRefusedException:
+            raise IceFlix.TemporaryUnavailable
+
+        # Volver a pedir authenticator
+        try:
+            self._auth_prx_ = self._main_prx_.getAuthenticator()
+            self._auth_prx_.ice_ping()
+        except IceFlix.TemporaryUnavailable or AttributeError: # Authenticator caido o no existe
+            raise IceFlix.TemporaryUnavailable
+
+    def update_main_prx(self):
+        for main_id in self._anunciamientos_listener.mains:
+            main_prx = self._anunciamientos_listener.mains.get(main_id)
+            try:
+                main_prx.ice_ping()
+                self._main_prx_ = main_prx
+                return
+            except IceFlix.TemporaryUnavailable:
+                self._anunciamientos_listener.mains.pop(main_id)
+        raise IceFlix.TemporaryUnavailable
+
+
 
 class MediaCatalogServer(Ice.Application):
     ''' Servidor de Catálogo  '''
@@ -502,11 +535,10 @@ class MediaCatalogServer(Ice.Application):
         self.servant._updates_sender = self._updates_sender
         self.servant._stream_listener = self._stream_listener
 
-        sleep(6)
         self.servant.read_media()
         self.announcer.start_service()
 
-        #print(self.servant._media_)
+        print(self.servant._media_)
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
 
