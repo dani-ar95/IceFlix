@@ -12,7 +12,7 @@ import IceStorm
 import iceflixrtsp # pylint: disable=import-error
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from user_revocations import RevocationsListener, RevocationsSender
-from stream_sync import StreamSync
+from stream_sync import StreamSyncListener, StreamSyncSender
 from constants import STREAM_SYNC_TOPIC, REVOCATIONS_TOPIC
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")

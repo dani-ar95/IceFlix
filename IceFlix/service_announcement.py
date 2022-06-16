@@ -86,6 +86,8 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
             self.known_ids.add(service_id)
             if self.servant.ice_isA("::IceFlix::Main"): 
                 self.servant.catalog_services.append(self.catalogs[service_id])
+            if self.servant.ice_isA("::IceFlix::StreamProvider"):
+                self.servant.reannounceMedia(service_id)
             print("[Anuncios] Registrado Catalogo")
             
         elif service.ice_isA("::IceFlix::StreamProvider"):
