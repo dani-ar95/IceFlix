@@ -31,7 +31,8 @@ class RevocationsListener(IceFlix.Revocations):
         if srvId is not self.service_id:
             self.servant.remove_token(userToken)
             if self.servant.ice_isA("::IceFlix::StreamController"):
-                self.servant.stream_sync_announcer.requestAuthentication()
+                self.servant.authentication_timer = threading.Timer(5.0, self.servant.stop)
+                self.servant.authentication_timer.start()
                 
     def revokeUser(self, user, srvId, current=None):
         """ Comportamiento al recibir un mensaje revokeUser """

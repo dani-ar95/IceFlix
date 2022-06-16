@@ -22,29 +22,33 @@ import IceFlix # pylint: disable=wrong-import-position
 class StreamControllerI(IceFlix.StreamController): # pylint: disable=inherit-non-class
     ''' Instancia de StreamController '''
 
-    def __init__(self, announcements_listener, file_path, current=None): # pylint: disable=invalid-name,unused-argument
+    def __init__(self, announcements_listener, filename, current=None): # pylint: disable=invalid-name,unused-argument
         self._emitter_ = None
-        self._filename_ = file_path
+        self._filename_ = filename
         self.service_id = str(uuid.uuid4)
         self.announcements_listener = announcements_listener
         self.authentication_timer = None
         
         try:
-            self._fd_ = open(file_path, "rb") # pylint: disable=bad-option-value
+            self._fd_ = open(filename, "rb") # pylint: disable=bad-option-value
         except FileNotFoundError:
-            print("Archivo no encontrado: " + file_path)
+            print("Archivo no encontrado: " + filename)
 
     def getSDP(self, userToken, port: int, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna la configuracion del flujo SDP '''
-
+        main_prx = random.choice(list(self.announcements_listener.mains.values()))
         try:
-            self.check_user(userToken)
-        except IceFlix.Unauthorized as e:
-            raise e
-        else:
-            self._emitter_ = iceflixrtsp.RTSPEmitter(self._filename_, "127.0.0.1", port)
-            self._emitter_.start()
-            return self._emitter_.playback_uri
+            auth = main_prx.getAuthenticator()
+        except IceFlix.TemporaryUnavailable:
+            print("[STREAM CONTROLLER] No se ha encontrado ningún servicio de Autenticación")
+            return ''
+        
+        if not auth.isAuthorized(userToken):
+            raise IceFlix.Unauthorized
+        
+        self._emitter_ = iceflixrtsp.RTSPEmitter(self._filename_, "127.0.0.1", port)
+        self._emitter_.start()
+        return self._emitter_.playback_uri
 
     def getSyncTopic(self, current=None):
         return self.service_id
@@ -68,28 +72,12 @@ class StreamControllerI(IceFlix.StreamController): # pylint: disable=inherit-non
         self._emitter_.stop()
         current.adapter.remove(current.id)
 
-    def check_user(self, user_token):
-        ''' Comprueba que la sesion del usuario está actualizada '''
-
-        is_user = self._authenticator_prx_.isAuthorized(user_token)
-        if not is_user:
-            raise IceFlix.Unauthorized
-        return is_user
-
-    # def share_data_with(self, service):
-    #     """Share the current database with an incoming service."""
-    #     service.updateDB(None, self.service_id)
-
-    # def updateDB(
-    #     self, values, service_id, current
-    # ):  # pylint: disable=invalid-name,unused-argument
-    #     """Receives the current main service database from a peer."""
-    #     print(
-    #         "Receiving remote data base from %s to %s", service_id, self.service_id
-    #     )
 
 class StreamControllerServer(Ice.Application): # pylint: disable=invalid-name
     ''' Servidor del controlador de Streaming '''
+
+    def __init__(self, announcements_listener, filename):
+        self.servant = StreamControllerI(announcements_listener, filename)
 
     # def setup_announcements(self):
     #     """Configure the announcements sender and listener."""
@@ -167,14 +155,6 @@ class StreamControllerServer(Ice.Application): # pylint: disable=invalid-name
 
     def run(self, args): # pylint: disable=unused-argument
 
-            #Suscribir el Controller al topic Revocations (listener)
-            #Suscribir el Controller al topic StreamSync(subscriber/listener)
-            #Cuando reciba un revokeToken llamar al subscriber del topic StreamSync y lanzar requestAuthentication
-            #Escuchar en topic StreamSync durante 5 segundos:
-                #Si no hay respuesta, cortar reproduccion
-                #Si hay respuesta, comprobar el token
-
-
         self.servant = StreamControllerI()
         broker = self.communicator()
 
@@ -189,8 +169,6 @@ class StreamControllerServer(Ice.Application): # pylint: disable=invalid-name
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
-
-        self.announcer.stop()
 
 if __name__ == '__main__':
     sys.exit(StreamControllerServer().main(sys.argv))
