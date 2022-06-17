@@ -36,7 +36,9 @@ class Cliente(Ice.Application):
         self._media_player_ = iceflixrtsp.RTSPPlayer()
         self.refreshed_token = False
         self.revoke_topic = None
+        self.revoke_topic_prx = None
         self.revocations_subscriber = None
+        self.adapter = None
 
     def format_prompt(self):
         ''' Formatea la consola '''
@@ -67,6 +69,7 @@ class Cliente(Ice.Application):
         try:
             main_proxy = self.communicator().stringToProxy(proxy)
             main_connection = IceFlix.MainPrx.checkedCast(main_proxy)
+            self.adapter = self.communicator().createObjectAdapterWithEndpoints('ClientAdapter', 'tcp')
         except:
             print("La conexión no ha sido posible")
             input()
@@ -145,7 +148,8 @@ class Cliente(Ice.Application):
                 topic = topic_manager.retrieve(REVOCATIONS_TOPIC)
             self.revocations_subscriber = RevocationsListener(self)
             self.revocations_subscriber_prx = self.adapter.addWithUUID(self.revocations_subscriber)
-            self.revoke_topic = topic.subscribeAndGetPublisher({}, self.revocations_subscriber_prx)
+            self.revoke_topic_prx = topic.subscribeAndGetPublisher({}, self.revocations_subscriber_prx)
+            self.revoke_topic = topic
         except IceFlix.Unauthorized:
             print(IceFlix.Unauthorized())
             input()
