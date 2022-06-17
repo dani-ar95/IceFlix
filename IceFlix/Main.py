@@ -29,6 +29,7 @@ class MainI(IceFlix.Main): # pylint: disable=inherit-non-class
         self.auth_services = []
         self.catalog_services = []
         self.actualizado = False
+        self.announcements_listener = None
 
     @property
     def get_volatile_services(self):
@@ -175,7 +176,7 @@ class MainServer(Ice.Application):
         self.adapter.activate()
 
         self.setup_announcements()
-        
+        self.servant.announcements_listener = self.subscriber
         self.announcer.start_service()
 
         print(f"[PROXY MAIN] {self.proxy}")

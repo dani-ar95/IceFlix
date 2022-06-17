@@ -114,14 +114,10 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
         if mediaId in self._provider_media_:
             filename = self._provider_media_.get(mediaId).info.name
             remove(filename)
+            self._provider_media_.pop(mediaId)
             self._stream_announcements_sender.removedMedia(mediaId, self.service_id)
         else:
-            # try:
-            #     media_file = self._catalog_prx_.getTile(mediaId)
-            # except IceFlix.WrongMediaId:
-                raise IceFlix.WrongMediaId(mediaId)
-            #else:
-                #filename = media_file.info.name
+            raise IceFlix.WrongMediaId(mediaId)
 
     def reannounceMedia(self, srvId, current=None):
         if srvId not in self._service_announcer_listener.known_ids:

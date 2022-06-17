@@ -22,7 +22,7 @@ class StreamAnnouncementsListener(IceFlix.StreamAnnouncements):
     def newMedia(self, mediaId, initialName, srvId, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Comportamiento al recibir un mensaje newMedia '''
 
-        print(f"[StreamAnnouncement] Recibido NewMedia: MediaID: {mediaId}, name={initialName}")
+        print(f"[MEDIA CATALOG] Recibido NewMedia: MediaID: {mediaId}, name={initialName}")
         if srvId in self.servant._anunciamientos_listener.known_ids:
             print("Recibido: ", mediaId, initialName, srvId)
             self.servant.add_media(mediaId, initialName, srvId)
@@ -31,7 +31,7 @@ class StreamAnnouncementsListener(IceFlix.StreamAnnouncements):
     def removedMedia(self, media_id, srv_id, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Comportamiento al recibir un mensaje removeMedia '''
 
-        print(f"[StreamAnnouncement] Recibido removedMedia: MediaID: {media_id}")
+        print(f"[MEDIA CATALOG] Recibido removedMedia: MediaID: {media_id}")
         if srv_id not in self.servant._anunciamientos_listener.known_ids:
             return
         self.servant.remove_media(media_id)
@@ -51,12 +51,12 @@ class StreamAnnouncementsSender():
         
         
     def newMedia(self, media_id, name, current=None): # pylint: disable=invalid-name,unused-argument
-        print(f"[StreamAnnouncement] Enviado NewMedia: MediaID: {media_id}, name={name}")
+        print(f"[STREAM PROVIDER] Enviado NewMedia: MediaID: {media_id}, name={name}")
         self.publisher.newMedia(media_id, name, self.service_id)
     
     
     def removedMedia(self, media_id, current=None): # pylint: disable=invalid-name,unused-argument
-        print(f"[StreamAnnouncement] Enviado removedMedia: MediaID: {media_id}")
+        print(f"[STREAM PROVIDER] Enviado removedMedia: MediaID: {media_id}")
         self.publisher.removedMedia(media_id, self.service_id)
 
 

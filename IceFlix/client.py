@@ -25,6 +25,7 @@ class Cliente(Ice.Application):
     def __init__(self):
         self._username_ = None
         self._password_hash_ = None
+        self.logged = False
         self._admin_token_ = None
         self._user_token_ = None
         self._main_prx_ = None
@@ -123,7 +124,6 @@ class Cliente(Ice.Application):
             raise IceFlix.TemporaryUnavailable
         
 
-
     def login(self):
         ''' Implementa la función de iniciar sesión '''
         user = input("Nombre de usuario: ")
@@ -150,6 +150,7 @@ class Cliente(Ice.Application):
             self.revocations_subscriber_prx = self.adapter.addWithUUID(self.revocations_subscriber)
             self.revoke_topic_prx = topic.subscribeAndGetPublisher({}, self.revocations_subscriber_prx)
             self.revoke_topic = topic
+            self.logged = True
         except IceFlix.Unauthorized:
             print(IceFlix.Unauthorized())
             input()
@@ -159,11 +160,18 @@ class Cliente(Ice.Application):
 
     def logout(self):
         ''' Implementa la función de cerrar sesión '''
-        self._username_ = None
-        self._user_token_ = None
-        self._password_hash_ = None
-        self.revoke_topic.unsubscribe(self.revocations_subscriber_prx)
-
+        if self.logged:
+            self._username_ = None
+            self._user_token_ = None
+            self._password_hash_ = None
+            self.revoke_topic.unsubscribe(self.revocations_subscriber_prx)
+            self.revoke_topic_prx = None
+            self.revoke_topic = None
+            self.revocations_subscriber = None
+            self.logged = False
+        else:
+            input("No hay ninguna sesión iniciada. Pulsa Enter para continuar...")
+    
     def create_prompt(self, servicio: str):
         ''' Informa al usuario del estado del cliente en todo momento '''
         if self._username_ and self._admin_token_:

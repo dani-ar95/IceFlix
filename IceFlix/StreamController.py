@@ -79,32 +79,6 @@ class StreamControllerServer(Ice.Application): # pylint: disable=invalid-name
     def __init__(self, announcements_listener, filename):
         self.servant = StreamControllerI(announcements_listener, filename)
 
-    # def setup_announcements(self):
-    #     """Configure the announcements sender and listener."""
-
-    #     communicator = self.communicator()
-    #     topic_manager = IceStorm.TopicManagerPrx.checkedCast(
-    #         communicator.propertyToProxy("IceStorm.TopicManager")
-    #     )
-
-    #     try:
-    #         topic = topic_manager.create(ANNOUNCEMENT_TOPIC)
-    #     except IceStorm.TopicExists:
-    #         topic = topic_manager.retrieve(ANNOUNCEMENT_TOPIC)
-
-    #     self.announcer = ServiceAnnouncementsSender(
-    #         topic,
-    #         self.servant.service_id,
-    #         self.proxy,
-    #     )
-
-    #     self.subscriber = ServiceAnnouncementsListener(
-    #         self.servant, self.servant.service_id, IceFlix.StreamControllerPrx
-    #     )
-
-    #     subscriber_prx = self.adapter.addWithUUID(self.subscriber)
-    #     topic.subscribeAndGetPublisher({}, subscriber_prx)
-
     def setup_revocations(self):
         communicator = self.communicator()
         topic_manager = IceStorm.TopicManagerPrx.checkedCast(
@@ -163,12 +137,8 @@ class StreamControllerServer(Ice.Application): # pylint: disable=invalid-name
         self.proxy = self.adapter.addWithUUID(self.servant)
         self.adapter.activate()
 
-        # self.setup_announcements()
         self.setup_revocations()
         self.setup_sync()
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
-
-if __name__ == '__main__':
-    sys.exit(StreamControllerServer().main(sys.argv))
