@@ -13,34 +13,36 @@ except ImportError:
 class RevocationsListener(IceFlix.Revocations):
     """ Listener del topic Revocations"""
 
-    def __init__(self, own_servant, own_service_id=None, own_type=None):
+    def __init__(self, own_servant, own_proxy=None, own_service_id=None, own_type=None):
         """ Inicialización del listener """
 
         self.servant = own_servant
         self.service_id = own_service_id
         self.own_type = own_type
-
-        self.authenticators = {}
-        self.catalogs = {}
-        self.mains = {}
-        self.known_ids = set()
+        self.service = own_proxy
 
     def revokeToken(self, userToken, srvId, current=None):
         """ Comportamiento al recibir un mensaje revokeToken """
-
-        if srvId is not self.service_id:
-            self.servant.remove_token(userToken)
-            if self.servant.ice_isA("::IceFlix::StreamController"):
+        if self.service is not None:
+            
+            if self.service.ice_isA("::IceFlix::Authenticator"):
+                self.servant.remove_token(userToken)
+                print("[REVOCATIONS] Token revoked: ", userToken)
+                
+            if self.service.ice_isA("::IceFlix::StreamController"):
                 self.servant.authentication_timer = threading.Timer(5.0, self.servant.stop)
                 self.servant.authentication_timer.start()
-            #Listener para el cliente
-            elif self.servant._username_:
+                
+        else:
+            if self.servant.logged:
+                print("cliente logeado sin token activo")
                 self.servant.refreshed_token = False
                 try:
                     auth = self.servant._main_prx_.getAuthenticator()
                     new_token = auth.refreshAuthorization(self.servant._username_, self.servant._password_hash_)
                     self.servant._user_token_ = new_token
                     self.servant.refreshed_token = True
+                    print("[REVOCATIONS] Token actualizao: ", new_token)
                 except IceFlix.TemporaryUnavailable:
                     print("No se ha encontrado ningún servicio de Autenticación")
                     self.servant.logout()
@@ -58,7 +60,7 @@ class RevocationsListener(IceFlix.Revocations):
 class RevocationsSender:
     """ Sender del topic Revocations """
 
-    def __init__(self, topic, service_id, servant_proxy, current=None):
+    def __init__(self, topic, service_id=None, servant_proxy=None, current=None):
         """ Inicialización del sender """
 
         self.publisher = IceFlix.RevocationsPrx.uncheckedCast(

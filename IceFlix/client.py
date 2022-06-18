@@ -12,7 +12,7 @@ import Ice
 import iceflixrtsp
 from MediaUploader import MediaUploaderI
 import IceStorm
-from user_revocations import RevocationsListener
+from user_revocations import RevocationsListener, RevocationsSender
 from constants import REVOCATIONS_TOPIC
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
@@ -39,6 +39,7 @@ class Cliente(Ice.Application):
         self.revoke_topic = None
         self.revoke_topic_prx = None
         self.revocations_subscriber = None
+        self.revocations_publisher = None
         self.adapter = None
 
     def format_prompt(self):
@@ -133,28 +134,31 @@ class Cliente(Ice.Application):
         if not self._auth_prx_:
             try:
                 self._auth_prx_ = self._main_prx_.getAuthenticator()
+                self._user_token_ = self._auth_prx_.refreshAuthorization(user, hash_password)
+                self.refreshed_token = True
+                
+                communicator = self.communicator()
+                topic_manager = IceStorm.TopicManagerPrx.checkedCast(communicator.propertyToProxy("IceStorm.TopicManager"))
+                try:
+                    topic = topic_manager.create(REVOCATIONS_TOPIC)
+                except IceStorm.TopicExists:
+                    topic = topic_manager.retrieve(REVOCATIONS_TOPIC)
+                self.revocations_publisher = RevocationsSender(topic)
+                self.revocations_subscriber = RevocationsListener(self)
+                self.revocations_subscriber_prx = self.adapter.addWithUUID(self.revocations_subscriber)
+                self.revoke_topic_prx = topic.subscribeAndGetPublisher({}, self.revocations_subscriber_prx)
+                self.revoke_topic = topic
+                self.logged = True
+                
             except IceFlix.TemporaryUnavailable:
-                print(IceFlix.TemporaryUnavailable())
+                print("No hay ningún servicio de Autenticación disponible")
                 input()
-        try:
-            self._user_token_ = self._auth_prx_.refreshAuthorization(user, hash_password)
-            self.refreshed_token = True
+                return
             
-            communicator = self.communicator()
-            topic_manager = IceStorm.TopicManagerPrx.checkedCast(communicator.propertyToProxy("IceStorm.TopicManager"))
-            try:
-                topic = topic_manager.create(REVOCATIONS_TOPIC)
-            except IceStorm.TopicExists:
-                topic = topic_manager.retrieve(REVOCATIONS_TOPIC)
-            self.revocations_subscriber = RevocationsListener(self)
-            self.revocations_subscriber_prx = self.adapter.addWithUUID(self.revocations_subscriber)
-            self.revoke_topic_prx = topic.subscribeAndGetPublisher({}, self.revocations_subscriber_prx)
-            self.revoke_topic = topic
-            self.logged = True
-        except IceFlix.Unauthorized:
-            print(IceFlix.Unauthorized())
-            input()
-        else:
+            except IceFlix.Unauthorized:
+                print("Credenciales no válidas")
+                input()
+                return
             self._username_ = user
             input("Registrado correctamente. Pulsa Enter para continuar...")
 
@@ -540,7 +544,10 @@ class Cliente(Ice.Application):
                     auth = self._main_prx_.getAuthenticator()
                     auth.addUser(new_user, new_hash_password, self._admin_token_)
                 except IceFlix.Unauthorized:
-                    print(IceFlix.Unauthorized())
+                    print("Usuario no autorizado como administrador")
+                    input()
+                except IceFlix.TemporaryUnavailable:
+                    print("No hay ningún servicio de Autenticación disponible")
                     input()
                 else:
                     input("Usuario creado correctamente. Pulsa Enter para continuar...")
@@ -552,7 +559,10 @@ class Cliente(Ice.Application):
                     auth = self._main_prx_.getAuthenticator()
                     auth.removeUser(delete_user, self._admin_token_)
                 except IceFlix.Unauthorized:
-                    print(IceFlix.Unauthorized())
+                    print("Usuario no autorizado como administrador")
+                    input()
+                except IceFlix.TemporaryUnavailable:
+                    print("No hay ningún servicio de Autenticación disponible")
                     input()
                 else:
                     if delete_user == self._username_:
@@ -659,6 +669,7 @@ class Cliente(Ice.Application):
     def run(self, args):
         self.format_prompt()
         self.set_main_proxy()
+        self.adapter.activate()
         self.main_menu()
 
 if __name__ == "__main__":

@@ -22,12 +22,13 @@ import IceFlix # pylint: disable=wrong-import-position
 class StreamControllerI(IceFlix.StreamController): # pylint: disable=inherit-non-class
     ''' Instancia de StreamController '''
 
-    def __init__(self, announcements_listener, filename, current=None): # pylint: disable=invalid-name,unused-argument
+    def __init__(self, announcements_listener, filename, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         self._emitter_ = None
         self._filename_ = filename
         self.service_id = str(uuid.uuid4)
         self.announcements_listener = announcements_listener
         self.authentication_timer = None
+        self.user_token = userToken
         
         try:
             self._fd_ = open(filename, "rb") # pylint: disable=bad-option-value
@@ -76,8 +77,8 @@ class StreamControllerI(IceFlix.StreamController): # pylint: disable=inherit-non
 class StreamControllerServer(Ice.Application): # pylint: disable=invalid-name
     ''' Servidor del controlador de Streaming '''
 
-    def __init__(self, announcements_listener, filename):
-        self.servant = StreamControllerI(announcements_listener, filename)
+    def __init__(self, announcements_listener, filename, userToken):
+        self.servant = StreamControllerI(announcements_listener, filename, userToken)
 
     def setup_revocations(self):
         communicator = self.communicator()
@@ -97,7 +98,7 @@ class StreamControllerServer(Ice.Application): # pylint: disable=invalid-name
         )
 
         self.revocations_subscriber = RevocationsListener(
-            self.servant, self.servant.service_id, IceFlix.StreamControllerPrx
+            self.servant, self.proxy, self.servant.service_id, IceFlix.StreamControllerPrx
         )
 
         subscriber_prx = self.adapter.addWithUUID(self.revocations_subscriber)

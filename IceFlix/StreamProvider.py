@@ -48,7 +48,7 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
         if self.isAvailable(mediaId):
             asked_media = self._provider_media_.get(mediaId)
             name = asked_media.info.name
-            controller = StreamControllerServer(self._service_announcer_listener, name)
+            controller = StreamControllerServer(self._service_announcer_listener, name, userToken)
             controller_servant = controller.servant
             controller_proxy = current.adapter.addWithUUID(controller_servant)
             return IceFlix.StreamControllerPrx.checkedCast(controller_proxy)

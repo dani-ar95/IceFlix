@@ -185,17 +185,16 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
 
     def remove_token(self, userToken):
         """ Elimina el token de un usuario """
-
-        usuarios = self._active_users_.items()
-
-        for tuple in usuarios:
-            if userToken in tuple:
-                self._active_users_.pop(tuple)
+        try:
+            user = self.whois(userToken)
+            self._active_users_.pop(user)
+        except IceFlix.Unauthorized:
+            print("[AUTHENTICATOR] Usuario no autorizado")
 
     def add_token(self, user, token):
         ''' Añade o actualiza un token de usuario '''
 
-        self._active_users_.update({user, token})
+        self._active_users_.update({user: token})
 
     def update_users(self, users_passwords):
         ''' Añade o actualiza usuarios y contraseñas '''
@@ -306,7 +305,7 @@ class AuthenticatorServer(Ice.Application):
         )
 
         self.revocations_subscriber = RevocationsListener(
-            self.servant, self.servant.service_id, IceFlix.AuthenticatorPrx
+            self.servant, self.proxy, self.servant.service_id, IceFlix.AuthenticatorPrx
         )
 
         subscriber_prx = self.adapter.addWithUUID(self.revocations_subscriber)

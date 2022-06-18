@@ -14,12 +14,14 @@ class StreamSyncListener(IceFlix.StreamSync):
         self.servant = own_servant
     
     def requestAuthentication(self, current=None):
-        if self.servant.refreshed_token:    #Controller del cliente
-            self.servant.controller.refreshAuthentication()  
-        else: #Si es un controller servant
-            refreshing_timer = threading.Timer(1.0, self.servant.refreshAuthenticaion, 
-                                               [self.servant._user_token_])
+        if self.servant.refreshed_token:
+            print("[CLIENT] Actualizando token")
+            self.servant._stream_controller_prx_.refreshAuthentication(self.servant._user_token_)  
+        else: 
+            refreshing_timer = threading.Timer(1.0, self.servant.refreshAuthentication, 
+                                               [self.servant.user_token])
             refreshing_timer.start()
+            print("[CONTROLLER] Comprobando token")
         
 class StreamSyncSender:
     def __init__(self, topic):

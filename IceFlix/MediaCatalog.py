@@ -89,12 +89,16 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         # Actualizar proxy a auth
         self.update_auth()
         # Comprobar usuario
-        self.check_user(userToken) # Raise Unauthorized
-
+        try:
+            if not self.check_user(userToken):
+                raise IceFlix.Unauthorized
+        except IceFlix.TemporaryUnavailable:
+            raise IceFlix.TemporaryUnavailable
+        
         # Buscar en medios temporales
         media = self._media_.get(mediaId)
         if media:
-            provider = self._media_.get(mediaId).provider #  Preguntar esto
+            provider = self._media_.get(mediaId).provider
             if provider:
                 try:
                     provider.ice_ping()
@@ -114,7 +118,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
 
         # Buscar el ID en bbdd y temporal
         if not query and mediaId not in self._media_.keys():
-            raise IceFlix.WrongMediaId
+            raise IceFlix.WrongMediaId(mediaId)
 
 
     def getTilesByName(self, name: str, exact: bool, current=None): # pylint: disable=invalid-name,unused-argument
@@ -192,7 +196,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             raise IceFlix.Unauthorized
 
         if mediaId not in self._media_:
-            raise IceFlix.WrongMediaId
+            raise IceFlix.WrongMediaId(mediaId)
 
         self.add_tags(mediaId, tags, user_name)
 
@@ -204,6 +208,9 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             user_name = self.check_user_name(userToken)
         except IceFlix.Unauthorized:
             raise IceFlix.Unauthorized
+        
+        if mediaId not in self._media_:
+            raise IceFlix.WrongMediaId(mediaId)
 
         self.remove_tags(mediaId, tags, user_name)
 
@@ -242,12 +249,14 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
 
     def check_user(self, user_token: str):
         ''' Comprueba que la sesion del usuario es la actual '''
-
-        return self._auth_prx_.isAuthorized(user_token)
+        try:
+            return self._auth_prx_.isAuthorized(user_token)
+        except Ice.ConnectionRefusedException:
+            raise IceFlix.TemporaryUnavailable
 
 
     def check_user_name(self, user_token: str):
-        ''' Comprueba que la sesion del usuario es la actual '''
+        ''' Devuelve el usuario al que pertenece el token dado '''
 
         try:
             user_name = self._auth_prx_.whois(user_token)
