@@ -491,13 +491,13 @@ class MediaCatalogServer(Ice.Application):
         except IceStorm.TopicExists:
             topic = topic_manager.retrieve(CATALOG_SYNC_TOPIC)
 
-        self._updates_sender = ServiceAnnouncementsSender(
+        self._updates_sender = CatalogUpdatesSender(
             topic,
             self.servant.service_id,
             self.proxy,
         )
 
-        self._updates_listener = ServiceAnnouncementsListener(
+        self._updates_listener = CatalogUpdatesListener(
             self.servant, self.servant.service_id, IceFlix.MediaCatalogPrx
         )
 
