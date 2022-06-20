@@ -94,36 +94,7 @@ class Cliente(Ice.Application):
                         return signal.SIGINT
                     sleep(10)  # cambiar a 10 segundoss
 
-            self._main_prx_ = main_connection
-            try:
-                self.update_proxies()
-            except IceFlix.TemporaryUnavailable as e:
-                print(e)
-                print("No hay servicios disponibles suficientes para ejecutar")
-                
-
-
-    def update_proxies(self):
-        # Comprobar Main funcionando
-        try:
-            self._main_prx_.ice_ping()
-        except Ice.ConnectionRefusedException:
-            raise IceFlix.TemporaryUnavailable
-
-        # Volver a pedir authenticator
-        try:
-            self._auth_prx_ = self._main_prx_.getAuthenticator()
-            self._auth_prx_.ice_ping()
-        except IceFlix.TemporaryUnavailable or Ice.ConnectionRefusedException: # Authenticator caido o no existe
-            raise IceFlix.TemporaryUnavailable
-
-        # Volver a pedir Catalog
-        try:
-            self._catalog_prx_ = self._main_prx_.getCatalog()
-            self._catalog_prx_.ice_ping()
-        except IceFlix.TemporaryUnavailable or Ice.ConnectionRefusedException: # Catalog caido o no existe
-            raise IceFlix.TemporaryUnavailable
-        
+            self._main_prx_ = main_connection        
 
     def login(self):
         ''' Implementa la función de iniciar sesión '''
@@ -131,7 +102,6 @@ class Cliente(Ice.Application):
         password = getpass.getpass("Contraseña: ")
         hash_password = hashlib.sha256(password.encode()).hexdigest()
         self._password_hash_ = hash_password
-        self.update_proxies()
         try:
             self._auth_prx_ = self._main_prx_.getAuthenticator()
             self._user_token_ = self._auth_prx_.refreshAuthorization(user, hash_password)
@@ -150,12 +120,14 @@ class Cliente(Ice.Application):
             self.revoke_topic = topic
             self.logged = True
                 
-        except IceFlix.TemporaryUnavailable:
+        except IceFlix.TemporaryUnavailable as e:
+            print(e)
             print("No hay ningún servicio de Autenticación disponible")
             input()
             return
         
-        except IceFlix.Unauthorized:
+        except IceFlix.Unauthorized as e:
+            print(e)
             print("Credenciales no válidas")
             input()
             return
@@ -198,11 +170,12 @@ class Cliente(Ice.Application):
         ''' Gestiona el comando "catalog_service" '''
         #MENU PARA ELEGIR LAS DISTINTAS BUSQUEDAS
 
-        if not self._catalog_prx_:
-            try:
-                self._catalog_prx_ = self._main_prx_.getCatalog()
-            except IceFlix.TemporaryUnavailable:
-                print(IceFlix.TemporaryUnavailable())
+        try:
+            self._catalog_prx_ = self._main_prx_.getCatalog()
+        except IceFlix.TemporaryUnavailable as e:
+            print(e)
+            print("No hay ningún servicio de Catálogo disponible")
+            return
 
         while 1:
             system("clear")
@@ -543,11 +516,13 @@ class Cliente(Ice.Application):
                 try:
                     auth = self._main_prx_.getAuthenticator()
                     auth.addUser(new_user, new_hash_password, self._admin_token_)
-                except IceFlix.Unauthorized:
-                    print("Usuario no autorizado como administrador")
-                    input()
-                except IceFlix.TemporaryUnavailable:
+                except IceFlix.TemporaryUnavailablea as e:
+                    print(e)
                     print("No hay ningún servicio de Autenticación disponible")
+                    input()
+                except IceFlix.Unauthorized as e:
+                    print(e)
+                    print("Usuario no autorizado como administrador")
                     input()
                 else:
                     input("Usuario creado correctamente. Pulsa Enter para continuar...")
@@ -558,11 +533,13 @@ class Cliente(Ice.Application):
                 try:
                     auth = self._main_prx_.getAuthenticator()
                     auth.removeUser(delete_user, self._admin_token_)
-                except IceFlix.Unauthorized:
-                    print("Usuario no autorizado como administrador")
-                    input()
-                except IceFlix.TemporaryUnavailable:
+                except IceFlix.TemporaryUnavailable as e:
+                    print(e)
                     print("No hay ningún servicio de Autenticación disponible")
+                    input()
+                except IceFlix.Unauthorized as e:
+                    print(e)
+                    print("Usuario no autorizado como administrador")
                     input()
                 else:
                     if delete_user == self._username_:
