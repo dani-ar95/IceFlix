@@ -452,8 +452,8 @@ class Cliente(Ice.Application):
                 config_url = self._stream_controller_prx_.getSDP(self._user_token_, 9998)
                 print(config_url)
                 print("Exito en el controller")
-            except IceFlix.Unauthorized:
-                print(IceFlix.Unauthorized())
+            except IceFlix.Unauthorized as e:
+                print(e)
                 input()
             else:
                 self._media_player_.play(config_url)

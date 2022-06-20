@@ -53,8 +53,9 @@ class RevocationsListener(IceFlix.Revocations):
     def revokeUser(self, user, srvId, current=None):
         """ Comportamiento al recibir un mensaje revokeUser """
 
-        if srvId is not self.service_id:
-            self.servant.remove_local_user(user)
+        if self.service.ice_isA("::IceFlix::Authenticator"):
+            if srvId is not self.service_id:
+                self.servant.remove_local_user(user)
 
 
 class RevocationsSender:

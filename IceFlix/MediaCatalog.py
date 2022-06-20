@@ -129,12 +129,12 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             for media in self._media_.values():
                 new_name = path.split(media.info.name)[1].lower()
                 if name.lower().split(".")[0] == new_name.split(".")[0]:
-                    id_list.append(media.mediaId)
+                    id_list.append(media.info.name)
         else:
             for media in self._media_.values():
                 new_name = path.split(media.info.name)[1].lower()
                 if name.lower().split(".")[0] in new_name.split(".")[0]:
-                    id_list.append(media.mediaId)
+                    id_list.append(media.info.name)
 
         return id_list
 
