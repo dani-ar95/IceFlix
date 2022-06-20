@@ -10,6 +10,7 @@ from time import sleep
 from os import path, rename
 import IceStorm
 import uuid
+import random
 from stream_announcements import StreamAnnouncementsListener
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from catalog_updates import CatalogUpdatesListener, CatalogUpdatesSender
@@ -129,19 +130,19 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             for media in self._media_.values():
                 new_name = path.split(media.info.name)[1].lower()
                 if name.lower().split(".")[0] == new_name.split(".")[0]:
-                    id_list.append(media.mediaId)
+                    id_list.append(media.info.name)
         else:
             for media in self._media_.values():
                 new_name = path.split(media.info.name)[1].lower()
                 if name.lower().split(".")[0] in new_name.split(".")[0]:
-                    id_list.append(media.mediaId)
+                    id_list.append(media.info.name)
 
         return id_list
 
 
     def getTilesByTags(self, tags: list, includeAllTags: bool, userToken, current=None): # pylint: disable=invalid-name,unused-argument
-        ''' Retorna una lista de IDs de los medios con las tags dadas '''
-
+        ''' Retorna una lista de IDs de los medios con las tags dadas '''     
+        
         try:
             username = self.check_user_name(userToken)
         except IceFlix.Unauthorized:
@@ -258,9 +259,11 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
 
     def check_user_name(self, user_token: str):
         ''' Devuelve el usuario al que pertenece el token dado '''
-
+        
+        main_prx = random.choice(list(self._anunciamientos_listener.mains.values()))
+        auth = main_prx.getAuthenticator()   
         try:
-            user_name = self._auth_prx_.whois(user_token)
+            user_name = auth.whois(user_token)
         except IceFlix.Unauthorized as e:
             raise e
         else:
