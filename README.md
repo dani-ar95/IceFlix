@@ -10,7 +10,7 @@ https://github.com/SSDD-2021-2022/SSDD_Lab_Team_ADS
 - **Token de administración**: admin  
 - **Username**: user  
 - **Contraseña**: password  
-- **Proxy servicio IceFlix::Main** -> Main:tcp -p 9090
+- **Proxy servicio IceFlix::Main** -> MainPrincipal -t -e 1.1 @ MainAdapter1
 - **Proxy servicio IceFlix::StreamProvider** -> StreamProvider:tcp -p 9095
 - **Medios de ejemplo**: Pelucas.mp4  
 - **La carpeta resources simula ser el servidor de archivos.**  
