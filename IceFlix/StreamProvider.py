@@ -7,14 +7,12 @@ import hashlib
 import glob
 import random
 import sys
-from time import sleep
-import threading
 import uuid
 import Ice
 import IceStorm
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from stream_announcements import StreamAnnouncementsSender, StreamAnnouncementsListener
-from constants import ANNOUNCEMENT_TOPIC, STREAM_ANNOUNCES_TOPIC, REVOCATIONS_TOPIC
+from constants import ANNOUNCEMENT_TOPIC, STREAM_ANNOUNCES_TOPIC
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 
@@ -128,7 +126,6 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
             print("[PROVIDER] Reanunciando ", media.mediaId, media.info.name)
             self._stream_announcements_sender.newMedia(media.mediaId, media.info.name, srvId) #TODO: Revisar
     
-
     def update_directory(self):
         root_folder = path.join(path.dirname(__file__), "resources")
         candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
@@ -141,7 +138,6 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
                 self._provider_media_.update({id_hash: new_media})
 
             #self._catalog_prx_.updateMedia(id_hash, filename, self._proxy_)
-
 
 class StreamProviderServer(Ice.Application):
     ''' Servidor que comparte con el catálogo sus medios disponibles  '''

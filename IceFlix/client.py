@@ -114,14 +114,14 @@ class Cliente(Ice.Application):
         try:
             self._auth_prx_ = self._main_prx_.getAuthenticator()
             self._auth_prx_.ice_ping()
-        except IceFlix.TemporaryUnavailable or AttributeError: # Authenticator caido o no existe
+        except IceFlix.TemporaryUnavailable or Ice.ConnectionRefusedException: # Authenticator caido o no existe
             raise IceFlix.TemporaryUnavailable
 
         # Volver a pedir Catalog
         try:
             self._catalog_prx_ = self._main_prx_.getCatalog()
             self._catalog_prx_.ice_ping()
-        except IceFlix.TemporaryUnavailable or AttributeError: # Catalog caido o no existe
+        except IceFlix.TemporaryUnavailable or Ice.ConnectionRefusedException: # Catalog caido o no existe
             raise IceFlix.TemporaryUnavailable
         
 
@@ -161,7 +161,7 @@ class Cliente(Ice.Application):
             return
         self._username_ = user
         input("Registrado correctamente. Pulsa Enter para continuar...")
-    
+
     def logout(self):
         ''' Implementa la función de cerrar sesión '''
         if self.logged:

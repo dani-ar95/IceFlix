@@ -2,9 +2,7 @@
 
 from os import path
 import uuid
-import logging
 import os
-import threading
 import Ice
 
 try:

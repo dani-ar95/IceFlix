@@ -2,8 +2,6 @@
 # pylint: disable=invalid-name
 """Modulo Servicio de Autenticación"""
 
-    
-from cmath import e
 import random
 import threading
 from time import sleep
@@ -23,7 +21,7 @@ from volatile_services import UsersDB
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from user_updates import UserUpdatesSender, UserUpdatesListener
 from user_revocations import RevocationsListener, RevocationsSender
-from constants import ANNOUNCEMENT_TOPIC, REVOCATIONS_TOPIC, AUTH_SYNC_TOPIC
+from constants import REVOCATIONS_TOPIC, AUTH_SYNC_TOPIC
 
 auth_id = str(uuid.uuid4())
 
