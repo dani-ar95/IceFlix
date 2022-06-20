@@ -199,7 +199,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             raise IceFlix.WrongMediaId(mediaId)
 
         self.add_tags(mediaId, tags, user_name)
-
+        self._updates_sender.addTags(mediaId, tags, user_name, self.service_id)
 
     def removeTags(self, mediaId: str, tags: list, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Elimina las tags dadas del medio con el ID dado '''
@@ -213,7 +213,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             raise IceFlix.WrongMediaId(mediaId)
 
         self.remove_tags(mediaId, tags, user_name)
-
+        self._updates_sender.removeTags(mediaId, tags, user_name, self.service_id)
 
     def renameTile(self, mediaId, name, adminToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Renombra el medio de la estructura correspondiente '''
@@ -224,6 +224,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             raise IceFlix.Unauthorized
         else:
             self.rename_tile(mediaId, name)
+            self._updates_sender.renameTile(mediaId, name, self.service_id)
 
 
     def updateMedia(self, mediaId, initialName, provider, current=None): # pylint: disable=invalid-name,unused-argument

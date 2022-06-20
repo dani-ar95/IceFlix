@@ -17,7 +17,7 @@ class CatalogUpdatesListener(IceFlix.CatalogUpdates):
         self.catalog_service = catalog_service   #servant
 
     
-    def renameTiles(self, mediaId, name, srvId, current=None): # pylint: disable=invalid-name,unused-argument
+    def renameTile(self, mediaId, name, srvId, current=None): # pylint: disable=invalid-name,unused-argument
         """ Comportamiento al recibir un mensaje renameTiles """
 
         if srvId == self.catalog_service.id or not self.catalog_service.is_in_catalog(mediaId):
@@ -29,26 +29,18 @@ class CatalogUpdatesListener(IceFlix.CatalogUpdates):
     def addTags(self, mediaId, tags, user, srvId, current=None): # pylint: disable=invalid-name,unused-argument
         """ Comportamiento al recibir un mensaje addTags """
 
-        if srvId == self.catalog_service.id:
+        if srvId == self.catalog_service.id or not self.catalog_service.is_in_catalog(mediaId):
             return
-        '''
-            TODO: Comprobar que el media_id existe en el catalogo(?)
-                Mover comprobacion user y media_id aquí(?)
-
-            ¿Puede ser que no haga falta?
-        '''
+        
         self.catalog_service.add_tags(mediaId, tags, user)
 
         
     def removeTags(self, mediaId, tags, user, srvId, current=None): # pylint: disable=invalid-name,unused-argument
         """ Comportamiento al recibir un mensaje removeTags """
 
-        if srvId == self.catalog_service.id:
+        if srvId == self.catalog_service.id or not self.catalog_service.is_in_catalog(mediaId):
             return
-        '''
-            TODO: Comprobar que el media_id existe en el catalogo(?)
-                Mover comprobacion user y media_id aquí(?)
-        '''
+        
         self.catalog_service.removeTags(mediaId, tags, user)
 
 

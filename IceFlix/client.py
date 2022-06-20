@@ -131,37 +131,37 @@ class Cliente(Ice.Application):
         password = getpass.getpass("Contraseña: ")
         hash_password = hashlib.sha256(password.encode()).hexdigest()
         self._password_hash_ = hash_password
-        if not self._auth_prx_:
-            try:
-                self._auth_prx_ = self._main_prx_.getAuthenticator()
-                self._user_token_ = self._auth_prx_.refreshAuthorization(user, hash_password)
-                self.refreshed_token = True
-                
-                communicator = self.communicator()
-                topic_manager = IceStorm.TopicManagerPrx.checkedCast(communicator.propertyToProxy("IceStorm.TopicManager"))
-                try:
-                    topic = topic_manager.create(REVOCATIONS_TOPIC)
-                except IceStorm.TopicExists:
-                    topic = topic_manager.retrieve(REVOCATIONS_TOPIC)
-                self.revocations_publisher = RevocationsSender(topic)
-                self.revocations_subscriber = RevocationsListener(self)
-                self.revocations_subscriber_prx = self.adapter.addWithUUID(self.revocations_subscriber)
-                self.revoke_topic_prx = topic.subscribeAndGetPublisher({}, self.revocations_subscriber_prx)
-                self.revoke_topic = topic
-                self.logged = True
-                
-            except IceFlix.TemporaryUnavailable:
-                print("No hay ningún servicio de Autenticación disponible")
-                input()
-                return
+        self.update_proxies()
+        try:
+            self._auth_prx_ = self._main_prx_.getAuthenticator()
+            self._user_token_ = self._auth_prx_.refreshAuthorization(user, hash_password)
+            self.refreshed_token = True
             
-            except IceFlix.Unauthorized:
-                print("Credenciales no válidas")
-                input()
-                return
-            self._username_ = user
-            input("Registrado correctamente. Pulsa Enter para continuar...")
-
+            communicator = self.communicator()
+            topic_manager = IceStorm.TopicManagerPrx.checkedCast(communicator.propertyToProxy("IceStorm.TopicManager"))
+            try:
+                topic = topic_manager.create(REVOCATIONS_TOPIC)
+            except IceStorm.TopicExists:
+                topic = topic_manager.retrieve(REVOCATIONS_TOPIC)
+            self.revocations_publisher = RevocationsSender(topic)
+            self.revocations_subscriber = RevocationsListener(self)
+            self.revocations_subscriber_prx = self.adapter.addWithUUID(self.revocations_subscriber)
+            self.revoke_topic_prx = topic.subscribeAndGetPublisher({}, self.revocations_subscriber_prx)
+            self.revoke_topic = topic
+            self.logged = True
+                
+        except IceFlix.TemporaryUnavailable:
+            print("No hay ningún servicio de Autenticación disponible")
+            input()
+            return
+        
+        except IceFlix.Unauthorized:
+            print("Credenciales no válidas")
+            input()
+            return
+        self._username_ = user
+        input("Registrado correctamente. Pulsa Enter para continuar...")
+    
     def logout(self):
         ''' Implementa la función de cerrar sesión '''
         if self.logged:
