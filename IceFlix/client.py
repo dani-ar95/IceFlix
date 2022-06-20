@@ -98,6 +98,10 @@ class Cliente(Ice.Application):
 
     def login(self):
         ''' Implementa la función de iniciar sesión '''
+        if self.logged:
+            print("Ya hay una sesión activa")
+            input()
+            return
         user = input("Nombre de usuario: ")
         password = getpass.getpass("Contraseña: ")
         hash_password = hashlib.sha256(password.encode()).hexdigest()
