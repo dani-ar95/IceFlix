@@ -87,8 +87,14 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
     def getTile(self, mediaId: str, userToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna un objeto Media con la informacion del medio con el ID dado '''
 
+        main_prx = random.choice(list(self._anunciamientos_listener.mains.values()))
+        try:
+            self._auth_prx_ = main_prx.getAuthenticator()
+        except IceFlix.TemporaryUnavailable:
+            raise IceFlix.TemporaryUnavailable
+
         # Actualizar proxy a auth
-        self.update_auth()
+        #self.update_auth()
         # Comprobar usuario
         try:
             if not self.check_user(userToken):
@@ -130,12 +136,12 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             for media in self._media_.values():
                 new_name = path.split(media.info.name)[1].lower()
                 if name.lower().split(".")[0] == new_name.split(".")[0]:
-                    id_list.append(media.info.name)
+                    id_list.append(media.mediaId)
         else:
             for media in self._media_.values():
                 new_name = path.split(media.info.name)[1].lower()
                 if name.lower().split(".")[0] in new_name.split(".")[0]:
-                    id_list.append(media.info.name)
+                    id_list.append(media.mediaId)
 
         return id_list
 
@@ -495,14 +501,10 @@ class MediaCatalogServer(Ice.Application):
             topic = topic_manager.retrieve(CATALOG_SYNC_TOPIC)
 
         self._updates_sender = CatalogUpdatesSender(
-            topic,
-            self.servant.service_id,
-            self.proxy,
-        )
+            topic, self.servant.service_id)
 
         self._updates_listener = CatalogUpdatesListener(
-            self.servant, self.servant.service_id, IceFlix.MediaCatalogPrx
-        )
+            self.servant, self.servant.service_id)
 
         subscriber_prx = self.adapter.addWithUUID(self._updates_listener)
         topic.subscribeAndGetPublisher({}, subscriber_prx)
