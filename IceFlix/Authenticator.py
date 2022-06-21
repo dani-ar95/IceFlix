@@ -42,6 +42,9 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         self._revocations_sender = None
         self._announcements_listener = None
 
+    def get_service_id(self):
+        return self.service_id
+    
     @property
     def get_usersDB(self):
         ''' Devuelve estructura UsersDB '''

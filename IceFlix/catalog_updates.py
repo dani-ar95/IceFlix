@@ -55,8 +55,8 @@ class CatalogUpdatesSender():
         )
         self.service_id = service_id
 
-    def renameTiles(self, mediaId, name):
-        self.publisher.renameTiles(mediaId, name, self.service_id)
+    def renameTile(self, mediaId, name):
+        self.publisher.renameTile(mediaId, name, self.service_id)
 
     def addTags(self, mediaId, tags, user):
         self.publisher.addTags(mediaId, tags, user, self.service_id)

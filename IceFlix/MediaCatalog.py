@@ -7,7 +7,8 @@ import sqlite3
 import sys
 import json
 from time import sleep
-from os import path, rename
+from os import path, rename, chdir
+import glob
 import IceStorm
 import uuid
 import random
@@ -244,9 +245,9 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
 
     def check_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''
-
+        main_prx = random.choice(list(self._anunciamientos_listener.mains.values()))
         try:
-            is_admin = self._main_prx_.isAdmin(admin_token)
+            is_admin = main_prx.isAdmin(admin_token)
             if not is_admin:
                 raise IceFlix.Unauthorized
         except IceFlix.TemporaryUnavailable:
@@ -377,42 +378,47 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         c = conn.cursor()
         c.execute(f"SELECT * FROM media where id LIKE '{media_id}'")
         media = conn.commit()
-        conn.close()
 
         # Buscar id en medios dinamicos
         if media_id not in self._media_ and not media:
+            print("1er print")
             raise IceFlix.WrongMediaId
 
         # Cambiar media en medios dinamicos
         if media_id in self._media_:
             media = self._media_.get(media_id)
-            #old_name = media.info.name # Si se hace esto no va a funcionar porque todos acceden al mismo archivo
-            old_name = name             # El archivo ya ha cambiado de nombre porque lo hizo el otro Catalogo
+            old_name = media.info.name # Si se hace esto no va a funcionar porque todos acceden al mismo archivo
+            #old_name = name             # El archivo ya ha cambiado de nombre porque lo hizo el otro Catalogo
             suffix = media.info.name.split(".")[1]
             media.info.name = name + "." + suffix
             self._media_.update({media_id: media})
 
         # Cambiar en directorio
-        try:
-            rename(old_name, "IceFlix/resources/" + name + "." + suffix)
-        except FileNotFoundError:
-            raise IceFlix.WrongMediaId
-
-        # Buscar medio en bbdd
-        try:
-            in_ddbb = self.getTile(media_id)
-        except IceFlix.Unauthorized:
-            raise IceFlix.Unauthorized
-
+        if self.findfile(old_name):
+            try:
+                rename(old_name, "IceFlix/resources/" + name + "." + suffix)
+            except FileNotFoundError:
+                print("2ºprint ", old_name)
+                raise IceFlix.WrongMediaId
         else:
-            if in_ddbb:
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute(
-                    f"UPDATE media SET name = '{name}.mp4' WHERE id LIKE '{media_id}'")
-                conn.commit()
-                conn.close()
+            print("putas en pijamas")
+        # Buscar medio en bbdd
+        media = self._media_.get(media_id)
 
+        if media:
+            c = conn.cursor()
+            c.execute(
+                f"UPDATE media SET name = '{name}.mp4' WHERE id LIKE '{media_id}'")
+            conn.commit()
+        conn.close()
+
+    def findfile(self, name):
+        for file in glob.glob("IceFlix/resources/*"):   #TODO: SACAR A RUTA GLOBAL PORFIS :D
+            print(file)
+            print(name)
+            if file == name:
+                return True
+        return False
 
     def share_data_with(self, service, current=None):
         """Share the current database with an incoming service."""
