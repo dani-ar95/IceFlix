@@ -309,7 +309,7 @@ class Cliente(Ice.Application):
         if len(id_list) > 0:
             for title_id in id_list:
                 try:
-                    media_list.append(self._catalog_prx_.getTile(title_id))
+                    media_list.append(self._catalog_prx_.getTile(title_id, self._user_token_))
                 except(IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e: # pylint: disable=invalid-name
                     print(e)
         else:

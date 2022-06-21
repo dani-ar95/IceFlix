@@ -17,7 +17,7 @@ from catalog_updates import CatalogUpdatesListener, CatalogUpdatesSender
 import Ice
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 DB_PATH = path.join(path.dirname(__file__), "media.db")
-USERS_PATH = None
+USERS_PATH = "IceFlix/users.json"
 Ice.loadSlice(SLICE_PATH)
 import IceFlix # pylint: disable=wrong-import-position
 
