@@ -7,7 +7,7 @@ import sqlite3
 import sys
 import json
 from time import sleep
-from os import path, rename, chdir
+from os import path, rename
 import glob
 import IceStorm
 import uuid
@@ -19,6 +19,7 @@ import Ice
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 DB_PATH = path.join(path.dirname(__file__), "media.db")
 USERS_PATH = "IceFlix/users.json"
+RESOURCES_FOLDER = path.join(path.dirname(__file__), "resources/")
 Ice.loadSlice(SLICE_PATH)
 import IceFlix # pylint: disable=wrong-import-position
 
@@ -396,7 +397,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         # Cambiar en directorio
         if self.findfile(old_name):
             try:
-                rename(old_name, "IceFlix/resources/" + name + "." + suffix)
+                rename(old_name, RESOURCES_FOLDER + name + "." + suffix)
             except FileNotFoundError:
                 print("2ºprint ", old_name)
                 raise IceFlix.WrongMediaId
@@ -413,7 +414,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         conn.close()
 
     def findfile(self, name):
-        for file in glob.glob("IceFlix/resources/*"):   #TODO: SACAR A RUTA GLOBAL PORFIS :D
+        for file in glob.glob(RESOURCES_FOLDER + "*"):
             print(file)
             print(name)
             if file == name:
