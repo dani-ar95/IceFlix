@@ -211,8 +211,9 @@ class StreamProviderServer(Ice.Application):
 
         broker = self.communicator()
 
-        self.adapter = broker.createObjectAdapterWithEndpoints('StreamProviderAdapter', 'tcp')
-        stream_provider_proxy = self.adapter.addWithUUID(self.servant_provider)
+        self.adapter = broker.createObjectAdapterWithEndpoints('StreamProviderAdapter', 'tcp -p 9095')
+        self.adapter.add(self.servant_provider, broker.stringToIdentity("StreamProvider"))
+        stream_provider_proxy = self.adapter.add(self.servant_provider, Ice.stringToIdentity("ProviderPrincipal"))
 
         self.servant_provider._proxy_ = stream_provider_proxy
         self.adapter.activate()
@@ -224,7 +225,7 @@ class StreamProviderServer(Ice.Application):
         self.servant_provider._stream_announcements_sender = self.stream_announcements_announcer
 
         self.announcer.start_service()
-
+        print(f"[PROXY PROVIDER] {self.servant_provider._proxy_ }")
         root_folder = path.join(path.dirname(__file__), "resources")
         candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
         
