@@ -596,7 +596,7 @@ class Cliente(Ice.Application):
                     input()
                 finally:
                     uploader_connection.close()
-                    adapter.deactivate()
+                    adapter.destroy()
 
             elif option == "2":
                 return 0
