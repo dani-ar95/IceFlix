@@ -95,7 +95,7 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
                 self._provider_media_.update({id_hash:new_media})
 
                 # Anunciar medio
-                self._stream_announcements_sender.newMedia(id_hash, fileName, self.service_id)
+                self._stream_announcements_sender.newMedia(id_hash, new_file_name, self.service_id)
 
                 return id_hash
 
