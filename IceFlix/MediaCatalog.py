@@ -317,7 +317,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
                 auth_prx.ice_ping()
                 USERS_PATH = path.join(path.join(path.dirname(__file__),
                        "persistence"), (auth_id + "_users.json"))
-                print(USERS_PATH)
+                # print(USERS_PATH)
                 return USERS_PATH
 
             except Ice.ConnectionRefusedException:
@@ -382,7 +382,6 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
 
         # Buscar id en medios dinamicos
         if media_id not in self._media_ and not media:
-            print("1er print")
             raise IceFlix.WrongMediaId
 
         # Cambiar media en medios dinamicos
@@ -399,10 +398,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             try:
                 rename(old_name, RESOURCES_FOLDER + name + "." + suffix)
             except FileNotFoundError:
-                print("2ºprint ", old_name)
                 raise IceFlix.WrongMediaId
-        else:
-            print("putas en pijamas")
         # Buscar medio en bbdd
         media = self._media_.get(media_id)
 
@@ -415,8 +411,6 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
 
     def findfile(self, name):
         for file in glob.glob(RESOURCES_FOLDER + "*"):
-            print(file)
-            print(name)
             if file == name:
                 return True
         return False
@@ -431,7 +425,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         print(f"Receiving remote data base from {service_id} to {self.service_id}")
         
         for media in values:
-            print("Se recibe el obejeto:")
+            print("Se recibe el objeto:")
             print(media)
             info = IceFlix.MediaInfo(media.name, media.tagsPerUser.values())
             self._media_.update({media.mediaId: IceFlix.Media(media.mediaId, None, info)})
@@ -560,7 +554,6 @@ class MediaCatalogServer(Ice.Application):
         self.servant.read_media()
         self.announcer.start_service()
 
-        print(self.servant._media_)
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
 
