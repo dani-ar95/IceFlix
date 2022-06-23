@@ -218,6 +218,7 @@ class StreamProviderServer(Ice.Application):
         self.servant_provider._proxy_ = stream_provider_proxy
         self.adapter.activate()
 
+        print(f"[PROXY PROVIDER] {self.servant_provider._proxy_ }")
         self.setup_announcements()
         self.setup_stream_announcements()
 
@@ -225,7 +226,6 @@ class StreamProviderServer(Ice.Application):
         self.servant_provider._stream_announcements_sender = self.stream_announcements_announcer
 
         self.announcer.start_service()
-        print(f"[PROXY PROVIDER] {self.servant_provider._proxy_ }")
         root_folder = path.join(path.dirname(__file__), "resources")
         candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
         
