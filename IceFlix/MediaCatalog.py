@@ -62,8 +62,8 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
 
     def remove_media(self, media_id):
         if self.is_in_catalog(media_id):
-            return
-        self._media_.pop(media_id)
+            self._media_.pop(media_id)
+        return
 
 
     def find_provider(self, srv_id):
