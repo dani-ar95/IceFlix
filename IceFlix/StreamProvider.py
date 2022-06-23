@@ -139,6 +139,18 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
 
             #self._catalog_prx_.updateMedia(id_hash, filename, self._proxy_)
 
+    def check_admin(self, admin_token: str):
+        ''' Comprueba si un token es Administrador '''
+        main_prx = random.choice(list(self._service_announcer_listener.mains.values()))
+        try:
+            is_admin = main_prx.isAdmin(admin_token)
+            if not is_admin:
+                raise IceFlix.Unauthorized
+        except IceFlix.TemporaryUnavailable:
+            raise IceFlix.Unauthorized
+        else:
+            return is_admin
+
 class StreamProviderServer(Ice.Application):
     ''' Servidor que comparte con el catálogo sus medios disponibles  '''
 

@@ -582,8 +582,8 @@ class Cliente(Ice.Application):
 
                 uploader = MediaUploaderI(file)
 
-                adapter = self.communicator().createObjectAdapterWithEndpoints('MediaUploaderAdapter', 'tcp -p 9100')
-                uploader_proxy = adapter.add(uploader, self.communicator().stringToIdentity('MediaUploader'))
+                adapter = self.communicator().createObjectAdapterWithEndpoints('MediaUploaderAdapter', 'tcp')
+                uploader_proxy = adapter.addWithUUID(uploader)
                 uploader_connection = IceFlix.MediaUploaderPrx.checkedCast(uploader_proxy)
 
                 adapter.activate()
@@ -596,7 +596,7 @@ class Cliente(Ice.Application):
                     input()
                 finally:
                     uploader_connection.close()
-                    adapter.remove(self.communicator().stringToIdentity('MediaUploader'))
+                    adapter.deactivate()
 
             elif option == "2":
                 return 0
