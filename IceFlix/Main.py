@@ -162,15 +162,9 @@ class MainServer(Ice.Application):
         properties = broker.getProperties()
         self.servant._token_ = properties.getProperty("AdminToken")
 
-        try: # Primer Main
-            self.adapter = broker.createObjectAdapterWithEndpoints('MainAdapter', 'tcp -p 9090')
-            self.adapter.add(self.servant, broker.stringToIdentity("Main"))
-            servant_proxy = self.adapter.add(self.servant, Ice.stringToIdentity("MainPrincipal"))
-            
-        except Ice.SocketException: # Más de un Main
-            self.adapter = broker.createObjectAdapterWithEndpoints('MainAdapter', 'tcp')
-            self.adapter.add(self.servant, broker.stringToIdentity("Main"))
-            servant_proxy = self.adapter.addWithUUID(self.servant)
+        self.adapter = broker.createObjectAdapterWithEndpoints('MainAdapter', 'tcp')
+        self.adapter.add(self.servant, broker.stringToIdentity("Main"))
+        servant_proxy = self.adapter.add(self.servant, Ice.stringToIdentity("MainPrincipal"))
 
         self.proxy = servant_proxy
         self.adapter.activate()
