@@ -19,10 +19,11 @@ SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
 import IceFlix # pylint: disable=wrong-import-position
 
-class Cliente(Ice.Application):
+class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
     ''' Implementación del cliente '''
 
     def __init__(self):
+        super().__init__()
         self._username_ = None
         self._password_hash_ = None
         self.logged = False
@@ -42,7 +43,8 @@ class Cliente(Ice.Application):
         self.revocations_publisher = None
         self.adapter = None
 
-    def format_prompt(self):
+    @staticmethod()
+    def format_prompt(): #pylint: disable=no-method-argument
         ''' Formatea la consola '''
         system("clear")
         print("         #----------------#")
@@ -73,7 +75,7 @@ class Cliente(Ice.Application):
             main_connection = IceFlix.MainPrx.checkedCast(main_proxy)
             self.adapter = self.communicator().createObjectAdapterWithEndpoints('ClientAdapter',
                                                                                 'tcp')
-        except:
+        except Ice.ConnectionRefusedException:
             print("La conexión no ha sido posible")
             input()
             os._exit(0)
@@ -158,18 +160,15 @@ class Cliente(Ice.Application):
         if self._username_ and self._admin_token_:
             if self._playing_media_:
                 return "Admin_Playing>>" + servicio + "@" + self._username_ + "> "
-            else:
-                return "Admin>>" + servicio + "@" + self._username_ + "> "
+            return "Admin>>" + servicio + "@" + self._username_ + "> "
+        if self._username_:
+            if self._playing_media_:
+                return "Playing>>" + servicio + "@" + self._username_ + "> "
+            return servicio + "@" + self._username_ + "> "
+        elif self._admin_token_:
+            return "Admin>>" + servicio + "@Anónimo> "
         else:
-            if self._username_:
-                if self._playing_media_:
-                    return "Playing>>" + servicio + "@" + self._username_ + "> "
-                else:
-                    return servicio + "@" + self._username_ + "> "
-            elif self._admin_token_:
-                return "Admin>>" + servicio + "@Anónimo> "
-            else:
-                return servicio + "@Anónimo> "
+            return servicio + "@Anónimo> "
 
     def catalog_service(self):
         ''' Gestiona el comando "catalog_service" '''
