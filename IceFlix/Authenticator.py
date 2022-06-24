@@ -29,7 +29,7 @@ USERS_PATH = "IceFlix/users.json" # Calcular ruta absoluta
 LOCAL_DB_PATH = path.join(path.join(path.dirname(__file__),
                                     "persistence"), (AUTH_ID + "_users.json"))
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
-Ice.loadSlice(SLICE_PATH)
+
 
 
 class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-class
