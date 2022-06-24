@@ -4,7 +4,6 @@
 from os import system, path
 from time import sleep
 import sys
-import os
 import signal
 import hashlib
 import getpass
@@ -13,13 +12,13 @@ import iceflixrtsp
 from MediaUploader import MediaUploaderI
 import IceStorm
 from user_revocations import RevocationsListener, RevocationsSender
-from constants import REVOCATIONS_TOPIC
+from constants import REVOCATIONS_TOPIC  #pylint: disable=no-name-in-module
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
 import IceFlix # pylint: disable=wrong-import-position
 
-class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
+class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,too-many-public-methods
     ''' Implementación del cliente '''
 
     def __init__(self):
@@ -40,6 +39,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
         self.revoke_topic = None
         self.revoke_topic_prx = None
         self.revocations_subscriber = None
+        self.revocations_subscriber_prx = None
         self.revocations_publisher = None
         self.adapter = None
 
@@ -78,7 +78,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
         except Ice.ConnectionRefusedException:
             print("La conexión no ha sido posible")
             input()
-            os._exit(0)
+            sys.exit(0)
         else:
             print("Conectando con el servicio principal...")
             sleep(1)    #Simula complejidad
@@ -115,11 +115,11 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
             self.refreshed_token = True
 
             communicator = self.communicator()
-            topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+            topic_manager = IceStorm.TopicManagerPrx.checkedCast(  #pylint: disable=no-member
                 communicator.propertyToProxy("IceStorm.TopicManager"))
             try:
                 topic = topic_manager.create(REVOCATIONS_TOPIC)
-            except IceStorm.TopicExists:
+            except IceStorm.TopicExists:  #pylint: disable=no-member
                 topic = topic_manager.retrieve(REVOCATIONS_TOPIC)
             self.revocations_publisher = RevocationsSender(topic)
             self.revocations_subscriber = RevocationsListener(self)
@@ -165,12 +165,11 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
             if self._playing_media_:
                 return "Playing>>" + servicio + "@" + self._username_ + "> "
             return servicio + "@" + self._username_ + "> "
-        elif self._admin_token_:
+        if self._admin_token_:
             return "Admin>>" + servicio + "@Anónimo> "
-        else:
-            return servicio + "@Anónimo> "
+        return servicio + "@Anónimo> "
 
-    def catalog_service(self):
+    def catalog_service(self):  #pylint: disable=too-many-branches,too-many-statements
         ''' Gestiona el comando "catalog_service" '''
         #MENU PARA ELEGIR LAS DISTINTAS BUSQUEDAS
 
@@ -178,11 +177,11 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
             self._catalog_prx_ = self._main_prx_.getCatalog()
         except IceFlix.TemporaryUnavailable:
             print("No hay ningún servicio de Catálogo disponible")
-            return
+            return 0
 
         while 1:
             system("clear")
-            self.format_prompt()
+            self.format_prompt()  #pylint: disable=too-many-function-args
             max_option = 3
             print("Opciones disponibles:")
             print("1. Búsqueda por nombre")
@@ -227,7 +226,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
                     print("\nNo se han encontrado resultados")
                     input("Pulsa enter para continuar...")
                     continue
-                elif media_list == 0:
+                if media_list == 0:
                     input("Pulsa enter para continuar...")
                     continue
 
@@ -326,7 +325,8 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
 
         return media_list
 
-    def ask_for_tags(self):
+    @staticmethod
+    def ask_for_tags():
         ''' Implementa la petición de tags por parte del usuario '''
         tag_list = []
         print("Inserta sus etiquetas. Para salir, dejar en blanco:")
@@ -339,7 +339,8 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
 
         return tag_list
 
-    def select_media(self, media_list):
+    @staticmethod
+    def select_media(media_list):
         ''' Implementa la selección de videos disponibles según la búsqueda '''
         counter = 0
         print("Videos encontrados:\n")
@@ -356,7 +357,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
         selected_media = media_list[int(option)-1]
         return selected_media
 
-    def ask_function(self, media_object):
+    def ask_function(self, media_object):  #pylint: disable=too-many-branches,too-many-statements
         ''' Implementa la petición de opciones para un medio '''
         max_option = 6
         print("1. Reproducir")
@@ -449,29 +450,30 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
         except IceFlix.Unauthorized: # pylint: disable=invalid-name
             print("Usuario no autorizado")
             input()
+            return
         except IceFlix.WrongMediaId:
             print("El video no se encuentra en el catalogo")
             input()
+            return
+        try:
+            config_url = self._stream_controller_prx_.getSDP(self._user_token_, 9998)
+            print(config_url)
+            print("Exito en el controller")
+        except IceFlix.Unauthorized:
+            print("Usuario no autorizado")
+            input()
         else:
-            try:
-                config_url = self._stream_controller_prx_.getSDP(self._user_token_, 9998)
-                print(config_url)
-                print("Exito en el controller")
-            except IceFlix.Unauthorized:
-                print("Usuario no autorizado")
-                input()
-            else:
-                self._media_player_.play(config_url)
-                self._playing_media_ = True
-                print("Introduce q para parar o presiona enter para seguir navegando")
-                key = input()
-                if key == "":
-                    return 0
-                elif key == "q":
-                    self._stream_controller_prx_.stop()
-                    self._media_player_.stop()
-                    self._playing_media_ = False
-                    return 0
+            self._media_player_.play(config_url)
+            self._playing_media_ = True
+            print("Introduce q para parar o presiona enter para seguir navegando")
+            key = input()
+            if key == "":
+                return
+            if key == "q":
+                self._stream_controller_prx_.stop()
+                self._media_player_.stop()
+                self._playing_media_ = False
+                return
 
     def add_tags(self, media_object):
         ''' Implementa la función de añadir tags a un medio '''
@@ -522,8 +524,8 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
         try:
             proxy = self.communicator().stringToProxy(stream_provider_proxy)
             stream_provider_connection = IceFlix.StreamProviderPrx.checkedCast(proxy)
-        except:
-            print("La conexión no ha sido posible")
+        except Ice.ConnectionRefusedException:
+            print("La conexión no ha sido posible. Pulsa Enter para continuar...")
             input()
             return 0
         try:
@@ -538,7 +540,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
 
         while 1:
             system("clear")
-            self.format_prompt()
+            self.format_prompt()  #pylint: disable=too-many-function-args
             print("1. Añadir usuario")
             print("2. Eliminar usuario")
             print("3. Salir")
@@ -564,7 +566,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
                     input("Usuario creado correctamente. Pulsa Enter para continuar...")
                 continue
 
-            elif option == "2":
+            if option == "2":
                 delete_user = input("Introduce un usuario válido para eliminarlo: ")
                 try:
                     auth = self._main_prx_.getAuthenticator()
@@ -582,14 +584,14 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
                     input("Usuario borrado correctamente. Pulsa Enter para continuar...")
                 continue
 
-            elif option == "3":
+            if option == "3":
                 return 0
 
     def stream_provider_service(self):
         ''' Implementa el servicio de subir videos '''
         while 1:
             system("clear")
-            self.format_prompt()
+            self.format_prompt()  #pylint: disable=too-many-function-args
             print("Opciones disponibles:")
             print("1. Subir un video")
             print("2. Volver\n")
@@ -636,11 +638,11 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
             elif option == "2":
                 return 0
 
-    def main_menu(self):
+    def main_menu(self):  #pylint: disable=too-many-branches
         ''' Implementa la interfaz del menú principal '''
         while 1:
             system("clear")
-            self.format_prompt()
+            self.format_prompt()  #pylint: disable=too-many-function-args
             max_option = 7
             print("Opciones disponibles: ")
             print("1. Introducir token de administración")
@@ -683,7 +685,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes
                 self._playing_media_ = False
 
     def run(self, args):
-        self.format_prompt()
+        self.format_prompt()  #pylint: disable=too-many-function-args
         self.set_main_proxy()
         self.adapter.activate()
         self.main_menu()
