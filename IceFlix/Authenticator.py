@@ -17,7 +17,7 @@ try:
 except ImportError:
     Ice.loadSlice(path.join(path.dirname(__file__), "iceflix.ice"))
     import IceFlix # pylint: disable=wrong-import-position
-from volatile_services import UsersDB
+from users_db import UsersDB
 from constants import REVOCATIONS_TOPIC, AUTH_SYNC_TOPIC # pylint: disable=no-name-in-module
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from user_updates import UserUpdatesSender, UserUpdatesListener
