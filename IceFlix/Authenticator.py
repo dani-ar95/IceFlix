@@ -11,7 +11,7 @@ import uuid
 import secrets
 from json import JSONDecodeError, load, dump
 import Ice
-from IceStorm import TopicManagerPrx, TopicExists
+from IceStorm import TopicManagerPrx, TopicExists # pylint: disable=no-name-in-module
 try:
     import IceFlix
 except ImportError:
@@ -90,6 +90,8 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                     return user[0]
         else:
             raise IceFlix.Unauthorized
+
+        return None
 
     def addUser(self, user, passwordHash, adminToken, current=None):  # pylint: disable=invalid-name,unused-argument
         ''' Perimte al administrador añadir usuarios al sistema '''
@@ -242,6 +244,21 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
 
         service.updateDB(self.get_usersDB, self.service_id)
 
+    def set_update_users(self, update_users):
+        """ Setea la variable _update_users """
+
+        self._update_users = update_users
+
+    def set_revocations_sender(self, revocations_sender):
+        """ Setea la variable _revocations_sender """
+
+        self._revocations_sender = revocations_sender
+
+    def set_announcements_listener(self, announcements_listener):
+        """ Setea la variable _announcements_listener """
+
+        self._announcements_listener = announcements_listener
+
 
 class AuthenticatorServer(Ice.Application): #pylint: disable=too-many-instance-attributes
     """Servidor del servicio principal"""
@@ -338,7 +355,7 @@ class AuthenticatorServer(Ice.Application): #pylint: disable=too-many-instance-a
         topic.subscribeAndGetPublisher({}, subscriber_prx)
 
 
-    def run(self, argv): # pylint: disable=unused-argument
+    def run(self, args): # pylint: disable=unused-argument
         ''' Implementación del servidor de autenticación '''
         sleep(1)
 
@@ -348,7 +365,8 @@ class AuthenticatorServer(Ice.Application): #pylint: disable=too-many-instance-a
         self.adapter = broker.createObjectAdapterWithEndpoints(
             'AuthenticatorAdapter', 'tcp')
         self.adapter.add(self.servant, broker.stringToIdentity("Authenticator"))
-        authenticator_proxy = self.adapter.add(self.servant, Ice.stringToIdentity("AuthenticatorPrincipal"))
+        authenticator_proxy = self.adapter.add(self.servant,
+                                               Ice.stringToIdentity("AuthenticatorPrincipal"))
 
         self.proxy = authenticator_proxy
         self.servant.create_db()
@@ -358,9 +376,9 @@ class AuthenticatorServer(Ice.Application): #pylint: disable=too-many-instance-a
         self.setup_user_updates()
         self.setup_revocations()
 
-        self.servant._update_users = self.updates_announcer
-        self.servant._revocations_sender = self.revocations_announcer
-        self.servant._announcements_listener = self.subscriber
+        self.servant.set_update_users(self.updates_announcer)
+        self.servant.set_revocations_sender(self.revocations_sender)
+        self.servant.set_announcements_listener(self.announcements_listener)
 
         self.announcer.start_service()
 
