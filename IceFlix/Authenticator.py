@@ -7,27 +7,27 @@ import threading
 from time import sleep
 from os import path
 import sys
-import json
-import secrets
-import Ice
-import IceStorm
 import uuid
+import secrets
+from json import JSONDecodeError, load, dump
+import Ice
+from IceStorm import TopicManagerPrx, TopicExists
 try:
     import IceFlix
 except ImportError:
     Ice.loadSlice(path.join(path.dirname(__file__), "iceflix.ice"))
     import IceFlix # pylint: disable=wrong-import-position
 from volatile_services import UsersDB
+from constants import REVOCATIONS_TOPIC, AUTH_SYNC_TOPIC
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from user_updates import UserUpdatesSender, UserUpdatesListener
 from user_revocations import RevocationsListener, RevocationsSender
-from constants import REVOCATIONS_TOPIC, AUTH_SYNC_TOPIC
 
-auth_id = str(uuid.uuid4())
+AUTH_ID = str(uuid.uuid4())
 
-USERS_PATH = "IceFlix/users.json"
+USERS_PATH = "IceFlix/users.json" # Calcular ruta absoluta
 LOCAL_DB_PATH = path.join(path.join(path.dirname(__file__),
-                                    "persistence"), (auth_id + "_users.json"))
+                                    "persistence"), (AUTH_ID + "_users.json"))
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
 
@@ -36,11 +36,13 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
     """Sirviente del servicio de autenticación """
 
     def __init__(self):
+
         self._active_users_ = {}
         self._update_users = None
-        self.service_id = auth_id
+        self.service_id = AUTH_ID
         self._revocations_sender = None
         self._announcements_listener = None
+        self._updated = False
 
     @property
     def get_usersDB(self):
@@ -48,7 +50,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
 
         users_passwords = {}
         with open(LOCAL_DB_PATH, "r", encoding="utf8") as f:
-            obj = json.load(f)
+            obj = load(f)
 
         for i in obj["users"]:
             users_passwords.update({i["user"]: i["password"]})
@@ -59,15 +61,15 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         ''' Actualiza el token de un usuario registrado '''
 
         with open(LOCAL_DB_PATH, "r", encoding="utf8") as f:
-            obj = json.load(f)
+            obj = load(f)
 
         for i in obj["users"]:
             if i["user"] == user and i["password"] == passwordHash:
                 new_token = secrets.token_urlsafe(40)
                 self._active_users_.update({user: new_token})
                 self._update_users.newToken(user, new_token)
-                revoke_timer = threading.Timer(120.0, 
-                                            self._revocations_sender.revokeToken, [new_token])
+                revoke_timer = threading.Timer(120.0,
+                                               self._revocations_sender.revokeToken, [new_token])
                 revoke_timer.start()
                 return new_token
 
@@ -93,11 +95,10 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         ''' Perimte al administrador añadir usuarios al sistema '''
 
         try:
-            if not self.is_admin(admin_token):
+            if not self.is_admin(adminToken):
                 raise IceFlix.Unauthorized
         except IceFlix.TemporaryUnavailable:
             raise IceFlix.TemporaryUnavailable
-
         user_password = (user, passwordHash)
         self.add_user(user_password, LOCAL_DB_PATH)
         self.add_user(user_password, USERS_PATH)
@@ -107,7 +108,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         ''' Permite al administrador elminar usuarios del sistema '''
 
         try:
-            if not self.is_admin(admin_token):
+            if not self.is_admin(adminToken):
                 raise IceFlix.Unauthorized
         except IceFlix.TemporaryUnavailable:
             raise IceFlix.TemporaryUnavailable
@@ -116,26 +117,52 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         self.remove_user(user, USERS_PATH)
         self._revocations_sender.revokeUser(user, self.service_id)
 
+    def updateDB(
+            self, values, service_id, current):  # pylint: disable=invalid-name,unused-argument
+        """ Actualiza datos locales a partir de una estructura usersDB """
+
+        if self._updated: # Allow only one update
+            return
+        self._updated = True
+
+        print(f"Receiving remote data base from {service_id} to {self.service_id}")
+
+        if service_id not in self._announcements_listener.known_ids:
+            raise IceFlix.UnknownService
+
+        user_passwords = values.userPasswords
+        user_tokens = values.usersToken
+
+        self._active_users_ = user_tokens  # Update user tokens
+        self.update_users(user_passwords)  # Update users and passwords
+
     def is_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''
-        main_prx = random.choice(list(self._announcements_listener.mains.values()))
-        if main_prx == None:
-            raise IceFlix.TemporaryUnavailable
-        is_admin = main_prx.isAdmin(admin_token)
-        return is_admin
 
-    def add_user(self, user_password, path):
+        while self._announcements_listener.mains.values():
+            main_prx = random.choice(list(self._announcements_listener.mains.values()))
+            if main_prx is not None:
+                try:
+                    main_prx.ice_ping()
+                    return main_prx.isAdmin(admin_token)
+
+                except Ice.ConnectionRefusedException:
+                    self._announcements_listener.mains.pop(main_prx) # Puede petar
+        raise IceFlix.TemporaryUnavailable
+
+    @staticmethod
+    def add_user(user_password, file_path):
         ''' Permite añadir usuario user_password partir de una tupla {usuario, password} '''
 
-        if path == None:
-            path = LOCAL_DB_PATH
+        if file_path is None: # Invocación remota
+            file_path = LOCAL_DB_PATH
 
         user, password = user_password
 
-        with open(path, "r", encoding="utf8") as f:
+        with open(file_path, "r", encoding="utf8") as f:
             try:
-                obj = json.load(f)
-            except Exception as e:  # Primer usuario del sistema -> Construir el formato del json
+                obj = load(f)
+            except JSONDecodeError:  # Primer usuario del sistema -> Construir el formato del json
                 obj = {
                     "users": [
                         {
@@ -150,39 +177,43 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                     obj["users"].append(
                         {"user": user, "password": password})
 
-        with open(path, 'w', encoding="utf8") as file:
-            json.dump(obj, file, indent=2)
+        with open(file_path, 'w', encoding="utf8") as file:
+            dump(obj, file, indent=2)
 
-    def add_local_user(self, user_password, tags):
-        self.add_user(user_password, {}, LOCAL_DB_PATH)
+    def add_local_user(self, user_password):
+        """ Añade un usuario de forma local """
 
-    def remove_user(self, user, path):
+        self.add_user(user_password, LOCAL_DB_PATH)
+
+    def remove_user(self, user, file_path):
         """ Elimina un usuario del archivo persistente """
 
-        with open(path, "r", encoding="utf8") as reading_descriptor:
-            obj = json.load(reading_descriptor)
+        with open(file_path, "r", encoding="utf8") as reading_descriptor:
+            obj = load(reading_descriptor)
 
         for i in obj["users"]:
             if i["user"] == user:
                 obj["users"].remove(i)
                 break
 
-        with open(path, 'w', encoding="utf8") as file:
-            json.dump(obj, file, indent=2)
+        with open(file_path, 'w', encoding="utf8") as file:
+            dump(obj, file, indent=2)
 
         if user in self._active_users_:
             self._active_users_.pop(user)
 
     def remove_local_user(self, user):
+        """ Elimina un usuario de forma local """
         self.remove_user(user, LOCAL_DB_PATH)
 
     def remove_token(self, userToken):
         """ Elimina el token de un usuario """
+
         try:
             user = self.whois(userToken)
             self._active_users_.pop(user)
         except IceFlix.Unauthorized:
-            print("[AUTHENTICATOR] Usuario no autorizado")
+            pass
 
     def add_token(self, user, token):
         ''' Añade o actualiza un token de usuario '''
@@ -196,9 +227,11 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
             self.add_user(user_info, LOCAL_DB_PATH)
 
     def create_db(self):
+        """ Crea la bbdd si no existe """
+
         open(LOCAL_DB_PATH, "x")
         with open(USERS_PATH, "r", encoding="utf8") as reading_descriptor:
-            obj = json.load(reading_descriptor)
+            obj = load(reading_descriptor)
 
         for i in obj["users"]:
             self.add_user((i["user"], i["password"]), LOCAL_DB_PATH)
@@ -208,36 +241,33 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
 
         service.updateDB(self.get_usersDB, self.service_id)
 
-    def updateDB(
-            self, values, service_id, current):  # pylint: disable=invalid-name,unused-argument
-        """ Actualiza datos locales a partir de una estructura usersDB """
 
-        print(f"Receiving remote data base from {service_id} to {self.service_id}")
-
-        if service_id not in self._announcements_listener.known_ids:
-            raise IceFlix.UnknownService
-
-        user_passwords = values.userPasswords
-        user_tokens = values.usersToken
-
-        self._active_users_ = user_tokens  # Update user tokens
-        self.update_users(user_passwords)  # Update users and passwords
-
-
-class AuthenticatorServer(Ice.Application):
+class AuthenticatorServer(Ice.Application): #pylint: disable=too-many-instance-attributes
     """Servidor del servicio principal"""
+
+    def __init__(self):
+        super().__init__()
+        self.announcer = None
+        self.subscriber = None
+        self.updates_announcer = None
+        self.updates_subscriber = None
+        self.revocations_announcer = None
+        self.revocations_subscriber = None
+        self.servant = None
+        self.adapter = None
+        self.proxy = None
 
     def setup_announcements(self):
         """Configure the announcements sender and listener."""
 
         communicator = self.communicator()
-        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+        topic_manager = TopicManagerPrx.checkedCast(
             communicator.propertyToProxy("IceStorm.TopicManager")
         )
 
         try:
             topic = topic_manager.create("ServiceAnnouncements")
-        except IceStorm.TopicExists:
+        except TopicExists:
             topic = topic_manager.retrieve("ServiceAnnouncements")
 
         self.announcer = ServiceAnnouncementsSender(
@@ -257,13 +287,13 @@ class AuthenticatorServer(Ice.Application):
         """ Configurar sender y listener del topic User Updates """
 
         communicator = self.communicator()
-        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+        topic_manager = TopicManagerPrx.checkedCast(
             communicator.propertyToProxy("IceStorm.TopicManager")
         )
 
         try:
             topic = topic_manager.create(AUTH_SYNC_TOPIC)
-        except IceStorm.TopicExists:
+        except TopicExists:
             topic = topic_manager.retrieve(AUTH_SYNC_TOPIC)
 
         self.updates_announcer = UserUpdatesSender(
@@ -284,13 +314,13 @@ class AuthenticatorServer(Ice.Application):
         """ Configurar sender y listener del topic Revocations """
 
         communicator = self.communicator()
-        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+        topic_manager = TopicManagerPrx.checkedCast(
             communicator.propertyToProxy("IceStorm.TopicManager")
         )
 
         try:
             topic = topic_manager.create(REVOCATIONS_TOPIC)
-        except IceStorm.TopicExists:
+        except TopicExists:
             topic = topic_manager.retrieve(REVOCATIONS_TOPIC)
 
         self.revocations_announcer = RevocationsSender(
@@ -307,7 +337,7 @@ class AuthenticatorServer(Ice.Application):
         topic.subscribeAndGetPublisher({}, subscriber_prx)
 
 
-    def run(self, argv):
+    def run(self, argv): # pylint: disable=unused-argument
         ''' Implementación del servidor de autenticación '''
         sleep(1)
 

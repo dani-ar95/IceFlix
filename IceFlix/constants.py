@@ -1,3 +1,4 @@
+""" Constantes con los nombres de los topics """
 ANNOUNCEMENT_TOPIC = 'ServiceAnnouncements'
 REVOCATIONS_TOPIC = 'Revocations'
 AUTH_SYNC_TOPIC = 'UserUpdates'

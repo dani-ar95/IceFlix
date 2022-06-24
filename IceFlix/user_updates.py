@@ -36,7 +36,7 @@ class UserUpdatesListener(IceFlix.UserUpdates):
 
         if srvId is not self.service_id:
             a = (user, passwordHash)
-            self.servant.add_local_user(a, None)
+            self.servant.add_local_user(a)
 
     def newToken(self, user, userToken, srvId, current=None):
         """ Comportamiento al recibir un mensaje newToken """
