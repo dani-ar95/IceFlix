@@ -71,7 +71,8 @@ class Cliente(Ice.Application):
         try:
             main_proxy = self.communicator().stringToProxy(proxy)
             main_connection = IceFlix.MainPrx.checkedCast(main_proxy)
-            self.adapter = self.communicator().createObjectAdapterWithEndpoints('ClientAdapter', 'tcp')
+            self.adapter = self.communicator().createObjectAdapterWithEndpoints('ClientAdapter',
+                                                                                'tcp')
         except:
             print("La conexión no ha sido posible")
             input()
@@ -94,7 +95,7 @@ class Cliente(Ice.Application):
                         return signal.SIGINT
                     sleep(10)  # cambiar a 10 segundoss
 
-            self._main_prx_ = main_connection        
+            self._main_prx_ = main_connection
 
     def login(self):
         ''' Implementa la función de iniciar sesión '''
@@ -110,9 +111,10 @@ class Cliente(Ice.Application):
             self._auth_prx_ = self._main_prx_.getAuthenticator()
             self._user_token_ = self._auth_prx_.refreshAuthorization(user, hash_password)
             self.refreshed_token = True
-            
+
             communicator = self.communicator()
-            topic_manager = IceStorm.TopicManagerPrx.checkedCast(communicator.propertyToProxy("IceStorm.TopicManager"))
+            topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+                communicator.propertyToProxy("IceStorm.TopicManager"))
             try:
                 topic = topic_manager.create(REVOCATIONS_TOPIC)
             except IceStorm.TopicExists:
@@ -120,18 +122,17 @@ class Cliente(Ice.Application):
             self.revocations_publisher = RevocationsSender(topic)
             self.revocations_subscriber = RevocationsListener(self)
             self.revocations_subscriber_prx = self.adapter.addWithUUID(self.revocations_subscriber)
-            self.revoke_topic_prx = topic.subscribeAndGetPublisher({}, self.revocations_subscriber_prx)
+            self.revoke_topic_prx = topic.subscribeAndGetPublisher({},
+                                                                   self.revocations_subscriber_prx)
             self.revoke_topic = topic
             self.logged = True
-                
-        except IceFlix.TemporaryUnavailable as e:
-            print(e)
+
+        except IceFlix.TemporaryUnavailable:
             print("No hay ningún servicio de Autenticación disponible")
             input()
             return
-        
-        except IceFlix.Unauthorized as e:
-            print(e)
+
+        except IceFlix.Unauthorized:
             print("Credenciales no válidas")
             input()
             return
@@ -151,7 +152,7 @@ class Cliente(Ice.Application):
             self.logged = False
         else:
             input("No hay ninguna sesión iniciada. Pulsa Enter para continuar...")
-    
+
     def create_prompt(self, servicio: str):
         ''' Informa al usuario del estado del cliente en todo momento '''
         if self._username_ and self._admin_token_:
@@ -176,8 +177,7 @@ class Cliente(Ice.Application):
 
         try:
             self._catalog_prx_ = self._main_prx_.getCatalog()
-        except IceFlix.TemporaryUnavailable as e:
-            print(e)
+        except IceFlix.TemporaryUnavailable:
             print("No hay ningún servicio de Catálogo disponible")
             return
 
@@ -213,8 +213,12 @@ class Cliente(Ice.Application):
 
                 try:
                     self.ask_function(selected_media)
-                except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e: # pylint: disable=invalid-name
-                    print(e)
+                except IceFlix.Unauthorized: # pylint: disable=invalid-name
+                    print("Usuario no autorizado")
+                    input("Presiona Enter para continuar...")
+                except IceFlix.WrongMediaId:
+                    print("El video no se encuentra en el catalogo")
+                    input("Presiona Enter para continuar...")
                 else:
                     continue
 
@@ -234,8 +238,12 @@ class Cliente(Ice.Application):
 
                 try:
                     self.ask_function(selected_media)
-                except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e: # pylint: disable=invalid-name
-                    print(e)
+                except IceFlix.Unauthorized: # pylint: disable=invalid-name
+                    print("Usuario no autorizado")
+                    input("Presiona Enter para continuar...")
+                except IceFlix.WrongMediaId:
+                    print("El video no se encuentra en el catalogo")
+                    input("Presiona Enter para continuar...")
                 else:
                     continue
 
@@ -273,8 +281,8 @@ class Cliente(Ice.Application):
             for title_id in id_list:
                 try:
                     media_list.append(self._catalog_prx_.getTile(title_id, self._user_token_))
-                except IceFlix.Unauthorized as e:
-                    print(e)
+                except IceFlix.Unauthorized:
+                    print("Usuario no autorizado")
                 except(IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable):
                     pass
         else:
@@ -303,15 +311,17 @@ class Cliente(Ice.Application):
         try:
             id_list = self._catalog_prx_.getTilesByTags(tag_list, all_tags, self._user_token_)
         except IceFlix.Unauthorized:
-            print(IceFlix.Unauthorized())
+            print("Usuario no autorizado")
             return 0
 
         if len(id_list) > 0:
             for title_id in id_list:
                 try:
                     media_list.append(self._catalog_prx_.getTile(title_id, self._user_token_))
-                except(IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable) as e: # pylint: disable=invalid-name
-                    print(e)
+                except(IceFlix.WrongMediaId, IceFlix.TemporaryUnavailable): # pylint: disable=invalid-name
+                    print("No hay un servicio de catalogo disponible")
+                except IceFlix.WrongMediaId:
+                    print("El video no se encuentra en el catalogo")
         else:
             return -1
 
@@ -367,29 +377,41 @@ class Cliente(Ice.Application):
         if option == "1":
             try:
                 self.play_video(media_object)
-            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e: # pylint: disable=invalid-name
-                print(e)
+            except IceFlix.Unauthorized: # pylint: disable=invalid-name
+                print("Usuario no autorizado")
+                input("Presiona Enter para continuar...")
+            except IceFlix.WrongMediaId:
+                print("El video no se encuentra en el catalogo")
                 input("Presiona Enter para continuar...")
 
         elif option == "2":
             try:
                 self.add_tags(media_object)
-            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e: # pylint: disable=invalid-name
-                print(e)
+            except IceFlix.Unauthorized: # pylint: disable=invalid-name
+                print("Usuario no autorizado")
+                input("Presiona Enter para continuar...")
+            except IceFlix.WrongMediaId:
+                print("El video no se encuentra en el catalogo")
                 input("Presiona Enter para continuar...")
 
         elif option == "3":
             try:
                 self.remove_tags(media_object)
-            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e: # pylint: disable=invalid-name
-                print(e)
+            except IceFlix.Unauthorized: # pylint: disable=invalid-name
+                print("Usuario no autorizado")
+                input("Presiona Enter para continuar...")
+            except IceFlix.WrongMediaId:
+                print("El video no se encuentra en el catalogo")
                 input("Presiona Enter para continuar...")
 
         elif option == "4":
             try:
                 self.rename_title(media_object)
-            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e: # pylint: disable=invalid-name
-                print(e)
+            except IceFlix.Unauthorized: # pylint: disable=invalid-name
+                print("Usuario no autorizado")
+                input("Presiona Enter para continuar...")
+            except IceFlix.WrongMediaId:
+                print("El video no se encuentra en el catalogo")
                 input("Presiona Enter para continuar...")
             else:
                 print("Título renombrado correctamente")
@@ -402,8 +424,11 @@ class Cliente(Ice.Application):
                     return 0
             try:
                 self._stream_provider_prx_.deleteMedia(media_object.mediaId, self._admin_token_)
-            except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e: # pylint: disable=invalid-name
-                print(e)
+            except IceFlix.Unauthorized: # pylint: disable=invalid-name
+                print("Usuario no autorizado")
+                input("Presiona Enter para continuar...")
+            except IceFlix.WrongMediaId:
+                print("El video no se encuentra en el catalogo")
                 input("Presiona Enter para continuar...")
             else:
                 print("Video borrado correctamente")
@@ -420,17 +445,21 @@ class Cliente(Ice.Application):
     def play_video(self, media):
         ''' Implementa la reproducción de video '''
         try:
-            self._stream_controller_prx_ = media.provider.getStream(media.mediaId, self._user_token_)
-        except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e: # pylint: disable=invalid-name
-            print(e)
+            self._stream_controller_prx_ = media.provider.getStream(media.mediaId,
+                                                                    self._user_token_)
+        except IceFlix.Unauthorized: # pylint: disable=invalid-name
+            print("Usuario no autorizado")
+            input()
+        except IceFlix.WrongMediaId:
+            print("El video no se encuentra en el catalogo")
             input()
         else:
             try:
                 config_url = self._stream_controller_prx_.getSDP(self._user_token_, 9998)
                 print(config_url)
                 print("Exito en el controller")
-            except IceFlix.Unauthorized as e:
-                print(e)
+            except IceFlix.Unauthorized:
+                print("Usuario no autorizado")
                 input()
             else:
                 self._media_player_.play(config_url)
@@ -450,9 +479,12 @@ class Cliente(Ice.Application):
         tags_list = self.ask_for_tags()
         try:
             self._catalog_prx_.addTags(media_object.mediaId, tags_list, self._user_token_)
-        except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e: # pylint: disable=invalid-name
-            print(e)
-            raise e
+        except IceFlix.Unauthorized: # pylint: disable=invalid-name
+            print("Usuario no autorizado")
+            input()
+        except IceFlix.WrongMediaId:
+            print("El video no se encuentra en el catalogo")
+            input()
         else:
             print("Etiquetas añadidas correctamente")
             input("Pulsa enter para continuar...")
@@ -464,9 +496,12 @@ class Cliente(Ice.Application):
         tags_list = self.ask_for_tags()
         try:
             self._catalog_prx_.removeTags(media_object.mediaId, tags_list, self._user_token_)
-        except (IceFlix.Unauthorized, IceFlix.WrongMediaId) as e: # pylint: disable=invalid-name
-            print(e)
-            raise e
+        except IceFlix.Unauthorized: # pylint: disable=invalid-name
+            print("Usuario no autorizado")
+            input()
+        except IceFlix.WrongMediaId:
+            print("El video no se encuentra en el catalogo")
+            input()
         else:
             print("Etiquetas eliminadas correctamente")
             input("Pulsa enter para continuar...")
@@ -520,12 +555,10 @@ class Cliente(Ice.Application):
                 try:
                     auth = self._main_prx_.getAuthenticator()
                     auth.addUser(new_user, new_hash_password, self._admin_token_)
-                except IceFlix.TemporaryUnavailablea as e:
-                    print(e)
+                except IceFlix.TemporaryUnavailable:
                     print("No hay ningún servicio de Autenticación disponible")
                     input()
-                except IceFlix.Unauthorized as e:
-                    print(e)
+                except IceFlix.Unauthorized:
                     print("Usuario no autorizado como administrador")
                     input()
                 else:
@@ -537,12 +570,10 @@ class Cliente(Ice.Application):
                 try:
                     auth = self._main_prx_.getAuthenticator()
                     auth.removeUser(delete_user, self._admin_token_)
-                except IceFlix.TemporaryUnavailable as e:
-                    print(e)
+                except IceFlix.TemporaryUnavailable:
                     print("No hay ningún servicio de Autenticación disponible")
                     input()
-                except IceFlix.Unauthorized as e:
-                    print(e)
+                except IceFlix.Unauthorized:
                     print("Usuario no autorizado como administrador")
                     input()
                 else:
@@ -582,7 +613,8 @@ class Cliente(Ice.Application):
 
                 uploader = MediaUploaderI(file)
 
-                adapter = self.communicator().createObjectAdapterWithEndpoints('MediaUploaderAdapter', 'tcp')
+                adapter = self.communicator().createObjectAdapterWithEndpoints(
+                    'MediaUploaderAdapter', 'tcp')
                 uploader_proxy = adapter.addWithUUID(uploader)
                 uploader_connection = IceFlix.MediaUploaderPrx.checkedCast(uploader_proxy)
 
@@ -590,9 +622,13 @@ class Cliente(Ice.Application):
 
                 uploader_connection.ice_ping()
                 try:
-                    self._stream_provider_prx_.uploadMedia(file, uploader_connection, self._admin_token_)
-                except (IceFlix.Unauthorized, IceFlix.UploadError) as e: # pylint: disable=invalid-name
-                    print(e)
+                    self._stream_provider_prx_.uploadMedia(file,
+                                                           uploader_connection, self._admin_token_)
+                except IceFlix.Unauthorized: # pylint: disable=invalid-name
+                    print("Usuario no autorizado como administrador")
+                    input()
+                except IceFlix.UploadError:
+                    print("Error al subir el media")
                     input()
                 finally:
                     uploader_connection.close()
