@@ -13,10 +13,10 @@ try:
     import IceFlix
 except ImportError:
     Ice.loadSlice(os.path.join(os.path.dirname(__file__), "iceflix.ice"))
-    import IceFlix
+    import IceFlix  #pylint: disable=wrong-import-position
 
 
-class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
+class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):  # pylint: disable=too-many-instance-attributes
     """Listener for the ServiceAnnouncements topic."""
 
     def __init__(self, own_servant, own_service_id, own_type):
@@ -43,9 +43,7 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
         self.providers = {}
         self.known_ids = set()
 
-    def newService(
-        self, service, service_id, current
-    ):  # pylint: disable=invalid-name,unused-argument
+    def newService(self, service, service_id, current):  # pylint: disable=invalid-name,unused-argument
         """Receive the announcement of a new started service."""
         if service_id == self.service_id:
             logging.debug("Received own announcement. Ignoring")
@@ -73,23 +71,21 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
 
 
         elif service.ice_isA("::IceFlix::Authenticator"):
-            self.authenticators[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(
-                service
-            )
+            self.authenticators[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
             self.known_ids.add(service_id)
-            if self.servant.ice_isA("::IceFlix::Main"): 
+            if self.servant.ice_isA("::IceFlix::Main"):
                 self.servant.auth_services.append(self.authenticators[service_id])
             print("[Anuncios] Registrado Authenticator")
 
         elif service.ice_isA("::IceFlix::MediaCatalog"):
             self.catalogs[service_id] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
             self.known_ids.add(service_id)
-            if self.servant.ice_isA("::IceFlix::Main"): 
+            if self.servant.ice_isA("::IceFlix::Main"):
                 self.servant.catalog_services.append(self.catalogs[service_id])
             if self.servant.ice_isA("::IceFlix::StreamProvider"):
                 self.servant.reannounceMedia(service_id)
             print("[Anuncios] Registrado Catalogo")
-            
+
         elif service.ice_isA("::IceFlix::StreamProvider"):
             self.providers[service_id] = IceFlix.StreamProviderPrx.uncheckedCast(service)
             self.known_ids.add(service_id)

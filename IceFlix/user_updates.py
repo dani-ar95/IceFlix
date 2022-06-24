@@ -13,8 +13,8 @@ except ImportError:
 
 AUTH_ID = str(uuid.uuid4())
 
-LOCAL_DB_PATH = path.join(path.join(path.dirname(__file__),
-                             "persistence"), (AUTH_ID + "_users.json"))
+LOCAL_DB_PATH = path.join(path.join(path.dirname(__file__), "persistence"),
+                                                    (AUTH_ID + "_users.json"))
 
 class UserUpdatesListener(IceFlix.UserUpdates):
     """ Listener del topic User updates """
@@ -59,11 +59,13 @@ class UserUpdatesSender:
     def newUser(self, user, passwordHash, current=None): # pylint: disable=invalid-name,unused-argument
         """ Emitir evento newUser """
 
-        print(f"[UserUpdates] (Emite New User) ID: {self.service_id}, Usuario: {user}, PasswordHash: {passwordHash}")
+        print(f"[UserUpdates] (Emite New User) ID: {self.service_id}," +
+              f"Usuario: {user}, PasswordHash: {passwordHash}")
         self.publisher.newUser(user, passwordHash, self.service_id)
 
     def newToken(self, user, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         """ Emitir evento newToken """
 
-        print(f"[UserUpdates] (Emite New Token) ID: {self.service_id}, Usuario: {user}, Token: {userToken}")
+        print(f"[UserUpdates] (Emite New Token) ID: {self.service_id}," +
+              f"Usuario: {user}, Token: {userToken}")
         self.publisher.newToken(user, userToken, self.service_id)

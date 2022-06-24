@@ -17,7 +17,7 @@ try:
 except ImportError:
     Ice.loadSlice(path.join(path.dirname(__file__), "iceflix.ice"))
     import IceFlix # pylint: disable=wrong-import-position
-from volatile_services import UsersDB
+from users_db import UsersDB
 from constants import REVOCATIONS_TOPIC, AUTH_SYNC_TOPIC # pylint: disable=no-name-in-module
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from user_updates import UserUpdatesSender, UserUpdatesListener
@@ -25,7 +25,7 @@ from user_revocations import RevocationsListener, RevocationsSender
 
 AUTH_ID = str(uuid.uuid4())
 
-USERS_PATH = "IceFlix/users.json" # Calcular ruta absoluta
+USERS_PATH = path.join(path.dirname(__file__), "users.json")
 LOCAL_DB_PATH = path.join(path.join(path.dirname(__file__),
                                     "persistence"), (AUTH_ID + "_users.json"))
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
@@ -71,6 +71,8 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                 revoke_timer = threading.Timer(120.0,
                                                self._revocations_sender.revokeToken, [new_token])
                 revoke_timer.start()
+
+                print(f"[AUTH] ID: {self.service_id} Nuevo token generado: {new_token}.")
                 return new_token
 
         raise IceFlix.Unauthorized
@@ -117,7 +119,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
 
         self.remove_user(user, LOCAL_DB_PATH)
         self.remove_user(user, USERS_PATH)
-        self._revocations_sender.revokeUser(user, self.service_id)
+        self._revocations_sender.revokeUser(user)
 
     def updateDB(
             self, values, service_id, current):  # pylint: disable=invalid-name,unused-argument
@@ -153,8 +155,8 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                     self._announcements_listener.mains.pop(main_prx) # Puede petar
         raise IceFlix.TemporaryUnavailable
 
-    @staticmethod
-    def add_user(user_password, file_path):
+
+    def add_user(self, user_password, file_path):
         ''' Permite añadir usuario user_password partir de una tupla {usuario, password} '''
 
         if file_path is None: # Invocación remota
@@ -179,6 +181,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                 if user not in current_users:
                     obj["users"].append(
                         {"user": user, "password": password})
+        print(f"[AUTH] ID: {self.service_id} Añadido usuario: {user}.")
 
         with open(file_path, 'w', encoding="utf8") as file:
             dump(obj, file, indent=2)
@@ -197,6 +200,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         for i in obj["users"]:
             if i["user"] == user:
                 obj["users"].remove(i)
+                print(f"[AUTH] ID: {self.service_id} Usuario eliminado: {user}.")
                 break
 
         with open(file_path, 'w', encoding="utf8") as file:
@@ -207,6 +211,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
 
     def remove_local_user(self, user):
         """ Elimina un usuario de forma local """
+
         self.remove_user(user, LOCAL_DB_PATH)
 
     def remove_token(self, userToken):
@@ -215,6 +220,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         try:
             user = self.whois(userToken)
             self._active_users_.pop(user)
+            print(f"[AUTH] ID: {self.service_id} Token eliminado: {userToken}.")
         except IceFlix.Unauthorized:
             pass
 
