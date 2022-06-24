@@ -13,7 +13,7 @@ except ImportError:
 class RevocationsListener(IceFlix.Revocations):
     """ Listener del topic Revocations"""
 
-    def __init__(self, own_servant, own_proxy=None, own_service_id=None, own_type=None):
+    def __init__(self, own_servant, own_proxy=None, own_service_id=None, own_type=None): # pylint: disable=unused-argument
         """ Inicialización del listener """
 
         self.servant = own_servant
@@ -21,26 +21,27 @@ class RevocationsListener(IceFlix.Revocations):
         self.own_type = own_type
         self.service = own_proxy
 
-    def revokeToken(self, userToken, srvId, current=None):
+    def revokeToken(self, userToken, srvId, current=None): # pylint: disable=invalid-name,unused-argument
         """ Comportamiento al recibir un mensaje revokeToken """
         if self.service is not None:
-            
+
             if self.service.ice_isA("::IceFlix::Authenticator"):
                 self.servant.remove_token(userToken)
                 print("[REVOCATIONS] Token revoked: ", userToken)
-                
+
             if self.service.ice_isA("::IceFlix::StreamController"):
                 self.servant.authentication_timer = threading.Timer(5.0, self.servant.stop)
                 self.servant.authentication_timer.start()
-                
+
         else:
             if self.servant.logged:
-                print("cliente logeado sin token activo")
+                print("Cliente logeado sin token activo")
                 self.servant.refreshed_token = False
                 try:
-                    auth = self.servant._main_prx_.getAuthenticator()
-                    new_token = auth.refreshAuthorization(self.servant._username_, self.servant._password_hash_)
-                    self.servant._user_token_ = new_token
+                    auth = self.servant._main_prx_.getAuthenticator() # pylint: disable=protected-access
+                    new_token = auth.refreshAuthorization(self.servant._username_, # pylint: disable=protected-access
+                                                          self.servant._password_hash_) # pylint: disable=protected-access
+                    self.servant._user_token_ = new_token # pylint: disable=protected-access
                     self.servant.refreshed_token = True
                     print("[REVOCATIONS] Token actualizao: ", new_token)
                 except IceFlix.TemporaryUnavailable:
@@ -49,8 +50,8 @@ class RevocationsListener(IceFlix.Revocations):
                 except IceFlix.Unauthorized:
                     print("Crendeciales no válidas")
                     self.servant.logout()
-                
-    def revokeUser(self, user, srvId, current=None):
+
+    def revokeUser(self, user, srvId, current=None): # pylint: disable=invalid-name,unused-argument
         """ Comportamiento al recibir un mensaje revokeUser """
 
         if self.service.ice_isA("::IceFlix::Authenticator"):
@@ -61,7 +62,7 @@ class RevocationsListener(IceFlix.Revocations):
 class RevocationsSender:
     """ Sender del topic Revocations """
 
-    def __init__(self, topic, service_id=None, servant_proxy=None, current=None):
+    def __init__(self, topic, service_id=None, servant_proxy=None, current=None): # pylint: disable=unused-argument
         """ Inicialización del sender """
 
         self.publisher = IceFlix.RevocationsPrx.uncheckedCast(
@@ -71,8 +72,12 @@ class RevocationsSender:
         self.proxy = servant_proxy
         self.timer = None
 
-    def revokeUser(self, user, current=None):
+    def revokeUser(self, user, current=None): # pylint: disable=invalid-name,unused-argument
+        """ Emite un evento revokeUser """
+
         self.publisher.revokeUser(user, self.service_id)
 
-    def revokeToken(self, userToken, current=None):
+    def revokeToken(self, userToken, current=None): # pylint: disable=invalid-name,unused-argument
+        """ Emite un evento revokeToken """
+
         self.publisher.revokeToken(userToken, self.service_id)

@@ -71,6 +71,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                 revoke_timer = threading.Timer(120.0,
                                                self._revocations_sender.revokeToken, [new_token])
                 revoke_timer.start()
+                print(f"[AUTH] ID: {self.service_id} Nuevo token generado: {new_token}.")
                 return new_token
 
         raise IceFlix.Unauthorized
@@ -153,8 +154,8 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                     self._announcements_listener.mains.pop(main_prx) # Puede petar
         raise IceFlix.TemporaryUnavailable
 
-    @staticmethod
-    def add_user(user_password, file_path):
+
+    def add_user(self, user_password, file_path):
         ''' Permite añadir usuario user_password partir de una tupla {usuario, password} '''
 
         if file_path is None: # Invocación remota
@@ -179,6 +180,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                 if user not in current_users:
                     obj["users"].append(
                         {"user": user, "password": password})
+        print(f"[AUTH] ID: {self.service_id} Añadido usuario: {user}.")
 
         with open(file_path, 'w', encoding="utf8") as file:
             dump(obj, file, indent=2)
@@ -197,6 +199,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         for i in obj["users"]:
             if i["user"] == user:
                 obj["users"].remove(i)
+                print(f"[AUTH] ID: {self.service_id} Usuario eliminado: {user}.")
                 break
 
         with open(file_path, 'w', encoding="utf8") as file:
@@ -207,6 +210,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
 
     def remove_local_user(self, user):
         """ Elimina un usuario de forma local """
+
         self.remove_user(user, LOCAL_DB_PATH)
 
     def remove_token(self, userToken):
@@ -215,6 +219,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         try:
             user = self.whois(userToken)
             self._active_users_.pop(user)
+            print(f"[AUTH] ID: {self.service_id} Token eliminado: {userToken}.")
         except IceFlix.Unauthorized:
             pass
 
