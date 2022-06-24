@@ -11,10 +11,10 @@ except ImportError:
     Ice.loadSlice(os.path.join(os.path.dirname(__file__), "iceflix.ice"))
     import IceFlix
 
-auth_id = str(uuid.uuid4())
+AUTH_ID = str(uuid.uuid4())
 
 LOCAL_DB_PATH = path.join(path.join(path.dirname(__file__),
-                       "persistence"), (auth_id + "_users.json"))
+                             "persistence"), (AUTH_ID + "_users.json"))
 
 class UserUpdatesListener(IceFlix.UserUpdates):
     """ Listener del topic User updates """
@@ -35,8 +35,8 @@ class UserUpdatesListener(IceFlix.UserUpdates):
         """ Comportamiento al recibir un mensaje newUser """
 
         if srvId is not self.service_id:
-            a = (user, passwordHash)
-            self.servant.add_local_user(a)
+            user = (user, passwordHash)
+            self.servant.add_local_user(user)
 
     def newToken(self, user, userToken, srvId, current=None): # pylint: disable=invalid-name,unused-argument
         """ Comportamiento al recibir un mensaje newToken """
@@ -64,6 +64,6 @@ class UserUpdatesSender:
 
     def newToken(self, user, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         """ Emitir evento newToken """
-        
+
         print(f"[UserUpdates] (Emite New Token) ID: {self.service_id}, Usuario: {user}, Token: {userToken}")
         self.publisher.newToken(user, userToken, self.service_id)
