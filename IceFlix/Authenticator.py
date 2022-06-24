@@ -27,7 +27,7 @@ auth_id = str(uuid.uuid4())
 
 USERS_PATH = "IceFlix/users.json"
 LOCAL_DB_PATH = path.join(path.join(path.dirname(__file__),
-                       "persistence"), (auth_id + "_users.json"))
+                                    "persistence"), (auth_id + "_users.json"))
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
 
@@ -42,9 +42,6 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         self._revocations_sender = None
         self._announcements_listener = None
 
-    def get_service_id(self):
-        return self.service_id
-    
     @property
     def get_usersDB(self):
         ''' Devuelve estructura UsersDB '''
@@ -63,13 +60,14 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
 
         with open(LOCAL_DB_PATH, "r", encoding="utf8") as f:
             obj = json.load(f)
-        
+
         for i in obj["users"]:
             if i["user"] == user and i["password"] == passwordHash:
                 new_token = secrets.token_urlsafe(40)
                 self._active_users_.update({user: new_token})
                 self._update_users.newToken(user, new_token)
-                revoke_timer = threading.Timer(120.0, self._revocations_sender.revokeToken, [new_token])
+                revoke_timer = threading.Timer(120.0, 
+                                            self._revocations_sender.revokeToken, [new_token])
                 revoke_timer.start()
                 return new_token
 
@@ -84,11 +82,10 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         ''' Permite conocer el usuario asociado a un token'''
 
         if self.isAuthorized(userToken):
-            if userToken in self._active_users_.values():
-                info = self._active_users_.items()
-                for user in info:
-                    if user[1] == userToken:
-                        return user[0]
+            info = self._active_users_.items()
+            for user in info:
+                if user[1] == userToken:
+                    return user[0]
         else:
             raise IceFlix.Unauthorized
 
@@ -96,47 +93,44 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         ''' Perimte al administrador añadir usuarios al sistema '''
 
         try:
-            self.check_admin(adminToken)
-        except IceFlix.Unauthorized:
-            raise IceFlix.Unauthorized
+            if not self.is_admin(admin_token):
+                raise IceFlix.Unauthorized
+        except IceFlix.TemporaryUnavailable:
+            raise IceFlix.TemporaryUnavailable
 
-        a = (user, passwordHash)
-        tags = {}
-        self.add_user(a, tags, LOCAL_DB_PATH)
-        self.add_user(a, tags, USERS_PATH)
-        self._update_users.newUser(
-            user, passwordHash, self.service_id)  # No testeado
+        user_password = (user, passwordHash)
+        self.add_user(user_password, LOCAL_DB_PATH)
+        self.add_user(user_password, USERS_PATH)
+        self._update_users.newUser(user, passwordHash, self.service_id)
 
     def removeUser(self, user, adminToken, current=None):  # pylint: disable=invalid-name,unused-argument
         ''' Permite al administrador elminar usuarios del sistema '''
 
         try:
-            self.check_admin(adminToken)
-        except IceFlix.Unauthorized:
-            raise IceFlix.Unauthorized
+            if not self.is_admin(admin_token):
+                raise IceFlix.Unauthorized
+        except IceFlix.TemporaryUnavailable:
+            raise IceFlix.TemporaryUnavailable
 
         self.remove_user(user, LOCAL_DB_PATH)
         self.remove_user(user, USERS_PATH)
         self._revocations_sender.revokeUser(user, self.service_id)
 
-    def check_admin(self, admin_token: str):
+    def is_admin(self, admin_token: str):
         ''' Comprueba si un token es Administrador '''
         main_prx = random.choice(list(self._announcements_listener.mains.values()))
+        if main_prx == None:
+            raise IceFlix.TemporaryUnavailable
         is_admin = main_prx.isAdmin(admin_token)
-        if not is_admin:
-            raise IceFlix.Unauthorized
-
         return is_admin
 
-    def add_user(self, user_password, tags, path):
-        ''' Permite añadir usuario a partir de una tupla {usuario, password} '''
+    def add_user(self, user_password, path):
+        ''' Permite añadir usuario user_password partir de una tupla {usuario, password} '''
 
         if path == None:
             path = LOCAL_DB_PATH
 
         user, password = user_password
-
-        print(user_password)
 
         with open(path, "r", encoding="utf8") as f:
             try:
@@ -146,20 +140,18 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                     "users": [
                         {
                             "user": user,
-                            "password": password,
-                            "tags": tags
+                            "password": password
                         }
                     ]
                 }
             else:
                 current_users = [i["user"] for i in obj["users"]]
-                if (user not in current_users):
+                if user not in current_users:
                     obj["users"].append(
-                        {"user": user, "password": password, "tags": tags})
+                        {"user": user, "password": password})
 
         with open(path, 'w', encoding="utf8") as file:
             json.dump(obj, file, indent=2)
-
 
     def add_local_user(self, user_password, tags):
         self.add_user(user_password, {}, LOCAL_DB_PATH)
@@ -201,7 +193,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         ''' Añade o actualiza usuarios y contraseñas '''
 
         for user_info in users_passwords.items():
-            self.add_user(user_info, {}, LOCAL_DB_PATH)
+            self.add_user(user_info, LOCAL_DB_PATH)
 
     def create_db(self):
         open(LOCAL_DB_PATH, "x")
@@ -209,8 +201,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
             obj = json.load(reading_descriptor)
 
         for i in obj["users"]:
-            self.add_user(
-                (i["user"], i["password"]), i["tags"], LOCAL_DB_PATH)
+            self.add_user((i["user"], i["password"]), LOCAL_DB_PATH)
 
     def share_data_with(self, service):
         """ Envía una estructura usersDB al servicio indicado """
@@ -222,6 +213,9 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         """ Actualiza datos locales a partir de una estructura usersDB """
 
         print(f"Receiving remote data base from {service_id} to {self.service_id}")
+
+        if service_id not in self._announcements_listener.known_ids:
+            raise IceFlix.UnknownService
 
         user_passwords = values.userPasswords
         user_tokens = values.usersToken
