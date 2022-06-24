@@ -31,18 +31,18 @@ class UserUpdatesListener(IceFlix.UserUpdates):
         self.mains = {}
         self.known_ids = set()
 
-    def newUser(self, user, passwordHash, srvId, current=None):
+    def newUser(self, user, passwordHash, srvId, current=None): # pylint: disable=invalid-name,unused-argument
         """ Comportamiento al recibir un mensaje newUser """
 
         if srvId is not self.service_id:
             a = (user, passwordHash)
             self.servant.add_local_user(a)
 
-    def newToken(self, user, userToken, srvId, current=None):
+    def newToken(self, user, userToken, srvId, current=None): # pylint: disable=invalid-name,unused-argument
         """ Comportamiento al recibir un mensaje newToken """
 
         if srvId is not self.service_id:
-            self.servant.add_token(user, userToken)  
+            self.servant.add_token(user, userToken)
 
 class UserUpdatesSender:
     """ Sender del topic User updates """
@@ -56,8 +56,14 @@ class UserUpdatesSender:
         self.service_id = service_id
         self.proxy = servant_proxy
 
-    def newUser(self, user, passwordHash, current=None):
+    def newUser(self, user, passwordHash, current=None): # pylint: disable=invalid-name,unused-argument
+        """ Emitir evento newUser """
+
+        print(f"[UserUpdates] (Emite New User) ID: {self.service_id}, Usuario: {user}, PasswordHash: {passwordHash}")
         self.publisher.newUser(user, passwordHash, self.service_id)
 
-    def newToken(self, user, userToken, current=None):
+    def newToken(self, user, userToken, current=None): # pylint: disable=invalid-name,unused-argument
+        """ Emitir evento newToken """
+        
+        print(f"[UserUpdates] (Emite New Token) ID: {self.service_id}, Usuario: {user}, Token: {userToken}")
         self.publisher.newToken(user, userToken, self.service_id)

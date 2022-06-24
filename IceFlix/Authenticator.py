@@ -122,10 +122,11 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         """ Actualiza datos locales a partir de una estructura usersDB """
 
         if self._updated: # Allow only one update
+            print(f"[AUTH] ID: {self.service_id}. Actualización de usuarios ya realizada. Abortando...")
             return
         self._updated = True
 
-        print(f"Receiving remote data base from {service_id} to {self.service_id}")
+        print(f"[AUTH] ID: {self.service_id}. Recibido UsersDB de {service_id}.")
 
         if service_id not in self._announcements_listener.known_ids:
             raise IceFlix.UnknownService
