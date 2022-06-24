@@ -346,7 +346,8 @@ class AuthenticatorServer(Ice.Application): #pylint: disable=too-many-instance-a
 
         self.adapter = broker.createObjectAdapterWithEndpoints(
             'AuthenticatorAdapter', 'tcp')
-        authenticator_proxy = self.adapter.addWithUUID(self.servant)
+        self.adapter.add(self.servant, broker.stringToIdentity("Authenticator"))
+        authenticator_proxy = self.adapter.add(self.servant, Ice.stringToIdentity("AuthenticatorPrincipal"))
 
         self.proxy = authenticator_proxy
         self.servant.create_db()
@@ -362,7 +363,7 @@ class AuthenticatorServer(Ice.Application): #pylint: disable=too-many-instance-a
 
         self.announcer.start_service()
 
-        #print(f"[AUTH PROXY] {self.proxy}")
+        print(f"[AUTH PROXY] {self.proxy}")
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
