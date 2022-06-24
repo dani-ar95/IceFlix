@@ -27,15 +27,17 @@ class RevocationsListener(IceFlix.Revocations):
 
             if self.service.ice_isA("::IceFlix::Authenticator"):
                 self.servant.remove_token(userToken)
-                print("[REVOCATIONS] Token revoked: ", userToken)
+                print("[AUTHENTICATOR] Token revoked")
 
             if self.service.ice_isA("::IceFlix::StreamController"):
+                if srvId == self.service_id:
+                    return
+                print("[STREAM CONTROLLER] Token revoked. Refreshing...")
                 self.servant.authentication_timer = threading.Timer(5.0, self.servant.stop)
                 self.servant.authentication_timer.start()
 
         else:
             if self.servant.logged:
-                print("Cliente logeado sin token activo")
                 self.servant.refreshed_token = False
                 try:
                     auth = self.servant._main_prx_.getAuthenticator() # pylint: disable=protected-access
@@ -54,9 +56,11 @@ class RevocationsListener(IceFlix.Revocations):
     def revokeUser(self, user, srvId, current=None): # pylint: disable=invalid-name,unused-argument
         """ Comportamiento al recibir un mensaje revokeUser """
 
-        if self.service.ice_isA("::IceFlix::Authenticator"):
-            if srvId is not self.service_id:
-                self.servant.remove_local_user(user)
+        if self.service and self.service.ice_isA("::IceFlix::Authenticator"):
+            if srvId == self.service_id:
+                return
+            
+        self.servant.remove_local_user(user)
 
 
 class RevocationsSender:
