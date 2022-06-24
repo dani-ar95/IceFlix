@@ -1,13 +1,18 @@
-import Ice # pylint: disable=import-error,wrong-import-position
-from os import path
+''' Modulo para la implementación de la bbdd de los medios '''
 
-SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
-Ice.loadSlice(SLICE_PATH)
-import IceFlix # pylint: disable=import-error,wrong-import-position
+import os
+import Ice
 
-class MediaDB(IceFlix.MediaDB):
-    
-    def __init__(self, mediaId, name, tagsPerUser):
-        self.mediaId = mediaId
+try:
+    import IceFlix
+except ImportError:
+    Ice.loadSlice(os.path.join(os.path.dirname(__file__), "iceflix.ice"))
+    import IceFlix # pylint: disable=import-error,wrong-import-position
+
+class MediaDB(IceFlix.MediaDB): #pylint: disable=too-few-public-methods
+    ''' Clase para el objeto MediaDB '''
+
+    def __init__(self, mediaId, name, tagsPerUser): # pylint: disable=invalid-name
+        self.mediaId = mediaId # pylint: disable=invalid-name
         self.name = name
-        self.tagsPerUser = tagsPerUser
+        self.tagsPerUser = tagsPerUser # pylint: disable=invalid-name
