@@ -18,7 +18,7 @@ except ImportError:
     Ice.loadSlice(path.join(path.dirname(__file__), "iceflix.ice"))
     import IceFlix # pylint: disable=wrong-import-position
 from volatile_services import UsersDB
-from constants import REVOCATIONS_TOPIC, AUTH_SYNC_TOPIC
+from constants import REVOCATIONS_TOPIC, AUTH_SYNC_TOPIC # pylint: disable=no-name-in-module
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from user_updates import UserUpdatesSender, UserUpdatesListener
 from user_revocations import RevocationsListener, RevocationsSender
@@ -124,7 +124,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         """ Actualiza datos locales a partir de una estructura usersDB """
 
         if self._updated: # Allow only one update
-            print(f"[AUTH] ID: {self.service_id}. Actualización de usuarios ya realizada. Abortando...")
+            print(f"[AUTH] ID: {self.service_id}. Actualización de usuarios ya realizada.")
             return
         self._updated = True
 
