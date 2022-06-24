@@ -25,7 +25,7 @@ from user_revocations import RevocationsListener, RevocationsSender
 
 AUTH_ID = str(uuid.uuid4())
 
-USERS_PATH = "IceFlix/users.json" # Calcular ruta absoluta
+USERS_PATH = path.join(path.dirname(__file__), "users.json")
 LOCAL_DB_PATH = path.join(path.join(path.dirname(__file__),
                                     "persistence"), (AUTH_ID + "_users.json"))
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
@@ -71,6 +71,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
                 revoke_timer = threading.Timer(120.0,
                                                self._revocations_sender.revokeToken, [new_token])
                 revoke_timer.start()
+
                 print(f"[AUTH] ID: {self.service_id} Nuevo token generado: {new_token}.")
                 return new_token
 
@@ -118,7 +119,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
 
         self.remove_user(user, LOCAL_DB_PATH)
         self.remove_user(user, USERS_PATH)
-        self._revocations_sender.revokeUser(user, self.service_id)
+        self._revocations_sender.revokeUser(user)
 
     def updateDB(
             self, values, service_id, current):  # pylint: disable=invalid-name,unused-argument

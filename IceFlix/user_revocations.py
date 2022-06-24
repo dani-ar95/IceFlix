@@ -75,9 +75,11 @@ class RevocationsSender:
     def revokeUser(self, user, current=None): # pylint: disable=invalid-name,unused-argument
         """ Emite un evento revokeUser """
 
+        print(f"[UserRevocations] (Emite revokeUser) ID: {self.service_id}, User: {user}.")
         self.publisher.revokeUser(user, self.service_id)
 
     def revokeToken(self, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         """ Emite un evento revokeToken """
 
+        print(f"[UserRevocations] (Emite revokeToken) ID: {self.service_id}, Token: {userToken}.")
         self.publisher.revokeToken(userToken, self.service_id)
