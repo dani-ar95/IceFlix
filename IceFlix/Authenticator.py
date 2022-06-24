@@ -232,7 +232,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
     def create_db(self):
         """ Crea la bbdd si no existe """
 
-        open(LOCAL_DB_PATH, "x")
+        open(LOCAL_DB_PATH, "x", encoding="utf8")
         with open(USERS_PATH, "r", encoding="utf8") as reading_descriptor:
             obj = load(reading_descriptor)
 
