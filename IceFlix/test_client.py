@@ -100,6 +100,17 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
             print("removeUser()=", e, ", FAIL")
         except IceFlix.TemporaryUnavailable as e:
             print("removeUser()=", e, ", FAIL")
+
+        print("\nPRUEBA AÑADIR/BORRAR USUARIOS MAIN NO DISPONIBLE")
+        try:
+            print("addUser()=", auth_connection.addUser(user, hash, admin_token), "FAIL")
+        except IceFlix.TemporaryUnavailable as e:
+            print("addUser=", e, "EXITO")
+
+        try:
+            print("removeUser()=", auth_connection.removeUser(user, admin_token), "FAIL")
+        except IceFlix.TemporaryUnavailable as e:
+            print("removeUser()=", e, ", EXITO")
             
 
 if __name__ == "__main__":

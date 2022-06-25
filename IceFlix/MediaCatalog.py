@@ -12,7 +12,7 @@ import glob
 import IceStorm
 import uuid
 import random
-from IceFlix import media
+# from IceFlix import media
 from stream_announcements import StreamAnnouncementsListener
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from catalog_updates import CatalogUpdatesListener, CatalogUpdatesSender
