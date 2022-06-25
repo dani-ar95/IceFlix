@@ -383,8 +383,8 @@ class AuthenticatorServer(Ice.Application): #pylint: disable=too-many-instance-a
         self.setup_revocations()
 
         self.servant.set_update_users(self.updates_announcer)
-        self.servant.set_revocations_sender(self.revocations_sender)
-        self.servant.set_announcements_listener(self.announcements_listener)
+        self.servant.set_revocations_sender(self.revocations_announcer)
+        self.servant.set_announcements_listener(self.revocations_subscriber)
 
         self.announcer.start_service()
 
