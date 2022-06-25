@@ -5,6 +5,6 @@ icegridregistry --Ice.Config=configs/icegrid.config > /dev/null 2>&1 &
 python3 IceFlix/Main.py --Ice.Config=configs/main.config admin &
 python3 IceFlix/Authenticator.py --Ice.Config=configs/authenticator.config &
 python3 IceFlix/MediaCatalog.py --Ice.Config=configs/catalog.config &
-#python3 IceFlix/StreamProvider.py --Ice.Config=configs/provider.config &
+python3 IceFlix/StreamProvider.py --Ice.Config=configs/provider.config &
 trap "kill 0" SIGINT
 wait

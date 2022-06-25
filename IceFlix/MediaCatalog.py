@@ -12,7 +12,6 @@ import glob
 import IceStorm
 import uuid
 import random
-from IceFlix import media
 from stream_announcements import StreamAnnouncementsListener
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from catalog_updates import CatalogUpdatesListener, CatalogUpdatesSender
@@ -284,7 +283,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
     def is_in_catalog(self, mediaId):
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        c.execute(f"SELECT * FROM media WHERE id LIKE '{mediaId}'") # pylint: disable=invalid-name,unused-argument
+        c.execute(f"SELECT * FROM media WHERE media_id LIKE '{mediaId}'") # pylint: disable=invalid-name,unused-argument
 
         query = c.fetchall()
 
