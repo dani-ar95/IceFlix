@@ -43,8 +43,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
         self.revocations_publisher = None
         self.adapter = None
 
-    @staticmethod()
-    def format_prompt(): #pylint: disable=no-method-argument
+    def format_prompt(self):
         ''' Formatea la consola '''
         system("clear")
         print("         #----------------#")

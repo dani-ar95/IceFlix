@@ -153,6 +153,8 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
 
                 except Ice.ConnectionRefusedException:
                     self._announcements_listener.mains.pop(main_prx) # Puede petar
+                except Ice.NotRegisteredException:
+                    raise IceFlix.TemporaryUnavailable
         raise IceFlix.TemporaryUnavailable
 
 

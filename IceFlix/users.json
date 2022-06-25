@@ -2,22 +2,11 @@
   "users": [
     {
       "user": "user",
-      "password": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
-      "tags": {
-        "0be6efeb267ef1dc271a9a740ee2a82bfe0527ac22ba18b7aa419cfb961aea1e": [
-          "ver mas tarde"
-        ]
-      }
+      "password": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
     },
     {
       "user": "manolo",
-      "password": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
-      "tags": {
-        "0be6efeb267ef1dc271a9a740ee2a82bfe0527ac22ba18b7aa419cfb961aea1e": [
-          "meme",
-          "gracioso"
-        ]
-      }
+      "password": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
     }
   ]
 }
