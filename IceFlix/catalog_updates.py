@@ -24,7 +24,7 @@ class CatalogUpdatesListener(IceFlix.CatalogUpdates):
         if srvId == self.service_id or not self.catalog_service.is_in_catalog(mediaId):
             return
 
-        self.catalog_service.renameTiles(mediaId, name)
+        self.catalog_service.rename_dynamic_media(mediaId, name)
 
 
     def addTags(self, mediaId, tags, user, srvId, current=None): # pylint: disable=invalid-name,unused-argument,too-many-arguments

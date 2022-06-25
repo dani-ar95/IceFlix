@@ -388,7 +388,7 @@ class AuthenticatorServer(Ice.Application): #pylint: disable=too-many-instance-a
 
         self.announcer.start_service()
 
-        print(f"[AUTH PROXY] {self.proxy}")
+        print(f"[PROXY AUTH] {self.proxy}")
 
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
