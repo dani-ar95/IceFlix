@@ -315,8 +315,9 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             current_tags = ""
             for tag in query[0]:
                 current_tags += tag
-            
-        tags_string = current_tags + " "
+            tags_string = current_tags + " "
+        else:
+            tags_string = ""
         for i in range(len(tags)):
             tags_string += tags[i]
             if i != len(tags)-1:
