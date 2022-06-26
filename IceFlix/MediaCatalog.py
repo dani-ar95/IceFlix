@@ -51,7 +51,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             for media in query:
                 tags = media[3]
                 if tags:
-                    info = IceFlix.MediaInfo(media[1], media[3].split())
+                    info = IceFlix.MediaInfo(media[1], media[3].split(","))
                 else:
                     info = IceFlix.MediaInfo(media[1], [])
                 self._media_.update({media[0]: IceFlix.Media(media[0], media[4], info)})
@@ -94,7 +94,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         conn.close()
 
         for info in query:
-            users_tags.update(info[0], info[1].split())
+            users_tags.update(info[0], info[1].split(","))
 
         return users_tags
 
@@ -167,7 +167,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         query = ddbb_cursor.fetchall()
         conn.close()
         for entry in query:
-            media_tags.update({entry[0]: entry[1].split()}) # MediaID: Tags
+            media_tags.update({entry[0]: entry[1].split(",")}) # MediaID: Tags
 
         # Buscar si los tags son todos o no
         if includeAllTags:
@@ -304,49 +304,60 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             return False
         return True
 
-    def add_tags(self, media_id, tags, user): # TODO
+    def add_tags(self, media_id, tags, user):   # HECHO
         ''' Añade las tags indicadas al usuario y medio correspondiente '''
-        
+        tags_string = self.list_to_string(tags)
+
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute(f"SELECT tags FROM media WHERE username='{user}' AND media_id='{media_id}'")
-        query = c.fetchall()
-        if query:
+        result = c.fetchall()
+        if result:
             current_tags = ""
-            for tag in query[0]:
+            for tag in result[0]:
                 current_tags += tag
-            tags_string = current_tags + " "
+                current_tags += ","
+            tags_string += "," + current_tags[:-1]
+            c.execute(f"""UPDATE media 
+                                SET tags='{tags_string}' WHERE media_id='{media_id}' AND username='{user}'""")
         else:
-            tags_string = ""
-        for i in range(len(tags)):
-            tags_string += tags[i]
-            if i != len(tags)-1:
-                tags_string += " "
-        print(tags_string)
-        c.execute(f"""UPDATE media 
-                            SET username='{user}', tags='{tags_string}' WHERE media_id='{media_id}'""")
+            c.execute(f"""INSERT INTO media 
+                      (media_id, username, tags) VALUES ('{media_id}', '{user}', '{tags_string}')""")
         conn.commit()
         conn.close()
         print(f"[CATALOG] ID: {self.service_id} actualizadas tags de {media_id} para usuario {user}")
 
 
-    def remove_tags(self, media_id, tags, user): # Actualizado
+    def remove_tags(self, media_id, tags, user): # HECHO
         ''' Elimina las tags indicadas del usuario y medio correpondiente '''
 
         # Obtener las tags del usuario : Restar las tags que nos dicen : Updatear tags
 
         conn = sqlite3.connect(DB_PATH)
-        ddbb_cursor = conn.cursor()
-        ddbb_cursor.execute(f"SELECT tags FROM media WHERE username='{user}' AND media_id='{media_id}'")
-        existing_tags = ddbb_cursor.fetchall()
+        c = conn.cursor()
+        c.execute(f"SELECT tags FROM media WHERE username='{user}' AND media_id='{media_id}'")
+        result = c.fetchall()
+        
+        if result:
+            existing_tags = result[0][0]
+            existing_tags = existing_tags.split(",")
+            for tag in tags:
+                if tag in existing_tags:
+                    existing_tags.remove(tag)
+                    
+            tags_string = self.list_to_string(existing_tags)
+            c.execute(f"""UPDATE media 
+                                SET tags='{tags_string}' WHERE media_id='{media_id}' AND username='{user}'""")
+            conn.commit()
         conn.close()
 
-        for tag in tags:
-            if tag in existing_tags:
-                existing_tags.remove(tag)
-        
-        self.add_tags(media_id, existing_tags, user)
-
+    def list_to_string(self, string_list):
+        tags_string = ""        
+        for i in range(len(string_list)):
+            tags_string += string_list[i]
+            if i != len(string_list)-1:
+                tags_string += ","
+        return tags_string
     
     def rename_tile(self, media_id, name): # Actualizado
         ''' Renombra el medio con el identificador dado al nuevo nombre '''
