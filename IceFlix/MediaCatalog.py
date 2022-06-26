@@ -107,6 +107,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         
         # Buscar en medios temporales
         media = self._media_.get(mediaId)
+        print(media)
         if media:
             provider = self._media_.get(mediaId).provider
             if provider:
@@ -166,22 +167,25 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         ddbb_cursor.execute(f"SELECT media_id, tags from media where username='{username}'")
         query = ddbb_cursor.fetchall()
         conn.close()
-        for entry in query:
-            media_tags.update({entry[0]: entry[1].split(",")}) # MediaID: Tags
+        if query:
+            for entry in query:
+                media_tags.update({entry[0]: entry[1].split(",")}) # MediaID: Tags
 
         # Buscar si los tags son todos o no
         if includeAllTags:
-            for id_tag in media_tags.values():
-                if (tags.sort() == id_tag[1].sort() and self.is_in_catalog(id_tag[0])): # Coinciden todos los tags y  el medio está disponible
-                    id_list.append(id_tag[0])
+            for key, value in media_tags.items():
+                tags.sort()
+                value.sort()
+                if tags == value:
+                    id_list.append(key)
 
-        else:
-            for id_tag in media_tags.values(): # Para cada medio para el que el usuario tiene tags
+        else:            
+            for key, value in media_tags.items():
                 for tag in tags:
-                    if (tag in id_tag[1] and self.is_in_catalog(id_tag[0])): # Coincide alguna tag y el medio está disponible
-                        id_list.append(id_tag[0])
+                    if tag in value:
+                        id_list.append(key)
                         break
-
+        print(id_list)
         return id_list
 
     def addTags(self, mediaId: str, tags: list, userToken, current=None): # pylint: disable=invalid-name,unused-argument
