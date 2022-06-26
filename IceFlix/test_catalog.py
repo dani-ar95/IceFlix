@@ -51,11 +51,12 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
         mediaid_valido = "0be6efeb267ef1dc271a9a740ee2a82bfe0527ac22ba18b7aa419cfb961aea1e"
         wrong_mediaId = "a"
         token_incorrecto = secrets.token_urlsafe(40)
+        admin_token = "admin"
 
         # ADD_TAGS ##################################################################################
         # print("\nPRUEBA ADD_TAGS MEDIA_ID VALIDO Y TOKEN VALIDO")
         # try:
-        #     print("getTile()=", catalog_connection.addTags(mediaid_valido, ["melon", "sandia"], token_valido), " EXITO")
+        #     print("addTags()=", catalog_connection.addTags(mediaid_valido, ["melon", "sandia"], token_valido), " EXITO")
         # except IceFlix.Unauthorized:
         #     print("Unauthorized FAIL")
         # except IceFlix.WrongMediaId:
@@ -63,7 +64,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
         
         # print("\nPRUEBA ADD_TAGS TOKEN NO VÁLIDO")
         # try:
-        #     print("getTile()=", catalog_connection.addTags(mediaid_valido, ["melon", "sandia"], token_incorrecto), " FAIL")
+        #     print("addTags()=", catalog_connection.addTags(mediaid_valido, ["melon", "sandia"], token_incorrecto), " FAIL")
         # except IceFlix.Unauthorized as e:
         #     print(e, " EXITO")
         # except IceFlix.WrongMediaId:
@@ -71,7 +72,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
 
         # print("\nPRUEBA ADD_TAGS MEDIA_ID NO VALIDO")
         # try:
-        #     print("getTile()=", catalog_connection.addTags(wrong_mediaId, ["melon", "sandia"], token_valido), " FAIL")
+        #     print("addTags()=", catalog_connection.addTags(wrong_mediaId, ["melon", "sandia"], token_valido), " FAIL")
         # except IceFlix.WrongMediaId as e:
         #     print(e, " EXITO")
         # except IceFlix.Unauthorized:
@@ -160,7 +161,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
         # REMOVE_TAGS ##################################################################################
         print("\nPRUEBA REMOVE_TAGS MEDIA_ID VALIDO Y TOKEN VALIDO")
         try:
-            print("getTile()=", catalog_connection.removeTags(mediaid_valido, ["prueba", "prueba2"], token_valido), " EXITO")
+            print("removeTags()=", catalog_connection.removeTags(mediaid_valido, ["prueba", "prueba2"], token_valido), " EXITO")
         except IceFlix.Unauthorized:
             print("Unauthorized FAIL")
         except IceFlix.WrongMediaId:
@@ -168,7 +169,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
         
         print("\nPRUEBA REMOVE_TAGS TOKEN NO VÁLIDO")
         try:
-            print("getTile()=", catalog_connection.removeTags(mediaid_valido, ["melon", "sandia"], token_incorrecto), " FAIL")
+            print("removeTags()=", catalog_connection.removeTags(mediaid_valido, ["melon", "sandia"], token_incorrecto), " FAIL")
         except IceFlix.Unauthorized as e:
             print(e, " EXITO")
         except IceFlix.WrongMediaId:
@@ -176,11 +177,37 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
 
         print("\nPRUEBA REMOVE_TAGS MEDIA_ID NO VALIDO")
         try:
-            print("getTile()=", catalog_connection.removeTags(wrong_mediaId, ["melon", "sandia"], token_valido), " FAIL")
+            print("removeTags()=", catalog_connection.removeTags(wrong_mediaId, ["melon", "sandia"], token_valido), " FAIL")
         except IceFlix.WrongMediaId as e:
             print(e, " EXITO")
         except IceFlix.Unauthorized:
             print("Unauthorized FAIL")
+
+        # RENAME_TILE #########################################################################################
+        print("\nPRUEBA RENAME_TILE MEDIA_ID VALIDO Y ADMIN TOKEN VALIDO")
+        try:
+            print("renameTile()=", catalog_connection.renameTile(mediaid_valido, "Prueba4", admin_token), " EXITO")
+        except IceFlix.Unauthorized:
+            print("Unauthorized FAIL")
+        except IceFlix.WrongMediaId:
+            print("WrongMediaID FAIL")
+        
+        print("\nPRUEBA RENAME_TILE ADMIN TOKEN NO VÁLIDO")
+        try:
+            print("renameTile()=", catalog_connection.renameTile(mediaid_valido, "Prueba2", "a"), " FAIL")
+        except IceFlix.Unauthorized as e:
+            print(e, " EXITO")
+        except IceFlix.WrongMediaId:
+            print("WrongMediaID FAIL")
+
+        print("\nPRUEBA RENAME_TILE MEDIA_ID NO VALIDO")
+        try:
+            print("renameTile()=", catalog_connection.renameTile(wrong_mediaId, "Prueba3", admin_token), " FAIL")
+        except IceFlix.WrongMediaId as e:
+            print(e, " EXITO")
+        except IceFlix.Unauthorized:
+            print("Unauthorized FAIL")
+
         
 
 
