@@ -35,6 +35,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
         print(f"Conectado a MediaCatalog en proxy {catalog_connection}")
 
         # Pruebas:
+        # Ejecutar: python3 IceFlix/test_catalog.py --Ice.Config=configs/client.config
         print("Probando")
 
 
