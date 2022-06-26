@@ -59,7 +59,7 @@ class RevocationsListener(IceFlix.Revocations):
         if self.service and self.service.ice_isA("::IceFlix::Authenticator"):
             if srvId == self.service_id:
                 return
-            
+
         self.servant.remove_local_user(user)
 
 

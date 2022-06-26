@@ -9,10 +9,10 @@ import random
 import sys
 import uuid
 import Ice
-import IceStorm
+from IceStorm import TopicManagerPrx, TopicExists # pylint: disable=no-name-in-module
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from stream_announcements import StreamAnnouncementsSender, StreamAnnouncementsListener
-from constants import ANNOUNCEMENT_TOPIC, STREAM_ANNOUNCES_TOPIC
+from constants import ANNOUNCEMENT_TOPIC, STREAM_ANNOUNCES_TOPIC # pylint: disable=no-name-in-module
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 
@@ -39,10 +39,10 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
         except IceFlix.TemporaryUnavailable:
             print("[STREAM PROVIDER] No se ha encontrado ningún servicio de Autenticación")
             return
-        
+
         if not auth.isAuthorized(userToken):
             raise IceFlix.Unauthorized
-        
+
         if self.isAvailable(mediaId):
             asked_media = self._provider_media_.get(mediaId)
             name = asked_media.info.name
@@ -118,15 +118,19 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
             raise IceFlix.WrongMediaId(mediaId)
 
     def reannounceMedia(self, srvId, current=None):
+        """" Vuelve a anunciar todos los medios """
+
         if srvId not in self._service_announcer_listener.known_ids:
             raise IceFlix.UnknownService
 
         for entry in self._provider_media_:
             media = self._provider_media_.get(entry)
-            print("[PROVIDER] Reanunciando ", media.mediaId, media.info.name)
-            self._stream_announcements_sender.newMedia(media.mediaId, media.info.name, srvId) #TODO: Revisar
-    
+            print(f"[PROVIDER] ID: {self.service_id} Reanunciando {media.info.name}")
+            self._stream_announcements_sender.newMedia(media.mediaId, media.info.name, srvId)
+
     def update_directory(self):
+        """ Actualiza el directorio correspondiente """
+
         root_folder = path.join(path.dirname(__file__), "resources")
         candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
 
@@ -161,24 +165,25 @@ class StreamProviderServer(Ice.Application):
         self.subscriber = None
         self.announcer = None
         self.stream_announcements_announcer = None
+        self.stream_announcements_listener = None
 
     def setup_announcements(self):
         """Configure the announcements sender and listener."""
 
         communicator = self.communicator()
-        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+        topic_manager = TopicManagerPrx.checkedCast(
             communicator.propertyToProxy("IceStorm.TopicManager")
         )
 
         try:
             topic = topic_manager.create(ANNOUNCEMENT_TOPIC)
-        except IceStorm.TopicExists:
+        except TopicExists:
             topic = topic_manager.retrieve(ANNOUNCEMENT_TOPIC)
 
         self.announcer = ServiceAnnouncementsSender(
             topic,
             self.servant_provider.service_id,
-            self.servant_provider._proxy_,
+            self.servant_provider._proxy_, #pylint: disable=protected-access
         )
 
         self.subscriber = ServiceAnnouncementsListener(
@@ -194,21 +199,21 @@ class StreamProviderServer(Ice.Application):
 
             TODO: Revisar
         """
-        
+
         communicator = self.communicator()
-        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+        topic_manager = TopicManagerPrx.checkedCast(
             communicator.propertyToProxy("IceStorm.TopicManager")
         )
 
         try:
             topic = topic_manager.create(STREAM_ANNOUNCES_TOPIC)
-        except IceStorm.TopicExists:
+        except TopicExists:
             topic = topic_manager.retrieve(STREAM_ANNOUNCES_TOPIC)
 
         self.stream_announcements_announcer = StreamAnnouncementsSender(
             topic,
             self.servant_provider.service_id,
-            self.servant_provider._proxy_,
+            self.servant_provider._proxy_, #pylint: disable=protected-access
         )
 
         self.stream_announcements_listener = StreamAnnouncementsListener(
@@ -217,36 +222,38 @@ class StreamProviderServer(Ice.Application):
 
         subscriber_prx = self.adapter.addWithUUID(self.stream_announcements_listener)
         subscriber_prx = topic.getPublisher()
-    
-    def run(self, argv):
+
+    def run(self, args):
         '''' Inicialización de la clase '''
 
         broker = self.communicator()
 
-        self.adapter = broker.createObjectAdapterWithEndpoints('StreamProviderAdapter', 'tcp -p 9095')
+        self.adapter = broker.createObjectAdapterWithEndpoints('StreamProviderAdapter', 'tcp')
         self.adapter.add(self.servant_provider, broker.stringToIdentity("StreamProvider"))
-        stream_provider_proxy = self.adapter.add(self.servant_provider, Ice.stringToIdentity("ProviderPrincipal"))
+        stream_provider_proxy = self.adapter.add(self.servant_provider,
+                                                 Ice.stringToIdentity("ProviderPrincipal"))
 
-        self.servant_provider._proxy_ = stream_provider_proxy
+        self.servant_provider._proxy_ = stream_provider_proxy #pylint: disable=protected-access
         self.adapter.activate()
 
-        print(f"[PROXY PROVIDER] {self.servant_provider._proxy_ }")
+        print(f"[PROXY PROVIDER] {self.servant_provider._proxy_ }") #pylint: disable=protected-access
         self.setup_announcements()
         self.setup_stream_announcements()
 
-        self.servant_provider._service_announcer_listener = self.subscriber
-        self.servant_provider._stream_announcements_sender = self.stream_announcements_announcer
+        self.servant_provider._service_announcer_listener = self.subscriber #pylint: disable=protected-access
+        self.servant_provider._stream_announcements_sender = self.stream_announcements_announcer #pylint: disable=protected-access
 
         self.announcer.start_service()
         root_folder = path.join(path.dirname(__file__), "resources")
         candidates = glob.glob(path.join(root_folder, '*'), recursive=True)
-        
+
         for filename in candidates:
             with open("./"+str(filename), "rb") as f:
                 read_file = f.read()
                 id_hash = hashlib.sha256(read_file).hexdigest()
-                new_media = IceFlix.Media(id_hash, stream_provider_proxy, IceFlix.MediaInfo(filename, []))
-                self.servant_provider._provider_media_.update({id_hash: new_media})
+                new_media = IceFlix.Media(id_hash, stream_provider_proxy,
+                                          IceFlix.MediaInfo(filename, []))
+                self.servant_provider._provider_media_.update({id_hash: new_media}) #pylint: disable=protected-access
 
             self.stream_announcements_announcer.newMedia(id_hash, filename)
 
