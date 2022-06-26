@@ -48,18 +48,29 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         query = ddbb_cursor.fetchall()
         conn.close()
         if query:
-            print(query)
             for media in query:
-                info = IceFlix.MediaInfo(media[2], media[3].split())
-                self._media_.update({media[0]: IceFlix.Media(media[0], None, info)})
+                tags = media[3]
+                if tags:
+                    info = IceFlix.MediaInfo(media[1], media[3].split())
+                else:
+                    info = IceFlix.MediaInfo(media[1], [])
+                self._media_.update({media[0]: IceFlix.Media(media[0], media[4], info)})
 
     def add_media(self, media_id, initial_name, srv_id):
-        if self.is_in_catalog(media_id):
-            return
+        if not self.is_in_catalog(media_id):
+            #Añadir medio en bbdd
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute(f"""INSERT INTO media (media_id, media_name)
+                    VALUES ('{media_id}','{initial_name}')""")
+            conn.commit()
+            conn.close()
+        
+        #Añadir medio en local
         info = IceFlix.MediaInfo(initial_name, [])
         provider_proxy = self.find_provider(srv_id)
         self._media_.update({media_id: IceFlix.Media(media_id, provider_proxy, info)})
-
+        
 
     def remove_media(self, media_id):
         if self.is_in_catalog(media_id):
@@ -108,14 +119,14 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             else:
                 raise IceFlix.TemporaryUnavailable
 
-        # Si no lo encuentra en los medios locales: Buscar ID en bbdd
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute(f"SELECT * FROM media WHERE media_id LIKE '{mediaId}'") # pylint: disable=invalid-name,unused-argument
-        query = c.fetchall()
+        # # Si no lo encuentra en los medios locales: Buscar ID en bbdd
+        # conn = sqlite3.connect(DB_PATH)
+        # c = conn.cursor()
+        # c.execute(f"SELECT * FROM media WHERE media_id LIKE '{mediaId}'") # pylint: disable=invalid-name,unused-argument
+        # query = c.fetchall()
 
         # Buscar el ID en bbdd y temporal
-        if not query and mediaId not in self._media_.keys():
+        if mediaId not in self._media_.keys():
             raise IceFlix.WrongMediaId(mediaId)
 
 
@@ -131,6 +142,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         else:
             for media in self._media_.values():
                 new_name = path.split(media.info.name)[1].lower()
+                print(new_name)
                 if name.lower().split(".")[0] in new_name.split(".")[0]:
                     id_list.append(media.mediaId)
 
@@ -286,23 +298,35 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         c.execute(f"SELECT * FROM media WHERE media_id LIKE '{mediaId}'") # pylint: disable=invalid-name,unused-argument
 
         query = c.fetchall()
-
+        conn.close()
         # Buscar el ID en bbdd y temporal
-        if not query and mediaId not in self._media_.keys():
+        if not query:
             return False
         return True
 
-    def add_tags(self, media_id, tags, user): # Actualizado
+    def add_tags(self, media_id, tags, user): # TODO
         ''' Añade las tags indicadas al usuario y medio correspondiente '''
         
         conn = sqlite3.connect(DB_PATH)
-        ddbb_cursor = conn.cursor()
-        ddbb_cursor.execute(f""" UPDATE media 
-                            SET tags='{tags}' tags from media 
-                            WHERE media_id='{media_id}' and username='{user}'""")
+        c = conn.cursor()
+        c.execute(f"SELECT tags FROM media WHERE username='{user}' AND media_id='{media_id}'")
+        query = c.fetchall()
+        if query:
+            current_tags = ""
+            for tag in query[0]:
+                current_tags += tag
+            
+        tags_string = current_tags + " "
+        for i in range(len(tags)):
+            tags_string += tags[i]
+            if i != len(tags)-1:
+                tags_string += " "
+        print(tags_string)
+        c.execute(f"""UPDATE media 
+                            SET username='{user}', tags='{tags_string}' WHERE media_id='{media_id}'""")
         conn.commit()
         conn.close()
-        print(f"[CATALOG] ID: {self.service_id} actualizadas tags de {media_id}")
+        print(f"[CATALOG] ID: {self.service_id} actualizadas tags de {media_id} para usuario {user}")
 
 
     def remove_tags(self, media_id, tags, user): # Actualizado
