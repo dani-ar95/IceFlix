@@ -173,7 +173,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
         print(f"[TEST CATALOGO] Query con tags = {query}, con user {username}")
         if query:
             for entry in query:
-                media_tags.update({entry[0]: entry[1].split(" ")}) # MediaID: Tags
+                media_tags.update({entry[0]: entry[1].split(",")}) # MediaID: Tags
 
         print(media_tags)
         # Buscar si los tags son todos o no
