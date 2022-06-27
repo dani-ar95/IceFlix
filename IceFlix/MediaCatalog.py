@@ -170,10 +170,12 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
         ddbb_cursor.execute(f"SELECT media_id, tags from media where username='{username}'")
         query = ddbb_cursor.fetchall()
         conn.close()
+        print(f"[TEST CATALOGO] Query con tags = {query}, con user {username}")
         if query:
             for entry in query:
-                media_tags.update({entry[0]: entry[1].split(",")}) # MediaID: Tags
+                media_tags.update({entry[0]: entry[1].split(" ")}) # MediaID: Tags
 
+        print(media_tags)
         # Buscar si los tags son todos o no
         if includeAllTags:
             for key, value in media_tags.items():

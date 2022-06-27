@@ -106,7 +106,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
 
         # GET_TILES_BY_NAME ##########################################################################
         print("\nPRUEBA GET_TILES_BY_NAME NOMBRE CORRECTO")
-        names = catalog_connection.getTilesByName("Pelucas", True)
+        names = catalog_connection.getTilesByName("Prueba4", True)
         print(names)
         if names != []:
             print("EXITO")
