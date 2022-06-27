@@ -381,13 +381,16 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             media = self._media_.get(media_id)
             old_name = media.info.name
             suffix = media.info.name.split(".")[1]
-            media.info.name = name + "." + suffix
+            resources = media.info.name.split("/")
+            preffix = resources[0] + "/" + resources[1] + "/"
+            media.info.name = preffix + name + "." + suffix
             self._media_.update({media_id: media})
+            print(f"[MEDIA] Archivo {old_name} cambiado a {media.info.name}")
 
         # Cambiar en directorio
         if self.findfile(old_name):
             try:
-                rename(old_name, RESOURCES_FOLDER + media.info.name )
+                rename(old_name, RESOURCES_FOLDER + name + "." + suffix )
             except FileNotFoundError:
                 raise IceFlix.WrongMediaId
 
