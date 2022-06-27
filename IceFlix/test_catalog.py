@@ -82,7 +82,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
         # GET_TILE ##################################################################################
         print("\nPRUEBA GET_TILE TOKEN VALIDO Y MEDIAID CORRECTO")
         try:
-            print("getTile()=", catalog_connection.getTile(token_valido, mediaid_valido), " EXITO")
+            print("getTile()=", catalog_connection.getTile(mediaid_valido, token_valido), " EXITO")
         except IceFlix.Unauthorized:
             print("Unauthorized FAIL")
         except IceFlix.WrongMediaId:
@@ -90,7 +90,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
 
         print("\nPRUEBA GET_TILE TOKEN NO VÁLIDO")
         try:
-            print("getTile()=", catalog_connection.getTile(token_incorrecto, mediaid_valido), " FAIL")
+            print("getTile()=", catalog_connection.getTile(mediaid_valido, token_incorrecto), " FAIL")
         except IceFlix.Unauthorized as e:
             print(e, " EXITO")
         except IceFlix.WrongMediaId:
@@ -98,7 +98,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
 
         print("\nPRUEBA GET_TILE MEDIA_ID NO VALIDO")
         try:
-            print("getTile()=", catalog_connection.getTile(token_valido, wrong_mediaId), " FAIL")
+            print("getTile()=", catalog_connection.getTile(wrong_mediaId, token_valido), " FAIL")
         except IceFlix.WrongMediaId as e:
             print(e, " EXITO")
         except IceFlix.Unauthorized:
