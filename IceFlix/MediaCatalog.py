@@ -5,28 +5,32 @@
 
 import sqlite3
 import sys
-import json
 from time import sleep
 from os import path, rename
 import glob
-import IceStorm
 import uuid
 import random
+import Ice
+from IceStorm import TopicManagerPrx, TopicExists # pylint: disable=no-name-in-module
+from constants import ANNOUNCEMENT_TOPIC, CATALOG_SYNC_TOPIC, STREAM_ANNOUNCES_TOPIC # pylint: disable=no-name-in-module
 from stream_announcements import StreamAnnouncementsListener
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from catalog_updates import CatalogUpdatesListener, CatalogUpdatesSender
-import Ice
+from media import MediaDB
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 DB_PATH = path.join(path.dirname(__file__), "media.db")
 USERS_PATH = "IceFlix/users.json"
 RESOURCES_FOLDER = path.join(path.dirname(__file__), "resources/")
+
 Ice.loadSlice(SLICE_PATH)
-import IceFlix # pylint: disable=wrong-import-position
+try:
+    import IceFlix
+except ImportError:
+    Ice.loadSlice(path.join(path.dirname(__file__), "iceflix.ice"))
+    import IceFlix # pylint: disable=wrong-import-position
 
-from media import MediaDB
-from constants import ANNOUNCEMENT_TOPIC, ICESTORM_PROXY_PROPERTY, CATALOG_SYNC_TOPIC, STREAM_ANNOUNCES_TOPIC
 
-class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
+class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, too-many-instance-attributes, too-many-public-methods
     ''' Instancia del servicio de Catálogo '''
 
     def __init__(self):
@@ -38,10 +42,11 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         self._anunciamientos_sender = None
         self._anunciamientos_listener = None
         self._updates_sender = None
-        self._stream_listener= None
-        
-    
+        self._stream_listener = None
+
     def read_media(self): # Actualizado
+        """ Rellena los medios dinámicos utilizando la bbdd """
+
         conn = sqlite3.connect(DB_PATH)
         ddbb_cursor = conn.cursor()
         ddbb_cursor.execute("SELECT * FROM media")
@@ -57,6 +62,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
                 self._media_.update({media[0]: IceFlix.Media(media[0], media[4], info)})
 
     def add_media(self, media_id, initial_name, srv_id):
+        """ Inserta un media en la bbdd """
         if not self.is_in_catalog(media_id):
             #Añadir medio en bbdd
             conn = sqlite3.connect(DB_PATH)
@@ -65,27 +71,28 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
                     VALUES ('{media_id}','{initial_name}')""")
             conn.commit()
             conn.close()
-        
+
         #Añadir medio en local
         info = IceFlix.MediaInfo(initial_name, [])
         provider_proxy = self.find_provider(srv_id)
         self._media_.update({media_id: IceFlix.Media(media_id, provider_proxy, info)})
-        
 
     def remove_media(self, media_id):
+        """ Elimina un media de la lista dinámica """
+
         if self.is_in_catalog(media_id):
             self._media_.pop(media_id)
-        return
-
 
     def find_provider(self, srv_id):
+        """ Devuelve el provider con el identificador dado """
+
         return self._anunciamientos_listener.providers[srv_id]
 
     def get_users_tags(self, media): # Actualizado
         """ Devuelve un objeto TagsPerUser"""
 
         users_tags = {}
-        
+
         conn = sqlite3.connect(DB_PATH)
         ddbb_cursor = conn.cursor()
         ddbb_cursor.execute(f"SELECT username, tags FROM media WHERE media_id='{media}'")
@@ -104,7 +111,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
 
         if not self.check_user(userToken): # También puede lanzar TemporaryUnavailable -> Está bien
             raise IceFlix.Unauthorized
-        
+
         # Buscar en medios temporales
         media = self._media_.get(mediaId)
         print(media)
@@ -120,15 +127,11 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             else:
                 raise IceFlix.TemporaryUnavailable
 
-        # # Si no lo encuentra en los medios locales: Buscar ID en bbdd
-        # conn = sqlite3.connect(DB_PATH)
-        # c = conn.cursor()
-        # c.execute(f"SELECT * FROM media WHERE media_id LIKE '{mediaId}'") # pylint: disable=invalid-name,unused-argument
-        # query = c.fetchall()
-
-        # Buscar el ID en bbdd y temporal
+        # Buscar el ID en temporal y temporal
         if mediaId not in self._media_.keys():
             raise IceFlix.WrongMediaId(mediaId)
+
+        return None
 
 
     def getTilesByName(self, name: str, exact: bool, current=None): # pylint: disable=invalid-name,unused-argument
@@ -151,11 +154,11 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
 
     # Actualizado
     def getTilesByTags(self, tags: list, includeAllTags: bool, userToken, current=None): # pylint: disable=invalid-name,unused-argument
-        ''' Retorna una lista de IDs de los medios con las tags dadas '''        
+        ''' Retorna una lista de IDs de los medios con las tags dadas '''
 
         try:
             username = self.check_user_name(userToken) # Raisea TemporaryUnavailable, Unauthorized
-        except IceFlix.TemporaryUnavailable: # La intefaz no permite raisear esto -> Se cambia por otra que se pueda
+        except IceFlix.TemporaryUnavailable:# La intefaz no permite raisear esto -> Se cambia por otra que se pueda
             raise IceFlix.Unauthorized
 
         id_list = []
@@ -179,7 +182,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
                 if tags == value:
                     id_list.append(key)
 
-        else:            
+        else:
             for key, value in media_tags.items():
                 for tag in tags:
                     if tag in value:
@@ -209,7 +212,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
             user_name = self.check_user_name(userToken) # Raisea TemporaryUnavailable, Unauthorized
         except IceFlix.TemporaryUnavailable: # No se puede raisear esta, se cambia por otra
             raise IceFlix.Unauthorized
-        
+
         if mediaId not in self._media_:
             raise IceFlix.WrongMediaId(mediaId)
 
@@ -259,7 +262,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
 
     def check_user_name(self, user_token: str):
         ''' Devuelve el usuario al que pertenece el token dado '''
-        
+
         self.update_auth() # Raisea TemporaryUnavailable
         user_name = self._auth_prx_.whois(user_token) # Raisea Unauthorized
 
@@ -269,20 +272,21 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         """ Actualiza el proxy al authenticator """
 
         while self._anunciamientos_listener.mains.values():
-            main_prx = random.choice(list(self._anunciamientos_listener.mains.values())) # Cambiar por si cae
+            main_prx = random.choice(list(self._anunciamientos_listener.mains.values())) #Cambiar por si cae
             try:
                 main_prx.ice_ping()
                 self._auth_prx_ = main_prx.getAuthenticator()
                 self._main_prx_ = main_prx
-                break
+                return
             except Ice.ConnectionRefusedException:
                 self._anunciamientos_listener.mains.pop(main_prx) # Comprobar si funciona
 
         raise IceFlix.TemporaryUnavailable
-    
+
     @property
     def get_mediaDB(self):
-        
+        """ Devuelve un objeto MediaDB """
+
         medias = self._media_.items()
 
         mediaDBList = []
@@ -297,6 +301,8 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         return mediaDBList
 
     def is_in_catalog(self, mediaId):
+        """ Permite saber si un media está en la bbdd """
+
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute(f"SELECT * FROM media WHERE media_id LIKE '{mediaId}'") # pylint: disable=invalid-name,unused-argument
@@ -310,6 +316,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
 
     def add_tags(self, media_id, tags, user):   # HECHO
         ''' Añade las tags indicadas al usuario y medio correspondiente '''
+
         tags_string = self.list_to_string(tags)
 
         conn = sqlite3.connect(DB_PATH)
@@ -322,14 +329,16 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
                 current_tags += tag
                 current_tags += ","
             tags_string += "," + current_tags[:-1]
-            c.execute(f"""UPDATE media 
-                                SET tags='{tags_string}' WHERE media_id='{media_id}' AND username='{user}'""")
+            c.execute(f"""UPDATE media
+                                SET tags='{tags_string}' 
+                                WHERE media_id='{media_id}' AND username='{user}'""")
         else:
-            c.execute(f"""INSERT INTO media 
-                      (media_id, username, tags) VALUES ('{media_id}', '{user}', '{tags_string}')""")
+            c.execute(f"""INSERT INTO media
+                      (media_id, username, tags) VALUES ('{media_id}', '{user}', '{tags_string}')
+                      """)
         conn.commit()
         conn.close()
-        print(f"[CATALOG] ID: {self.service_id} actualizadas tags de {media_id} para usuario {user}")
+        print(f"[CATALOG] ID: {self.service_id} actualizadas tags de {media_id},  usuario {user}")
 
 
     def remove_tags(self, media_id, tags, user): # HECHO
@@ -341,28 +350,31 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         c = conn.cursor()
         c.execute(f"SELECT tags FROM media WHERE username='{user}' AND media_id='{media_id}'")
         result = c.fetchall()
-        
+
         if result:
             existing_tags = result[0][0]
             existing_tags = existing_tags.split(",")
             for tag in tags:
                 if tag in existing_tags:
                     existing_tags.remove(tag)
-                    
+
             tags_string = self.list_to_string(existing_tags)
-            c.execute(f"""UPDATE media 
-                                SET tags='{tags_string}' WHERE media_id='{media_id}' AND username='{user}'""")
+            c.execute(f"""UPDATE media
+                                SET tags='{tags_string}' 
+                                WHERE media_id='{media_id}' AND username='{user}'""")
             conn.commit()
         conn.close()
 
     def list_to_string(self, string_list):
-        tags_string = ""        
+        """ Permite crear una string juntando valores de una lista """
+
+        tags_string = ""
         for i in range(len(string_list)):
             tags_string += string_list[i]
             if i != len(string_list)-1:
                 tags_string += ","
         return tags_string
-    
+
     def rename_tile(self, media_id, name): # Actualizado
         ''' Renombra el medio con el identificador dado al nuevo nombre '''
 
@@ -390,7 +402,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         # Cambiar en directorio
         if self.findfile(old_name):
             try:
-                rename(old_name, RESOURCES_FOLDER + name + "." + suffix )
+                rename(old_name, RESOURCES_FOLDER + name + "." + suffix)
             except FileNotFoundError:
                 raise IceFlix.WrongMediaId
 
@@ -401,7 +413,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
         conn.commit()
         conn.close()
 
-    def rename_dynamic_media(self, media_id,  name):
+    def rename_dynamic_media(self, media_id, name):
         """ Actualiza el nombre de un medio en la lista dinámica """
 
         if media_id in self._media_:
@@ -412,43 +424,33 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
 
 
     def findfile(self, name):
+        """ Encuentra el archivo en el directorio correspondiente """
+
         for file in glob.glob(RESOURCES_FOLDER + "*"):
             if file == name:
                 return True
         return False
 
-    def share_data_with(self, service, current=None):
+    def share_data_with(self, service, current=None): # pylint: disable=unused-argument
         """Share the current database with an incoming service."""
+
         service.updateDB(self.get_mediaDB, self.service_id)
 
 
     def updateDB(self, values, service_id, current=None):  # pylint: disable=invalid-name,unused-argument
         """Receives the current main service database from a peer."""
+
         print(f"Receiving remote data base from {service_id} to {self.service_id}")
-        
+
         for media in values:
             print("Se recibe el objeto:")
             print(media)
             info = IceFlix.MediaInfo(media.name, media.tagsPerUser.values())
             self._media_.update({media.mediaId: IceFlix.Media(media.mediaId, None, info)})
 
-    def update_auth(self):
-        # Update main
-        self.update_main_prx()
-        # Comprobar Main funcionando
-        try:
-            self._main_prx_.ice_ping()
-        except Ice.ConnectionRefusedException:
-            raise IceFlix.TemporaryUnavailable
-
-        # Volver a pedir authenticator
-        try:
-            self._auth_prx_ = self._main_prx_.getAuthenticator()
-            self._auth_prx_.ice_ping()
-        except IceFlix.TemporaryUnavailable or AttributeError: # Authenticator caido o no existe
-            raise IceFlix.TemporaryUnavailable
-
     def update_main_prx(self):
+        """ Busca un Main válido """
+
         for main_id in self._anunciamientos_listener.mains:
             main_prx = self._anunciamientos_listener.mains.get(main_id)
             try:
@@ -461,20 +463,31 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class
 
 
 
-class MediaCatalogServer(Ice.Application):
+class MediaCatalogServer(Ice.Application): # pylint: disable=too-many-instance-attributes
     ''' Servidor de Catálogo  '''
+
+    def __init__(self):
+        super().__init__()
+        self.announcer = None
+        self.subscriber = None
+        self._updates_sender = None
+        self._updates_listener = None
+        self._stream_listener = None
+        self.adapter = None
+        self.proxy = None
+        self.servant = None
 
     def setup_announcements(self):
         """Configure the announcements sender and listener."""
 
         communicator = self.communicator()
-        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+        topic_manager = TopicManagerPrx.checkedCast(
             communicator.propertyToProxy("IceStorm.TopicManager")
         )
 
         try:
             topic = topic_manager.create(ANNOUNCEMENT_TOPIC)
-        except IceStorm.TopicExists:
+        except TopicExists:
             topic = topic_manager.retrieve(ANNOUNCEMENT_TOPIC)
 
         self.announcer = ServiceAnnouncementsSender(
@@ -494,13 +507,13 @@ class MediaCatalogServer(Ice.Application):
         """Configure the announcements sender and listener."""
 
         communicator = self.communicator()
-        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+        topic_manager = TopicManagerPrx.checkedCast(
             communicator.propertyToProxy("IceStorm.TopicManager")
         )
 
         try:
             topic = topic_manager.create(CATALOG_SYNC_TOPIC)
-        except IceStorm.TopicExists:
+        except TopicExists:
             topic = topic_manager.retrieve(CATALOG_SYNC_TOPIC)
 
         self._updates_sender = CatalogUpdatesSender(
@@ -517,22 +530,22 @@ class MediaCatalogServer(Ice.Application):
         '''  Configurar listener del topic StreamAnnouncements '''
 
         communicator = self.communicator()
-        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+        topic_manager = TopicManagerPrx.checkedCast(
             communicator.propertyToProxy("IceStorm.TopicManager")
         )
         try:
             topic = topic_manager.create(STREAM_ANNOUNCES_TOPIC)
-        except IceStorm.TopicExists:
+        except TopicExists:
             topic = topic_manager.retrieve(STREAM_ANNOUNCES_TOPIC)
-            
+
         self._stream_listener = StreamAnnouncementsListener(
             self.servant, self.servant.service_id, IceFlix.MediaCatalogPrx)
-        
+
         subscriber_prx = self.adapter.addWithUUID(self._stream_listener)
         topic.subscribeAndGetPublisher({}, subscriber_prx)
 
 
-    def run(self, argv):
+    def run(self, args):
         sleep(1)
 
         broker = self.communicator()
@@ -540,7 +553,8 @@ class MediaCatalogServer(Ice.Application):
 
         self.adapter = broker.createObjectAdapterWithEndpoints('MediaCatalogAdapter', 'tcp')
         self.adapter.add(self.servant, broker.stringToIdentity("MediaCatalog"))
-        media_catalog_proxy = self.adapter.add(self.servant, Ice.stringToIdentity("MediaCatalogPrincipal"))
+        media_catalog_proxy = self.adapter.add(self.servant,
+                                               Ice.stringToIdentity("MediaCatalogPrincipal"))
 
         self.proxy = media_catalog_proxy
         self.adapter.activate()
@@ -549,10 +563,10 @@ class MediaCatalogServer(Ice.Application):
         self.setup_catalog_updates()
         self.setup_stream_announcements()
 
-        self.servant._anunciamientos_sender = self.announcer
-        self.servant._anunciamientos_listener = self.subscriber
-        self.servant._updates_sender = self._updates_sender
-        self.servant._stream_listener = self._stream_listener
+        self.servant._anunciamientos_sender = self.announcer    #pylint: disable=protected-access
+        self.servant._anunciamientos_listener = self.subscriber #pylint: disable=protected-access
+        self.servant._updates_sender = self._updates_sender     #pylint: disable=protected-access
+        self.servant._stream_listener = self._stream_listener   #pylint: disable=protected-access
 
         self.servant.read_media()
         self.announcer.start_service()
