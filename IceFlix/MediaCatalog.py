@@ -11,12 +11,12 @@ import glob
 import uuid
 import random
 import Ice
-from IceStorm import TopicManagerPrx, TopicExists # pylint: disable=no-name-in-module
-from constants import ANNOUNCEMENT_TOPIC, CATALOG_SYNC_TOPIC, STREAM_ANNOUNCES_TOPIC # pylint: disable=no-name-in-module
-from stream_announcements import StreamAnnouncementsListener
-from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
-from catalog_updates import CatalogUpdatesListener, CatalogUpdatesSender
-from media import MediaDB
+from IceStorm import TopicManagerPrx, TopicExists # pylint: disable=no-name-in-module, import-error
+from constants import ANNOUNCEMENT_TOPIC, CATALOG_SYNC_TOPIC, STREAM_ANNOUNCES_TOPIC # pylint: disable=no-name-in-module, import-error
+from stream_announcements import StreamAnnouncementsListener #pylint disable=import-error
+from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender #pylint disable=import-error
+from catalog_updates import CatalogUpdatesListener, CatalogUpdatesSender #pylint disable=import-error
+from media import MediaDB #pylint disable=import-error
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 DB_PATH = path.join(path.dirname(__file__), "media.db")
 USERS_PATH = "IceFlix/users.json"

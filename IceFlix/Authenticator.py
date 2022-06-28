@@ -11,15 +11,15 @@ import uuid
 import secrets
 from json import JSONDecodeError, load, dump
 import Ice
-from IceStorm import TopicManagerPrx, TopicExists # pylint: disable=no-name-in-module
+from IceStorm import TopicManagerPrx, TopicExists # pylint: disable=no-name-in-module, disable-error
 try:
     import IceFlix
 except ImportError:
     Ice.loadSlice(path.join(path.dirname(__file__), "iceflix.ice"))
-    import IceFlix # pylint: disable=wrong-import-position
-from users_db import UsersDB
-from constants import REVOCATIONS_TOPIC, AUTH_SYNC_TOPIC # pylint: disable=no-name-in-module
-from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
+    import IceFlix # pylint: disable=wrong-import-position, disable-error
+from users_db import UsersDB #pylint disable=import-error, disable-error
+from constants import REVOCATIONS_TOPIC, AUTH_SYNC_TOPIC # pylint: disable=no-name-in-module, disable-error
+from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender #pylint disable=import-error, disable-error
 from user_updates import UserUpdatesSender, UserUpdatesListener
 from user_revocations import RevocationsListener, RevocationsSender
 
