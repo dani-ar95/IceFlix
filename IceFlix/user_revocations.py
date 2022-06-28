@@ -2,8 +2,9 @@
 
 import os
 import threading
+from time import sleep
 import Ice
-
+import logging
 try:
     import IceFlix
 except ImportError:
@@ -30,11 +31,15 @@ class RevocationsListener(IceFlix.Revocations):
                 print("[AUTHENTICATOR] Token revoked")
 
             if self.service.ice_isA("::IceFlix::StreamController"):
+                print("STREAM CONTROLLER REVOCATIONS")
                 if srvId == self.service_id:
                     return
-                print("[STREAM CONTROLLER] Token revoked. Refreshing...")
-                self.servant.authentication_timer = threading.Timer(5.0, self.servant.stop)
-                self.servant.authentication_timer.start()
+                print(self.servant.user_token, userToken)
+                if self.servant.user_token == userToken:
+                    print("\n\n[STREAM CONTROLLER] Token revoked. Refreshing...")
+                    self.servant.stream_sync_announcer.requestAuthentication()
+                    self.servant.authentication_timer = threading.Timer(5.0, self.servant.stop)
+                    self.servant.authentication_timer.start()
 
         else:
             if self.servant.logged:
@@ -74,7 +79,6 @@ class RevocationsSender:
         )
         self.service_id = service_id
         self.proxy = servant_proxy
-        self.timer = None
 
     def revokeUser(self, user, current=None): # pylint: disable=invalid-name,unused-argument
         """ Emite un evento revokeUser """

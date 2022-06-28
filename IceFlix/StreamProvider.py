@@ -9,27 +9,33 @@ import random
 import sys
 import uuid
 import Ice
-from IceStorm import TopicManagerPrx, TopicExists # pylint: disable=no-name-in-module
+from IceStorm import TopicManagerPrx, TopicExists
+from user_revocations import RevocationsListener, RevocationsSender # pylint: disable=no-name-in-module
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from stream_announcements import StreamAnnouncementsSender, StreamAnnouncementsListener
-from constants import ANNOUNCEMENT_TOPIC, STREAM_ANNOUNCES_TOPIC # pylint: disable=no-name-in-module
+from stream_sync import StreamSyncSender, StreamSyncListener
+from StreamController import StreamControllerI
+from constants import ANNOUNCEMENT_TOPIC, REVOCATIONS_TOPIC, STREAM_ANNOUNCES_TOPIC, STREAM_SYNC_TOPIC # pylint: disable=no-name-in-module
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 
 Ice.loadSlice(SLICE_PATH)
 import IceFlix # pylint: disable=wrong-import-position
 
-from StreamController import StreamControllerServer # pylint: disable=import-error, wrong-import-position
+#from StreamController import StreamControllerI # pylint: disable=import-error, wrong-import-position
 
 class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-class
     ''' Instancia de Stream Provider '''
 
-    def __init__(self):
+    def __init__(self, broker):
         self._provider_media_ = {}
         self._proxy_ = None
         self._stream_announcements_sender = None
         self._service_announcer_listener = None
         self.service_id = str(uuid.uuid4())
+        self.broker = broker
+        self.stream_sync_sender = None
+        self.stream_sync_listener = None
 
     def getStream(self, mediaId: str, userToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Factoría de objetos StreamController '''
@@ -46,9 +52,38 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
         if self.isAvailable(mediaId):
             asked_media = self._provider_media_.get(mediaId)
             name = asked_media.info.name
-            controller = StreamControllerServer(self._service_announcer_listener, name, userToken)
-            controller_servant = controller.servant
-            controller_proxy = current.adapter.addWithUUID(controller_servant)
+            controller = StreamControllerI(self._service_announcer_listener, name, userToken)
+            # controller_servant = controller.servant
+            controller_proxy = current.adapter.addWithUUID(controller)
+            
+            topic_manager = TopicManagerPrx.checkedCast(
+                self.broker.propertyToProxy("IceStorm.TopicManager")) 
+            
+            try:
+                topic = topic_manager.create(REVOCATIONS_TOPIC)
+            except TopicExists:
+                topic = topic_manager.retrieve(REVOCATIONS_TOPIC)
+            
+            revocations_sender = RevocationsSender(
+                topic, controller.service_id, controller_proxy)
+            revocations_listener = RevocationsListener(
+                controller, controller_proxy, controller.service_id, IceFlix.StreamControllerPrx
+            )
+            rev_subscriber_prx = current.adapter.addWithUUID(revocations_listener)
+            topic.subscribeAndGetPublisher({}, rev_subscriber_prx)
+            
+            
+            try:
+                topic = topic_manager.create(STREAM_SYNC_TOPIC)
+            except TopicExists:
+                topic = topic_manager.retrieve(STREAM_SYNC_TOPIC)
+
+            stream_sync_sender = StreamSyncSender(topic)
+            stream_sync_listener = StreamSyncListener(controller, controller_proxy)
+
+            sync_subscriber_prx = current.adapter.addWithUUID(stream_sync_listener)
+            topic.subscribeAndGetPublisher({}, sync_subscriber_prx)
+            controller.stream_sync_announcer = stream_sync_sender
             return IceFlix.StreamControllerPrx.checkedCast(controller_proxy)
         else:
             raise IceFlix.WrongMediaId(mediaId)
@@ -155,12 +190,13 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
         else:
             return is_admin
 
+
 class StreamProviderServer(Ice.Application):
     ''' Servidor que comparte con el catálogo sus medios disponibles  '''
 
     def __init__(self):
         super().__init__()
-        self.servant_provider = StreamProviderI()
+        self.servant_provider = None
         self.adapter = None
         self.subscriber = None
         self.announcer = None
@@ -227,14 +263,14 @@ class StreamProviderServer(Ice.Application):
         '''' Inicialización de la clase '''
 
         broker = self.communicator()
-
+        self.servant_provider = StreamProviderI(broker)
         self.adapter = broker.createObjectAdapterWithEndpoints('StreamProviderAdapter', 'tcp')
+        self.adapter.activate()
         self.adapter.add(self.servant_provider, broker.stringToIdentity("StreamProvider"))
         stream_provider_proxy = self.adapter.add(self.servant_provider,
                                                  Ice.stringToIdentity("ProviderPrincipal"))
 
         self.servant_provider._proxy_ = stream_provider_proxy #pylint: disable=protected-access
-        self.adapter.activate()
 
         print(f"[PROXY PROVIDER] {self.servant_provider._proxy_ }") #pylint: disable=protected-access
         self.setup_announcements()

@@ -12,7 +12,8 @@ import iceflixrtsp
 from MediaUploader import MediaUploaderI
 import IceStorm
 from user_revocations import RevocationsListener, RevocationsSender
-from constants import REVOCATIONS_TOPIC  #pylint: disable=no-name-in-module
+from stream_sync import StreamSyncListener, StreamSyncSender
+from constants import REVOCATIONS_TOPIC, STREAM_SYNC_TOPIC  #pylint: disable=no-name-in-module
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
@@ -150,6 +151,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
             self.revoke_topic_prx = None
             self.revoke_topic = None
             self.revocations_subscriber = None
+            self.revocations_listener = None
             self.logged = False
         else:
             input("No hay ninguna sesión iniciada. Pulsa Enter para continuar...")
@@ -454,6 +456,21 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
             print("El video no se encuentra en el catalogo")
             input()
             return
+        
+        communicator = self.communicator()
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(  #pylint: disable=no-member
+            communicator.propertyToProxy("IceStorm.TopicManager"))
+        try:
+            topic = topic_manager.create(STREAM_SYNC_TOPIC)
+        except IceStorm.TopicExists:  #pylint: disable=no-member
+            topic = topic_manager.retrieve(STREAM_SYNC_TOPIC)
+        self.sync_publisher = StreamSyncSender(topic)
+        self.sync_subscriber = StreamSyncListener(self)
+        self.sync_subscriber_prx = self.adapter.addWithUUID(self.sync_subscriber)
+        self.sync_topic_prx = topic.subscribeAndGetPublisher({},
+                                                                self.sync_subscriber_prx)
+        self.sync_topic = topic
+        
         try:
             config_url = self._stream_controller_prx_.getSDP(self._user_token_, 9998)
             print(config_url)
@@ -472,6 +489,12 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
                 self._stream_controller_prx_.stop()
                 self._media_player_.stop()
                 self._playing_media_ = False
+                self.sync_topic.unsubscribe(self.sync_subscriber_prx)
+                self.sync_topic_prx = None
+                self.sync_topic = None
+                self.sync_subscriber_prx = None
+                self.sync_publisher = None
+                self.sync_subscriber = None
                 return
 
     def add_tags(self, media_object):

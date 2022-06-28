@@ -9,9 +9,6 @@ import uuid
 import Ice
 from IceStorm import TopicManagerPrx, TopicExists # pylint: disable=no-name-in-module
 import iceflixrtsp # pylint: disable=import-error
-from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
-from user_revocations import RevocationsListener, RevocationsSender
-from stream_sync import StreamSyncListener, StreamSyncSender
 from constants import STREAM_SYNC_TOPIC, REVOCATIONS_TOPIC # pylint: disable=no-name-in-module
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
@@ -28,6 +25,7 @@ class StreamControllerI(IceFlix.StreamController): # pylint: disable=inherit-non
         self.announcements_listener = announcements_listener
         self.authentication_timer = None
         self.user_token = userToken
+        self.stream_sync_announcer = None
 
         try:
             self._fd_ = open(filename, "rb") # pylint: disable=bad-option-value
@@ -76,82 +74,4 @@ class StreamControllerI(IceFlix.StreamController): # pylint: disable=inherit-non
 
         self._emitter_.stop()
         current.adapter.remove(current.id)
-
-
-class StreamControllerServer(Ice.Application): # pylint: disable=invalid-name
-    ''' Servidor del controlador de Streaming '''
-
-    def __init__(self, announcements_listener, filename, userToken):
-        """ Inicializa el controlador """
-
-        super().__init__()
-        self.servant = StreamControllerI(announcements_listener, filename, userToken)
-        self.adapter = None
-        self.proxy = None
-        self.revocations_announcer = None
-        self.revocations_subscriber = None
-        self.stream_sync_announcer = None
-        self.revocations_announcer = None
-        self.stream_sync_subscriber = None
-
-    def setup_revocations(self):
-        """ Establece la interfaz para el topic UserRovocations """
-
-        communicator = self.communicator()
-        topic_manager = TopicManagerPrx.checkedCast(
-            communicator.propertyToProxy("IceStorm.TopicManager")
-        )
-
-        try:
-            topic = topic_manager.create(REVOCATIONS_TOPIC)
-        except TopicExists:
-            topic = topic_manager.retrieve(REVOCATIONS_TOPIC)
-
-        self.revocations_announcer = RevocationsSender(
-            topic,
-            self.servant.service_id,
-            self.proxy,
-        )
-
-        self.revocations_subscriber = RevocationsListener(
-            self.servant, self.proxy, self.servant.service_id, IceFlix.StreamControllerPrx
-        )
-
-        subscriber_prx = self.adapter.addWithUUID(self.revocations_subscriber)
-        topic.subscribeAndGetPublisher({}, subscriber_prx)
-
-    def setup_sync(self):
-        """ Permite pausar el stream """
-
-        communicator = self.communicator()
-        topic_manager = TopicManagerPrx.checkedCast(
-            communicator.propertyToProxy("IceStorm.TopicManager")
-        )
-
-        try:
-            topic = topic_manager.create(STREAM_SYNC_TOPIC)
-        except TopicExists:
-            topic = topic_manager.retrieve(STREAM_SYNC_TOPIC)
-
-        self.stream_sync_announcer = StreamSyncSender(topic)
-
-        self.stream_sync_subscriber = StreamSyncListener(self.servant)
-
-        subscriber_prx = self.adapter.addWithUUID(self.revocations_subscriber)
-        topic.subscribeAndGetPublisher({}, subscriber_prx)
-
-    def run(self, args):
-
-        self.servant = StreamControllerI() # pylint: disable=no-value-for-parameter
-        broker = self.communicator()
-
-        self.adapter = broker.createObjectAdapterWithEndpoints(
-            'StreamControllerAdapter', 'tcp')
-        self.proxy = self.adapter.addWithUUID(self.servant)
-        self.adapter.activate()
-
-        self.setup_revocations()
-        self.setup_sync()
-
-        self.shutdownOnInterrupt()
-        broker.waitForShutdown()
+        print("\n\nVideo parado y adaptador eliminado")
