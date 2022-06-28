@@ -62,46 +62,46 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
         # uploader_connection = IceFlix.MediaUploaderPrx.uncheckedCast(uploader_proxy)
 
         # GET_STREAM ##################################################################################
-        print("\nPRUEBA GET_STREAM MEDIA_ID VALIDO Y TOKEN VALIDO")
-        try:
-            print("getStream()=", provider_connection.getStream(mediaid_valido, token_valido), " EXITO")
-        except IceFlix.Unauthorized as e:
-            print(e, " FAIL")
-        except IceFlix.WrongMediaID as e:
-            print(e, " FAIL")
+        # print("\nPRUEBA GET_STREAM MEDIA_ID VALIDO Y TOKEN VALIDO")
+        # try:
+        #     print("getStream()=", provider_connection.getStream(mediaid_valido, token_valido), " EXITO")
+        # except IceFlix.Unauthorized as e:
+        #     print(e, " FAIL")
+        # except IceFlix.WrongMediaId as e:
+        #     print(e, " FAIL")
         
-        print("\nPRUEBA GET_STREAM TOKEN INCORRECTO")
-        try:
-            print("getStream()=", provider_connection.getStream(mediaid_valido, token_incorrecto), " FAIL")
-        except IceFlix.Unauthorized as e:
-            print(e, " EXITO")
-        except IceFlix.WrongMediaID as e:
-            print(e, " FAIL")
+        # print("\nPRUEBA GET_STREAM TOKEN INCORRECTO")
+        # try:
+        #     print("getStream()=", provider_connection.getStream(mediaid_valido, token_incorrecto), " FAIL")
+        # except IceFlix.Unauthorized as e:
+        #     print(e, " EXITO")
+        # except IceFlix.WrongMediaId as e:
+        #     print(e, " FAIL")
 
-        print("\nPRUEBA GET_STREAM MEDIA_ID INCORRECTO")
-        try:
-            print("getStream()=", provider_connection.getStream(wrong_mediaId, token_valido), " FAIL")
-        except IceFlix.Unauthorized as e:
-            print(e, " FAIL")
-        except IceFlix.WrongMediaId as e:
-            print(e, " EXITO")
+        # print("\nPRUEBA GET_STREAM MEDIA_ID INCORRECTO")
+        # try:
+        #     print("getStream()=", provider_connection.getStream(wrong_mediaId, token_valido), " FAIL")
+        # except IceFlix.Unauthorized as e:
+        #     print(e, " FAIL")
+        # except IceFlix.WrongMediaId as e:
+        #     print(e, " EXITO")
 
-        # IS_AVAILABLE ##################################################################################
-        print("\nPRUEBA IS_AVAILABLE MEDIA_ID CORRECTO")
-        is_available = provider_connection.isAvailable(mediaid_valido)
-        print(is_available)
-        if is_available == True:
-            print("EXITO")
-        else:
-            print("FAIL")
+        # # IS_AVAILABLE ##################################################################################
+        # print("\nPRUEBA IS_AVAILABLE MEDIA_ID CORRECTO")
+        # is_available = provider_connection.isAvailable(mediaid_valido)
+        # print(is_available)
+        # if is_available == True:
+        #     print("EXITO")
+        # else:
+        #     print("FAIL")
         
-        print("\nPRUEBA IS_AVAILABLE MEDIA_ID INCORRECTO")
-        is_available = provider_connection.isAvailable(wrong_mediaId)
-        print(is_available)
-        if is_available == False:
-            print("EXITO")
-        else:
-            print("FAIL")
+        # print("\nPRUEBA IS_AVAILABLE MEDIA_ID INCORRECTO")
+        # is_available = provider_connection.isAvailable(wrong_mediaId)
+        # print(is_available)
+        # if is_available == False:
+        #     print("EXITO")
+        # else:
+        #     print("FAIL")
 
         # UPLOAD_MEDIA #############################################################################
         # print("\nPRUEBA UPLOAD_MEDIA NOMBRE CORRECTO Y ES ADMIN")

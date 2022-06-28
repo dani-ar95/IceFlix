@@ -104,7 +104,7 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
         user_password = (user, passwordHash)
         self.add_user(user_password, LOCAL_DB_PATH)
         self.add_user(user_password, USERS_PATH)
-        self._update_users.newUser(user, passwordHash, self.service_id)
+        self._update_users.newUser(user, passwordHash)
 
     def removeUser(self, user, adminToken, current=None):  # pylint: disable=invalid-name,unused-argument
         ''' Permite al administrador elminar usuarios del sistema '''

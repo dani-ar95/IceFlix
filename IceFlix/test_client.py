@@ -44,7 +44,7 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
             print("whois()=", e, ", EXITO")
         
         print("\nPRUEBA USUARIO NO EXISTE, expected UNAUTHORIZED")
-        user = "sergio"
+        user = "sergios"
         password = "password"
         hash = hashlib.sha256(password.encode()).hexdigest()
         try:

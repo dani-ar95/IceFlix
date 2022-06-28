@@ -54,29 +54,29 @@ class Cliente(Ice.Application): #pylint: disable=too-many-instance-attributes,to
         admin_token = "admin"
 
         # ADD_TAGS ##################################################################################
-        # print("\nPRUEBA ADD_TAGS MEDIA_ID VALIDO Y TOKEN VALIDO")
-        # try:
-        #     print("addTags()=", catalog_connection.addTags(mediaid_valido, ["melon", "sandia"], token_valido), " EXITO")
-        # except IceFlix.Unauthorized:
-        #     print("Unauthorized FAIL")
-        # except IceFlix.WrongMediaId:
-        #     print("WrongMediaID FAIL")
+        print("\nPRUEBA ADD_TAGS MEDIA_ID VALIDO Y TOKEN VALIDO")
+        try:
+            print("addTags()=", catalog_connection.addTags(mediaid_valido, ["melon", "sandia"], token_valido), " EXITO")
+        except IceFlix.Unauthorized:
+            print("Unauthorized FAIL")
+        except IceFlix.WrongMediaId:
+            print("WrongMediaID FAIL")
         
-        # print("\nPRUEBA ADD_TAGS TOKEN NO VÁLIDO")
-        # try:
-        #     print("addTags()=", catalog_connection.addTags(mediaid_valido, ["melon", "sandia"], token_incorrecto), " FAIL")
-        # except IceFlix.Unauthorized as e:
-        #     print(e, " EXITO")
-        # except IceFlix.WrongMediaId:
-        #     print("WrongMediaID FAIL")
-
-        # print("\nPRUEBA ADD_TAGS MEDIA_ID NO VALIDO")
-        # try:
-        #     print("addTags()=", catalog_connection.addTags(wrong_mediaId, ["melon", "sandia"], token_valido), " FAIL")
-        # except IceFlix.WrongMediaId as e:
-        #     print(e, " EXITO")
-        # except IceFlix.Unauthorized:
-        #     print("Unauthorized FAIL")
+        print("\nPRUEBA ADD_TAGS TOKEN NO VÁLIDO")
+        try:
+            print("addTags()=", catalog_connection.addTags(mediaid_valido, ["melon", "sandia"], token_incorrecto), " FAIL")
+        except IceFlix.Unauthorized as e:
+            print(e, " EXITO")
+        except IceFlix.WrongMediaId:
+            print("WrongMediaID FAIL")
+    
+        print("\nPRUEBA ADD_TAGS MEDIA_ID NO VALIDO")
+        try:
+            print("addTags()=", catalog_connection.addTags(wrong_mediaId, ["melon", "sandia"], token_valido), " FAIL")
+        except IceFlix.WrongMediaId as e:
+            print(e, " EXITO")
+        except IceFlix.Unauthorized:
+            print("Unauthorized FAIL")
 
 
         # GET_TILE ##################################################################################
