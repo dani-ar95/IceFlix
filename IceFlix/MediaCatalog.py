@@ -112,6 +112,10 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
         if not self.check_user(userToken): # También puede lanzar TemporaryUnavailable -> Está bien
             raise IceFlix.Unauthorized
 
+        # Buscar el ID en temporal y temporal
+        if mediaId not in self._media_.keys():
+            raise IceFlix.WrongMediaId(mediaId)
+
         # Buscar en medios temporales
         media = self._media_.get(mediaId)
         print(media)
@@ -119,17 +123,14 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
             provider = self._media_.get(mediaId).provider
             if provider:
                 try:
-                    provider.ice_ping()
+                    provider_prx = self.communicator().stringToProxy(provider)
+                    provider_prx.ice_ping()
                 except Ice.ConnectionRefusedException:
                     raise IceFlix.TemporaryUnavailable
                 else:
                     return self._media_.get(mediaId)
             else:
                 raise IceFlix.TemporaryUnavailable
-
-        # Buscar el ID en temporal y temporal
-        if mediaId not in self._media_.keys():
-            raise IceFlix.WrongMediaId(mediaId)
 
         return None
 
