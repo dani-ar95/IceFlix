@@ -43,6 +43,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
         self._anunciamientos_listener = None
         self._updates_sender = None
         self._stream_listener = None
+        self._broker = None
 
     def read_media(self): # Actualizado
         """ Rellena los medios dinámicos utilizando la bbdd """
@@ -118,12 +119,11 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
 
         # Buscar en medios temporales
         media = self._media_.get(mediaId)
-        print(media)
         if media:
             provider = self._media_.get(mediaId).provider
             if provider:
                 try:
-                    provider_prx = self.communicator().stringToProxy(provider)
+                    provider_prx = self._broker.stringToProxy(str(provider))
                     provider_prx.ice_ping()
                 except Ice.ConnectionRefusedException:
                     raise IceFlix.TemporaryUnavailable
@@ -570,6 +570,7 @@ class MediaCatalogServer(Ice.Application): # pylint: disable=too-many-instance-a
         self.servant._anunciamientos_listener = self.subscriber #pylint: disable=protected-access
         self.servant._updates_sender = self._updates_sender     #pylint: disable=protected-access
         self.servant._stream_listener = self._stream_listener   #pylint: disable=protected-access
+        self.servant._broker = broker                           #pylint: disable=protected-access
 
         self.servant.read_media()
         self.announcer.start_service()
