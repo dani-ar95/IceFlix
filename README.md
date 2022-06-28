@@ -20,7 +20,7 @@ https://github.com/SSDD-2021-2022/SSDD_Lab_Team_ADS
 1. Ejecutar "run_iceflix"
 2. Ejecutar "run_client"
 3. Introducir el proxy al servicio IceFlix::Main()
-4. Seleccionar <2> e introducir usuario y contraseña
+4. Seleccionar <2> e introducir "user" como usuario y "password" como contraseña
 5. Seleccionar <4>, seleccionar <1>, seleccionar <1>
 6. Insertar título (Pelucas)
 7. Seleccionar <1>
