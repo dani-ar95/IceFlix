@@ -9,20 +9,20 @@ import random
 import sys
 import uuid
 import Ice
-from IceStorm import TopicManagerPrx, TopicExists
+from IceStorm import TopicManagerPrx, TopicExists # pylint: disable=no-name-in-module
 from user_revocations import RevocationsListener, RevocationsSender # pylint: disable=no-name-in-module
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from stream_announcements import StreamAnnouncementsSender, StreamAnnouncementsListener
 from stream_sync import StreamSyncSender, StreamSyncListener
-from StreamController import StreamControllerI
-from constants import ANNOUNCEMENT_TOPIC, REVOCATIONS_TOPIC, STREAM_ANNOUNCES_TOPIC, STREAM_SYNC_TOPIC # pylint: disable=no-name-in-module
+from constants import ANNOUNCEMENT_TOPIC, REVOCATIONS_TOPIC
+from constants import STREAM_ANNOUNCES_TOPIC, STREAM_SYNC_TOPIC # pylint: disable=no-name-in-module
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 
 Ice.loadSlice(SLICE_PATH)
 import IceFlix # pylint: disable=wrong-import-position
 
-#from StreamController import StreamControllerI # pylint: disable=import-error, wrong-import-position
+from StreamController import StreamControllerI # pylint: disable=import-error, wrong-import-position
 
 class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-class
     ''' Instancia de Stream Provider '''
@@ -34,17 +34,15 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
         self._service_announcer_listener = None
         self.service_id = str(uuid.uuid4())
         self.broker = broker
-        self.stream_sync_sender = None
-        self.stream_sync_listener = None
 
-    def getStream(self, mediaId: str, userToken: str, current=None): # pylint: disable=invalid-name,unused-argument
+    def getStream(self, mediaId: str, userToken: str, current=None): # pylint: disable=invalid-name,unused-argument,too-many-locals
         ''' Factoría de objetos StreamController '''
         main_prx = random.choice(list(self._service_announcer_listener.mains.values()))
         try:
             auth = main_prx.getAuthenticator()
         except IceFlix.TemporaryUnavailable:
             print("[STREAM PROVIDER] No se ha encontrado ningún servicio de Autenticación")
-            return
+            return ''
 
         if not auth.isAuthorized(userToken):
             raise IceFlix.Unauthorized
@@ -53,17 +51,16 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
             asked_media = self._provider_media_.get(mediaId)
             name = asked_media.info.name
             controller = StreamControllerI(self._service_announcer_listener, name, userToken)
-            # controller_servant = controller.servant
             controller_proxy = current.adapter.addWithUUID(controller)
-            
+
             topic_manager = TopicManagerPrx.checkedCast(
-                self.broker.propertyToProxy("IceStorm.TopicManager")) 
-            
+                self.broker.propertyToProxy("IceStorm.TopicManager"))
+
             try:
                 topic = topic_manager.create(REVOCATIONS_TOPIC)
             except TopicExists:
                 topic = topic_manager.retrieve(REVOCATIONS_TOPIC)
-            
+
             revocations_sender = RevocationsSender(
                 topic, controller.service_id, controller_proxy)
             revocations_listener = RevocationsListener(
@@ -71,8 +68,8 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
             )
             rev_subscriber_prx = current.adapter.addWithUUID(revocations_listener)
             topic.subscribeAndGetPublisher({}, rev_subscriber_prx)
-            
-            
+
+
             try:
                 topic = topic_manager.create(STREAM_SYNC_TOPIC)
             except TopicExists:
@@ -85,8 +82,8 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
             topic.subscribeAndGetPublisher({}, sync_subscriber_prx)
             controller.stream_sync_announcer = stream_sync_sender
             return IceFlix.StreamControllerPrx.checkedCast(controller_proxy)
-        else:
-            raise IceFlix.WrongMediaId(mediaId)
+
+        raise IceFlix.WrongMediaId(mediaId)
 
     def isAvailable(self, mediaId: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Confirma si existe un medio con ese id'''
@@ -115,24 +112,24 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
 
             if not new_file:
                 raise IceFlix.UploadError
-            else:
-                id_hash = hashlib.sha256(new_file).hexdigest()
 
-                file = path.split(fileName)[1]
-                new_file_name = path.join(path.dirname(__file__), "resources/" + file)
+            id_hash = hashlib.sha256(new_file).hexdigest()
 
-                with open(new_file_name, "wb") as write_pointer:
-                    write_pointer.write(new_file)
+            file = path.split(fileName)[1]
+            new_file_name = path.join(path.dirname(__file__), "resources/" + file)
 
-                # Crear el media propio
-                info = IceFlix.MediaInfo(new_file_name, [])
-                new_media = IceFlix.Media(id_hash, self._proxy_, info)
-                self._provider_media_.update({id_hash:new_media})
+            with open(new_file_name, "wb") as write_pointer:
+                write_pointer.write(new_file)
 
-                # Anunciar medio
-                self._stream_announcements_sender.newMedia(id_hash, new_file_name, self.service_id)
+            # Crear el media propio
+            info = IceFlix.MediaInfo(new_file_name, [])
+            new_media = IceFlix.Media(id_hash, self._proxy_, info)
+            self._provider_media_.update({id_hash:new_media})
 
-                return id_hash
+            # Anunciar medio
+            self._stream_announcements_sender.newMedia(id_hash, new_file_name, self.service_id)
+
+            return id_hash
 
     def deleteMedia(self, mediaId: str, adminToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Perimite al administrador borrar archivos conociendo su id '''

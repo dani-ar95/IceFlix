@@ -7,9 +7,7 @@ from os import path
 import random
 import uuid
 import Ice
-from IceStorm import TopicManagerPrx, TopicExists # pylint: disable=no-name-in-module
 import iceflixrtsp # pylint: disable=import-error
-from constants import STREAM_SYNC_TOPIC, REVOCATIONS_TOPIC # pylint: disable=no-name-in-module
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
