@@ -56,14 +56,14 @@ class UserUpdatesSender:
         self.service_id = service_id
         self.proxy = servant_proxy
 
-    def newUser(self, user, passwordHash, current=None): # pylint: disable=invalid-name,unused-argument
+    def newUser(self, user, passwordHash): # pylint: disable=invalid-name,unused-argument
         """ Emitir evento newUser """
 
         print(f"[UserUpdates] (Emite New User) ID: {self.service_id}," +
               f"Usuario: {user}, PasswordHash: {passwordHash}")
         self.publisher.newUser(user, passwordHash, self.service_id)
 
-    def newToken(self, user, userToken, current=None): # pylint: disable=invalid-name,unused-argument
+    def newToken(self, user, userToken): # pylint: disable=invalid-name,unused-argument
         """ Emitir evento newToken """
 
         print(f"[UserUpdates] (Emite New Token) ID: {self.service_id}," +

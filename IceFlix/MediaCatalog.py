@@ -106,12 +106,17 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
 
         return users_tags
 
+    def update_main(self):
+        ''' Consigue un Main Service '''
+        self._main_prx_ = random.choice(list(self._anunciamientos_listener.mains.values()))
+
+    def update_auth(self):
+        ''' Consigue un Authenticator Service '''
+        self._auth_prx_ = self._main_prx_.getAuthenticator()
+
     # Actualizado
     def getTile(self, mediaId: str, userToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna un objeto Media con la informacion del medio con el ID dado '''
-
-        if not self.check_user(userToken): # También puede lanzar TemporaryUnavailable -> Está bien
-            raise IceFlix.Unauthorized
 
         # Buscar el ID en temporal y temporal
         if mediaId not in self._media_.keys():
@@ -127,12 +132,20 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
                     provider_prx.ice_ping()
                 except Ice.ConnectionRefusedException:
                     raise IceFlix.TemporaryUnavailable
-                else:
-                    return self._media_.get(mediaId)
             else:
+
                 raise IceFlix.TemporaryUnavailable
 
-        return None
+        self.update_main()
+        try:
+            self.update_auth()
+        except IceFlix.TemporaryUnavailable:
+            pass
+
+        if not self._auth_prx_.isAuthorized(userToken):
+            raise IceFlix.Unauthorized
+
+        return self._media_.get(mediaId)
 
 
     def getTilesByName(self, name: str, exact: bool, current=None): # pylint: disable=invalid-name,unused-argument
@@ -156,12 +169,13 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
     # Actualizado
     def getTilesByTags(self, tags: list, includeAllTags: bool, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna una lista de IDs de los medios con las tags dadas '''
-
+        self.update_main()
         try:
-            username = self.check_user_name(userToken) # Raisea TemporaryUnavailable, Unauthorized
-        except IceFlix.TemporaryUnavailable:# La intefaz no permite raisear esto -> Se cambia por otra que se pueda
-            raise IceFlix.Unauthorized
+            self.update_auth()
+        except IceFlix.TemporaryUnavailable:
+            pass
 
+        username = self._auth_prx_.whois(userToken)
         id_list = []
         media_tags = {}
 
@@ -197,40 +211,44 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
     def addTags(self, mediaId: str, tags: list, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Añade las tags dadas al medio con el ID dado '''
 
+        self.update_main()
         try:
-            user_name = self.check_user_name(userToken) # Raisea TemporaryUnavailable, Unauthorized
-        except IceFlix.TemporaryUnavailable: # No se puede raisear esta, se cambia por otra
-            raise IceFlix.Unauthorized
+            self.update_auth()
+        except IceFlix.TemporaryUnavailable:
+            pass
+
+        username = self._auth_prx_.whois(userToken)
 
         if mediaId not in self._media_:
             raise IceFlix.WrongMediaId(mediaId)
 
-        self.add_tags(mediaId, tags, user_name)
-        self._updates_sender.addTags(mediaId, tags, user_name)
+        self.add_tags(mediaId, tags, username)
+        self._updates_sender.addTags(mediaId, tags, username)
 
     def removeTags(self, mediaId: str, tags: list, userToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Elimina las tags dadas del medio con el ID dado '''
 
+        self.update_main()
         try:
-            user_name = self.check_user_name(userToken) # Raisea TemporaryUnavailable, Unauthorized
-        except IceFlix.TemporaryUnavailable: # No se puede raisear esta, se cambia por otra
-            raise IceFlix.Unauthorized
+            self.update_auth()
+        except IceFlix.TemporaryUnavailable:
+            pass
+
+        username = self._auth_prx_.whois(userToken)
 
         if mediaId not in self._media_:
             raise IceFlix.WrongMediaId(mediaId)
 
-        self.remove_tags(mediaId, tags, user_name)
-        self._updates_sender.removeTags(mediaId, tags, user_name)
+        self.remove_tags(mediaId, tags, username)
+        self._updates_sender.removeTags(mediaId, tags, username)
 
     def renameTile(self, mediaId, name, adminToken, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Renombra el medio de la estructura correspondiente '''
 
-        try:
-            self.update_main_prx() # Puede lanzar TemporaryUnavailable, pero la interfaz no deja
-        except IceFlix.TemporaryUnavailable:
+        self.update_main()
+        if not self._main_prx_.isAdmin(adminToken):
             raise IceFlix.Unauthorized
 
-        self.check_admin(adminToken) # Puede lanzar Unauthorized
         self.rename_tile(mediaId, name)
         self._updates_sender.renameTile(mediaId, name)
 
@@ -242,49 +260,6 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
         nuevo = IceFlix.Media(mediaId, provider, info)
         self._media_.update({mediaId: nuevo})
 
-
-    def check_admin(self, admin_token: str):
-        ''' Comprueba si un token es Administrador '''
-
-        main_prx = random.choice(list(self._anunciamientos_listener.mains.values()))
-        try:
-            is_admin = main_prx.isAdmin(admin_token)
-            if not is_admin:
-                raise IceFlix.Unauthorized
-        except IceFlix.TemporaryUnavailable:
-            raise IceFlix.Unauthorized
-        else:
-            return is_admin
-
-
-    def check_user(self, user_token: str):
-        ''' Comprueba que la sesion del usuario es la actual '''
-
-        self.update_auth()
-        return self._auth_prx_.isAuthorized(user_token)
-
-    def check_user_name(self, user_token: str):
-        ''' Devuelve el usuario al que pertenece el token dado '''
-
-        self.update_auth() # Raisea TemporaryUnavailable
-        user_name = self._auth_prx_.whois(user_token) # Raisea Unauthorized
-
-        return user_name
-
-    def update_auth(self):
-        """ Actualiza el proxy al authenticator """
-
-        while self._anunciamientos_listener.mains.values():
-            main_prx = random.choice(list(self._anunciamientos_listener.mains.values())) #Cambiar por si cae
-            try:
-                main_prx.ice_ping()
-                self._auth_prx_ = main_prx.getAuthenticator()
-                self._main_prx_ = main_prx
-                return
-            except Ice.ConnectionRefusedException:
-                self._anunciamientos_listener.mains.pop(main_prx) # Comprobar si funciona
-
-        raise IceFlix.TemporaryUnavailable
 
     @property
     def get_mediaDB(self):
@@ -389,7 +364,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
 
         # Buscar id en medios dinamicos
         if media_id not in self._media_ and not media:
-            raise IceFlix.WrongMediaId
+            raise IceFlix.WrongMediaId(media_id)
 
         # Cambiar media en medios dinamicos
         if media_id in self._media_:
@@ -404,10 +379,7 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
 
         # Cambiar en directorio
         if self.findfile(old_name):
-            try:
-                rename(old_name, RESOURCES_FOLDER + name + "." + suffix)
-            except FileNotFoundError:
-                raise IceFlix.WrongMediaId
+            rename(old_name, RESOURCES_FOLDER + name + "." + suffix)
 
         # Actualizar en bbdd
         c = conn.cursor()
@@ -444,6 +416,8 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
         """Receives the current main service database from a peer."""
 
         print(f"Receiving remote data base from {service_id} to {self.service_id}")
+        if service_id not in self._anunciamientos_listener.catalogs:
+            raise IceFlix.UnknownService
 
         for media in values:
             print("Se recibe el objeto:")

@@ -14,7 +14,7 @@ from user_revocations import RevocationsListener, RevocationsSender # pylint: di
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
 from stream_announcements import StreamAnnouncementsSender, StreamAnnouncementsListener
 from stream_sync import StreamSyncSender, StreamSyncListener
-from constants import ANNOUNCEMENT_TOPIC, REVOCATIONS_TOPIC
+from constants import ANNOUNCEMENT_TOPIC, REVOCATIONS_TOPIC # pylint: disable=no-name-in-module
 from constants import STREAM_ANNOUNCES_TOPIC, STREAM_SYNC_TOPIC # pylint: disable=no-name-in-module
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
@@ -24,7 +24,7 @@ import IceFlix # pylint: disable=wrong-import-position
 
 from StreamController import StreamControllerI # pylint: disable=import-error, wrong-import-position
 
-class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-class
+class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-class,too-many-instance-attributes
     ''' Instancia de Stream Provider '''
 
     def __init__(self, broker):
@@ -33,18 +33,28 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
         self._stream_announcements_sender = None
         self._service_announcer_listener = None
         self.service_id = str(uuid.uuid4())
+        self._main_prx_ = None
+        self._auth_prx_ = None
         self.broker = broker
+
+    def update_main(self):
+        ''' Consigue un Main Service '''
+        self._main_prx_ = random.choice(list(self._service_announcer_listener.mains.values()))
+
+    def update_auth(self):
+        ''' Consigue un Authenticator Service '''
+        self._auth_prx_ = self._main_prx_.getAuthenticator()
 
     def getStream(self, mediaId: str, userToken: str, current=None): # pylint: disable=invalid-name,unused-argument,too-many-locals
         ''' Factoría de objetos StreamController '''
-        main_prx = random.choice(list(self._service_announcer_listener.mains.values()))
+        self.update_main()
         try:
-            auth = main_prx.getAuthenticator()
+            self.update_auth()
         except IceFlix.TemporaryUnavailable:
             print("[STREAM PROVIDER] No se ha encontrado ningún servicio de Autenticación")
             return ''
 
-        if not auth.isAuthorized(userToken):
+        if not self._auth_prx_.isAuthorized(userToken):
             raise IceFlix.Unauthorized
 
         if self.isAvailable(mediaId):
@@ -92,52 +102,49 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
 
     def uploadMedia(self, fileName: str, uploader, adminToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Permite al administador subir un archivo al sistema '''
+        self.update_main()
+        if not self._main_prx_.isAdmin(adminToken):
+            raise IceFlix.Unauthorized
+
+        new_file = b""
+        received = b""
 
         try:
-            self.check_admin(adminToken)
-        except IceFlix.Unauthorized:
-            raise IceFlix.Unauthorized
-        else:
-            new_file = b""
-            received = b""
+            while True:
+                received = uploader.receive(512)
+                if not received:
+                    break
+                new_file += received
+        except:
+            raise IceFlix.UploadError
 
-            try:
-                while True:
-                    received = uploader.receive(512)
-                    if not received:
-                        break
-                    new_file += received
-            except:
-                raise IceFlix.UploadError
+        if not new_file:
+            raise IceFlix.UploadError
 
-            if not new_file:
-                raise IceFlix.UploadError
+        id_hash = hashlib.sha256(new_file).hexdigest()
 
-            id_hash = hashlib.sha256(new_file).hexdigest()
+        file = path.split(fileName)[1]
+        new_file_name = path.join(path.dirname(__file__), "resources/" + file)
 
-            file = path.split(fileName)[1]
-            new_file_name = path.join(path.dirname(__file__), "resources/" + file)
+        with open(new_file_name, "wb") as write_pointer:
+            write_pointer.write(new_file)
 
-            with open(new_file_name, "wb") as write_pointer:
-                write_pointer.write(new_file)
+        # Crear el media propio
+        info = IceFlix.MediaInfo(new_file_name, [])
+        new_media = IceFlix.Media(id_hash, self._proxy_, info)
+        self._provider_media_.update({id_hash:new_media})
 
-            # Crear el media propio
-            info = IceFlix.MediaInfo(new_file_name, [])
-            new_media = IceFlix.Media(id_hash, self._proxy_, info)
-            self._provider_media_.update({id_hash:new_media})
+        # Anunciar medio
+        self._stream_announcements_sender.newMedia(id_hash, new_file_name, self.service_id) #pylint: disable=too-many-function-args
 
-            # Anunciar medio
-            self._stream_announcements_sender.newMedia(id_hash, new_file_name, self.service_id)
-
-            return id_hash
+        return id_hash
 
     def deleteMedia(self, mediaId: str, adminToken: str, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Perimite al administrador borrar archivos conociendo su id '''
 
         self.update_directory() #?
-        try:
-            self.check_admin(adminToken)
-        except IceFlix.Unauthorized:
+        self.update_main()
+        if not self._main_prx_.isAdmin(adminToken):
             raise IceFlix.Unauthorized
 
         # Los catalogos tienen los medios que tengan los providers?
@@ -145,7 +152,7 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
             filename = self._provider_media_.get(mediaId).info.name
             remove(filename)
             self._provider_media_.pop(mediaId)
-            self._stream_announcements_sender.removedMedia(mediaId, self.service_id)
+            self._stream_announcements_sender.removedMedia(mediaId)
         else:
             raise IceFlix.WrongMediaId(mediaId)
 
@@ -158,7 +165,7 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
         for entry in self._provider_media_:
             media = self._provider_media_.get(entry)
             print(f"[PROVIDER] ID: {self.service_id} Reanunciando {media.info.name}")
-            self._stream_announcements_sender.newMedia(media.mediaId, media.info.name, srvId)
+            self._stream_announcements_sender.newMedia(media.mediaId, media.info.name)
 
     def update_directory(self):
         """ Actualiza el directorio correspondiente """
@@ -172,20 +179,6 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
                 id_hash = hashlib.sha256(read_file).hexdigest()
                 new_media = IceFlix.Media(id_hash, self._proxy_, IceFlix.MediaInfo(filename, []))
                 self._provider_media_.update({id_hash: new_media})
-
-            #self._catalog_prx_.updateMedia(id_hash, filename, self._proxy_)
-
-    def check_admin(self, admin_token: str):
-        ''' Comprueba si un token es Administrador '''
-        main_prx = random.choice(list(self._service_announcer_listener.mains.values()))
-        try:
-            is_admin = main_prx.isAdmin(admin_token)
-            if not is_admin:
-                raise IceFlix.Unauthorized
-        except IceFlix.TemporaryUnavailable:
-            raise IceFlix.Unauthorized
-        else:
-            return is_admin
 
 
 class StreamProviderServer(Ice.Application):

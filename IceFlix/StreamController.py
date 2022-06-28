@@ -13,7 +13,7 @@ SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 Ice.loadSlice(SLICE_PATH)
 import IceFlix # pylint: disable=wrong-import-position
 
-class StreamControllerI(IceFlix.StreamController): # pylint: disable=inherit-non-class
+class StreamControllerI(IceFlix.StreamController): # pylint: disable=inherit-non-class,too-many-instance-attributes
     ''' Instancia de StreamController '''
 
     def __init__(self, announcements_listener, filename, userToken, current=None): # pylint: disable=invalid-name,unused-argument
@@ -24,22 +24,32 @@ class StreamControllerI(IceFlix.StreamController): # pylint: disable=inherit-non
         self.authentication_timer = None
         self.user_token = userToken
         self.stream_sync_announcer = None
+        self._main_prx_ = None
+        self._auth_prx_ = None
 
         try:
             self._fd_ = open(filename, "rb") # pylint: disable=bad-option-value
         except FileNotFoundError:
             print("Archivo no encontrado: " + filename)
 
+    def update_main(self):
+        ''' Consigue un Main Service '''
+        self._main_prx_ = random.choice(list(self.announcements_listener.mains.values()))
+
+    def update_auth(self):
+        ''' Consigue un Authenticator Service '''
+        self._auth_prx_ = self._main_prx_.getAuthenticator()
+
     def getSDP(self, userToken, port: int, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Retorna la configuracion del flujo SDP '''
-        main_prx = random.choice(list(self.announcements_listener.mains.values()))
+        self.update_main()
         try:
-            auth = main_prx.getAuthenticator()
+            self.update_auth()
         except IceFlix.TemporaryUnavailable:
             print("[STREAM CONTROLLER] No se ha encontrado ningún servicio de Autenticación")
             return ''
 
-        if not auth.isAuthorized(userToken):
+        if not self._auth_prx_.isAuthorized(userToken):
             raise IceFlix.Unauthorized
 
         self._emitter_ = iceflixrtsp.RTSPEmitter(self._filename_, "127.0.0.1", port)
@@ -54,18 +64,20 @@ class StreamControllerI(IceFlix.StreamController): # pylint: disable=inherit-non
     def refreshAuthentication(self, user_token, current=None): # pylint: disable=unused-argument
         """ Actualiza el token de usuario """
 
-        main_prx = random.choice(list(self.announcements_listener.mains.values()))
+        self.update_main()
         try:
-            auth = main_prx.getAuthenticator()
+            self.update_auth()
         except IceFlix.TemporaryUnavailable:
             print("[STREAM CONTROLLER] No se ha encontrado ningún servicio de Autenticación")
-            return
+            return ''
 
-        if not auth.isAuthorized(user_token):
+        if not self._auth_prx_.isAuthorized(user_token):
             raise IceFlix.Unauthorized
 
         if self.authentication_timer.is_alive():
             self.authentication_timer.cancel()
+
+        return None
 
     def stop(self, current=None): # pylint: disable=invalid-name,unused-argument
         ''' Detiene la emision del flujo SDP '''

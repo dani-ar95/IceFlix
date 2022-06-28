@@ -98,11 +98,9 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
     def addUser(self, user, passwordHash, adminToken, current=None):  # pylint: disable=invalid-name,unused-argument
         ''' Perimte al administrador añadir usuarios al sistema '''
 
-        try:
-            if not self.is_admin(adminToken):
-                raise IceFlix.Unauthorized
-        except IceFlix.TemporaryUnavailable as exc:
-            raise IceFlix.TemporaryUnavailable from exc
+        if not self.is_admin(adminToken):
+            raise IceFlix.Unauthorized
+
         user_password = (user, passwordHash)
         self.add_user(user_password, LOCAL_DB_PATH)
         self.add_user(user_password, USERS_PATH)
@@ -111,11 +109,8 @@ class AuthenticatorI(IceFlix.Authenticator):  # pylint: disable=inherit-non-clas
     def removeUser(self, user, adminToken, current=None):  # pylint: disable=invalid-name,unused-argument
         ''' Permite al administrador elminar usuarios del sistema '''
 
-        try:
-            if not self.is_admin(adminToken):
-                raise IceFlix.Unauthorized
-        except IceFlix.TemporaryUnavailable as exc:
-            raise IceFlix.TemporaryUnavailable from exc
+        if not self.is_admin(adminToken):
+            raise IceFlix.Unauthorized
 
         self.remove_user(user, LOCAL_DB_PATH)
         self.remove_user(user, USERS_PATH)

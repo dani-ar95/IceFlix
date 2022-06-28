@@ -48,13 +48,13 @@ class StreamAnnouncementsSender():
         self.service_id = service_id
         self.proxy = servant_proxy
 
-    def newMedia(self, media_id, name, current=None): # pylint: disable=invalid-name,unused-argument
+    def newMedia(self, media_id, name): # pylint: disable=invalid-name,unused-argument
         ''' Envía un mensaje newMedia '''        
 
         print(f"[STREAM PROVIDER] Enviado NewMedia: MediaID: {media_id}, name={name}")
         self.publisher.newMedia(media_id, name, self.service_id)
 
-    def removedMedia(self, media_id, current=None): # pylint: disable=invalid-name,unused-argument
+    def removedMedia(self, media_id): # pylint: disable=invalid-name,unused-argument
         ''' Envía un mensaje removedMedia '''        
 
         print(f"[STREAM PROVIDER] Enviado removedMedia: MediaID: {media_id}")
