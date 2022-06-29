@@ -7,10 +7,10 @@ import sys
 import random
 import uuid
 import Ice
-from IceStorm import TopicManagerPrx, TopicExists # pylint: disable=no-name-in-module
+from IceStorm import TopicManagerPrx, TopicExists # pylint: disable=no-name-in-module, import-error
 from volatile_services import VolatileServices # pylint: disable=no-name-in-module, import-error
 from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender # pylint: disable=no-name-in-module, import-error
-from constants import ANNOUNCEMENT_TOPIC # pylint: disable=no-name-in-module
+from constants import ANNOUNCEMENT_TOPIC # pylint: disable=no-name-in-module, import-error
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 

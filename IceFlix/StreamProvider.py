@@ -9,13 +9,13 @@ import random
 import sys
 import uuid
 import Ice
-from IceStorm import TopicManagerPrx, TopicExists # pylint: disable=no-name-in-module
-from user_revocations import RevocationsListener, RevocationsSender # pylint: disable=no-name-in-module
-from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender
-from stream_announcements import StreamAnnouncementsSender, StreamAnnouncementsListener
-from stream_sync import StreamSyncSender, StreamSyncListener
-from constants import ANNOUNCEMENT_TOPIC, REVOCATIONS_TOPIC # pylint: disable=no-name-in-module
-from constants import STREAM_ANNOUNCES_TOPIC, STREAM_SYNC_TOPIC # pylint: disable=no-name-in-module
+from IceStorm import TopicManagerPrx, TopicExists # pylint: disable=no-name-in-module, import-error
+from user_revocations import RevocationsListener, RevocationsSender # pylint: disable=no-name-in-module, import-error
+from service_announcement import ServiceAnnouncementsListener, ServiceAnnouncementsSender # pylint: disable=import-error
+from stream_announcements import StreamAnnouncementsSender, StreamAnnouncementsListener # pylint: disable=import-error
+from stream_sync import StreamSyncSender, StreamSyncListener# pylint: disable=import-error
+from constants import ANNOUNCEMENT_TOPIC, REVOCATIONS_TOPIC # pylint: disable=no-name-in-module, import-error
+from constants import STREAM_ANNOUNCES_TOPIC, STREAM_SYNC_TOPIC # pylint: disable=no-name-in-module, import-error
 
 SLICE_PATH = path.join(path.dirname(__file__), "iceflix.ice")
 
@@ -135,7 +135,7 @@ class StreamProviderI(IceFlix.StreamProvider): # pylint: disable=inherit-non-cla
         self._provider_media_.update({id_hash:new_media})
 
         # Anunciar medio
-        self._stream_announcements_sender.newMedia(id_hash, new_file_name, self.service_id) #pylint: disable=too-many-function-args
+        self._stream_announcements_sender.newMedia(id_hash, new_file_name) #pylint: disable=too-many-function-args
 
         return id_hash
 
