@@ -55,7 +55,8 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):  # pylint: dis
             logging.debug("New service isn't of my type. Ignoring")
             return
 
-        self.servant.share_data_with(proxy)
+        if not proxy.ice_isA("::IceFlix::StreamProvider"):
+            self.servant.share_data_with(proxy)
 
     def announce(self, service, service_id, current):  # pylint: disable=unused-argument
         """Receive an announcement."""

@@ -100,9 +100,10 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
         conn.commit()
         query = ddbb_cursor.fetchall()
         conn.close()
-
+        print(query)
         for info in query:
-            users_tags.update(info[0], info[1].split(","))
+            if info[0] is not None:
+                users_tags.update({info[0]: info[1].split(",")})
 
         return users_tags
 
@@ -269,12 +270,18 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
 
         mediaDBList = []
 
-        for media in medias:
-            media_id, mediaO = media
-            media_info = mediaO.info
+        for media_id, media_object in self._media_.items():
+            media_info = media_object.info
             media_name = media_info.name
-            media_tags = self.get_users_tags(media)
+            media_tags = self.get_users_tags(media_id)
             mediaDBList.append(MediaDB(media_id, media_name, media_tags))
+
+        # for media in medias:
+        #     media_id, mediaO = media
+        #     media_info = mediaO.info
+        #     media_name = media_info.name
+        #     media_tags = self.get_users_tags(media)
+        #     mediaDBList.append(MediaDB(media_id, media_name, media_tags))
 
         return mediaDBList
 
