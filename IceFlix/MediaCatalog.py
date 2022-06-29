@@ -266,8 +266,6 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
     def get_mediaDB(self):
         """ Devuelve un objeto MediaDB """
 
-        medias = self._media_.items()
-
         mediaDBList = []
 
         for media_id, media_object in self._media_.items():
@@ -275,13 +273,6 @@ class MediaCatalogI(IceFlix.MediaCatalog): # pylint: disable=inherit-non-class, 
             media_name = media_info.name
             media_tags = self.get_users_tags(media_id)
             mediaDBList.append(MediaDB(media_id, media_name, media_tags))
-
-        # for media in medias:
-        #     media_id, mediaO = media
-        #     media_info = mediaO.info
-        #     media_name = media_info.name
-        #     media_tags = self.get_users_tags(media)
-        #     mediaDBList.append(MediaDB(media_id, media_name, media_tags))
 
         return mediaDBList
 
