@@ -28,7 +28,7 @@ pip install python-vlc
 ## Integrantes del equipo:  
 - Sergio Garrido Merino (https://github.com/sergiogm8)
 - Álvaro Fernández Santos (https://github.com/AlvaroFernandezSantos) 
-- Daniel Almansa Rodríguez (https://github.com/DanielAlmansaRodriguez)
+- Daniel Almansa Rodríguez (https://github.com/dani-ar95)
 
 ## Información útil:  
 - **Token de administración**: admin  
